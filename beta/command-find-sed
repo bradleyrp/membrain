@@ -1,0 +1,1 @@
+find ./ -name "script*" -exec sed -n -e '/for.*tpr/p' {} \; -exec echo {} \; > log

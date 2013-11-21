@@ -1,0 +1,15 @@
+#!/usr/bin/python
+
+if 0:
+	protptsplus_all = mset.store[0].get(['type','protptsplus'])
+	domain_all = mset.store[0].get(['type','domain'])
+
+overlaps = []
+protsize = []
+domainsize = []
+for i in range(len(domain_all)):
+	overlaps.append(sum(all(((domain_all[i]==1),(protptsplus_all[i]==1)),axis=0)))
+	protsize.append(sum((protptsplus_all[i]==1)))
+	domainsize.append(sum((domain_all[i]==1)))
+plot([float(overlaps[i])/protsize[i] for i in range(len(overlaps))]);plt.show()
+
