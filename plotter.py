@@ -5,10 +5,10 @@
 
 #---Import plotting libraries
 import numpy as np
-import matplotlib
+import matplotlib as mpl
 
 #---Remote operation
-matplotlib.use('Agg')
+mpl.use('Agg')
 
 #---Import plotting libraries
 import matplotlib.pyplot as plt
@@ -17,7 +17,6 @@ from matplotlib.ticker import NullFormatter
 from matplotlib import rc
 import pylab
 from datetime import date
-import matplotlib.pyplot as plt
 from mpl_toolkits.mplot3d import Axes3D
 #---Note: imports are a mess. Sometimes running execfile('plotter.py') gives you problems with later mpl use.
 
@@ -208,7 +207,7 @@ def plotter_undulations_2d_zoom(mset,logcolor=False,maxval=None,minval=None,
 	minplotval = minval if minval != None else 10**1
 	if max([max(i) for i in mset.uqrawmean/2.]) > maxplotval: 
 		print "Warning: your maximum color is lower than your true maximum! May be washing out the pattern."
-	imshow(Z,interpolation='nearest', cmap=mpl.cm.get_cmap('RdGy',100),
+	plt.imshow(Z,interpolation='nearest', cmap=mpl.cm.get_cmap('RdGy',100),
 		norm=(mpl.colors.LogNorm(vmin=minplotval,vmax=maxplotval) if logcolor == True else None),
 		origin='lower',aspect='equal',extent=[mset.griddims[0]/4,3/4*mset.griddims[0],
 		mset.griddims[1]/4,3/4*mset.griddims[1]])
@@ -234,7 +233,7 @@ def plotter_undulations_summary(mset,logcolor=False,maxval=None,minval=None,
 	minplotval = minval if minval != None else 10**1
 	if max(mset.uqrawmean) > maxplotval: 
 		print "Warning: your maximum color is lower than your true maximum! May be washing out the pattern."
-	imshow(Z,interpolation='nearest', cmap=mpl.cm.get_cmap('RdGy',100),
+	plt.imshow(Z,interpolation='nearest', cmap=mpl.cm.get_cmap('RdGy',100),
 		norm=(mpl.colors.LogNorm(vmin=minplotval,vmax=maxplotval) if logcolor == True else None),
 		origin='lower',aspect='equal',extent=[0,mset.griddims[0],0,mset.griddims[1]])
 	xtickx = [int(i) for i in list(arange(0,mset.griddims[0],int(mset.griddims[0]/10)))]
@@ -310,7 +309,7 @@ def plotter_undulations_summary(mset,logcolor=False,maxval=None,minval=None,
 		minplotval = minval if minval != None else 10**1
 		if max(mset.uqrawmean) > maxplotval:
 			print "Warning: your maximum color is lower than your true maximum! Pattern may be washed-out."
-		imshow(Z,interpolation='nearest', cmap=mpl.cm.get_cmap('RdGy',100),
+		plt.imshow(Z,interpolation='nearest', cmap=mpl.cm.get_cmap('RdGy',100),
 			norm=(mpl.colors.LogNorm(vmin=minplotval,vmax=maxplotval) if logcolor == True else None),
 			origin='lower',aspect='equal',extent=[0,shape(Z)[0],0,shape(Z)[1]])
 		plt.xticks(range(shape(Z)[0]),[(i+flanking[0]-1) for i in range(shape(Z)[0])])
@@ -518,7 +517,7 @@ def plot_gr_voronoi_heat(self,label,specs=None,filename=None,savefig=False,logco
 	extent = [yedges[0], yedges[-1], xedges[-1], xedges[0]]
 	minplotval = 1.0
 	maxplotval = max([max(pdistsz),max(pdists2d)])
-	cmap = matplotlib.cm.jet
+	cmap = mpl.cm.jet
 	cmap.set_bad('k',1.)
 	plt.imshow(H, extent=None, interpolation='nearest',aspect='equal',origin='lower',
 		norm=(mpl.colors.LogNorm(vmin=minplotval,vmax=maxplotval) if logcolor == True else None),cmap=cmap)
