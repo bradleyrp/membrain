@@ -202,12 +202,12 @@ class MembraneSet:
 		if len(self.universe.trajectory) == 1:
 			print 'Warning: I only have one frame, so that\'s the one you\'re getting.'
 		elif frameno == 0:
-			print 'Warning: you have navigated to the zeroth frame.'
 			frame = self.universe.trajectory[frameno]
 		elif self.universe.trajectory.frame-1 < frameno:
 			[self.universe.trajectory.next() for i in range(frameno-(self.universe.trajectory.frame-1))]
 		elif self.universe.trajectory.frame-1 > frameno:
 			frame = self.universe.trajectory[frameno]
+		print 'Done moving.'
 
 #---General identification functions
 
@@ -229,7 +229,7 @@ class MembraneSet:
 		else:
 			return self.vecs[self.vecs_index.index(frameno)]
 
-	def identify_monolayers(self,atomdirectors,startframeno=1):
+	def identify_monolayers(self,atomdirectors,startframeno=0):
 		'''General monolayer identifier function. Needs: names of outer, inner atoms on lipids.'''
 		self.gotoframe(startframeno)
 		pointouts = self.universe.selectAtoms(atomdirectors[0])
@@ -319,7 +319,8 @@ class MembraneSet:
 		for k in range(start,end,skip):
 			print 'Calculating mesh for frame: '+str(k)+'.'
 			starttime = time.time()
-			points = array([mean(self.universe.residues[i].selectAtoms(selector).coordinates(),axis=0) for i in self.monolayer_residues[0]])
+			points = array([mean(self.universe.residues[i].selectAtoms(selector).coordinates(),axis=0) 
+				for i in self.monolayer_residues[0]])
 			self.tri.append(scipy.spatial.Delaunay(points[:,0:2]))
 			self.xyzs.append(points)
 			self.tri_index.append(k)
@@ -331,9 +332,7 @@ class MembraneSet:
 	def calculate_midplane(self,selector,frameno,pbcadjust=1,rounder=4.0,interp='best',storexyz=True):
 		'''Find the midplane of a molecular dynamics bilayer.'''
 		lenscale = self.lenscale
-		print 'in calculate_midplane, moving to frameno '+str(frameno)
 		self.gotoframe(frameno)
-		#frame = self.universe.trajectory[frameno]
 		topxyz = array([mean(self.universe.residues[i].selectAtoms(selector).coordinates(),axis=0) 
 			for i in self.monolayer_residues[0]])
 		botxyz = array([mean(self.universe.residues[i].selectAtoms(selector).coordinates(),axis=0) 
@@ -381,9 +380,7 @@ class MembraneSet:
 
 	def calculate_triangulate(self,selector,frameno,tesstype=None):
 		'''Produce a clean tesselation.'''
-		print 'in calculate_midplane, moving to frameno '+str(frameno)
 		self.gotoframe(frameno)
-		#frame = self.universe.trajectory[frameno]
 		if type(selector) == str:
 			selector = [selector for i in range(len(self.resnames))]
 		top = []

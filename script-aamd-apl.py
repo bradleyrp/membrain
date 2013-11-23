@@ -58,7 +58,7 @@ def analyze_area_per_lipid(testno,traj):
 		sel_aamd_surfacer,
 		(basedir+'/'+gro,basedir+'/'+traj),
 		resolution='aamd')
-	mset.identify_monolayers(director,startframeno=3)
+	mset.identify_monolayers(director,startframeno=0)
 	mset.identify_residues(residues)
 	#---Area-per-lipid calculations
 	mset.triangulator(selector,framecount=framecount,skip=skip,tesstype='voronoi')
