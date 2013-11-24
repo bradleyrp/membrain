@@ -8,7 +8,7 @@ from membrainrunner import *
 #---Analysis parameters
 skip = 1
 framecount = 15
-location = 'light'
+location = 'dark'
 execfile('locations.py')
 
 #---Parameters
@@ -22,7 +22,7 @@ director_aamd_asymmetric = ['(name P and not resname CHL1) or (name C3 and resna
 	'(name C218 and not resname CHL1) or (name C25 and resname CHL1)']
 selector_aamd_symmetric = 'name P'
 selector_aamd_asymmetric = '(name P and not resname CHL1) or (name C3 and resname CHL1)'
-selector_aamd_asymmetric = '(name P and not resname CHL1)'
+#selector_aamd_asymmetric = '(name P and not resname CHL1)'
 	
 #---Analysis plan
 analysis_plan = slice(-1,None)
@@ -49,7 +49,7 @@ def analyze_structure(testno,traj):
 	mset.load_trajectory((basedir+'/'+gro,basedir+'/'+traj),
 		resolution='cgmd')
 	#---Average structure calculation
-	mset.identify_monolayers(director,startframeno=1)
+	mset.identify_monolayers(director,startframeno=0)
 	mset.midplaner(selector,skip=skip,rounder=rounder,framecount=framecount)
 	mset.calculate_undulation_spectrum(removeavg=0,redundant=0)
 	mset.analyze_undulations(redundant=0)
