@@ -874,7 +874,7 @@ class MembraneSet:
 		'''Turns a regular set of points in 3-space into a 2D matrix.'''
 		if grid == None: grid = self.griddims
 		if vecs == None: vecs = self.vec(frameno)
-		steps = [vecs[i]/(grid[i]-1) for i in range(2)] if diff == 0 else [vecs[i]/(grid[i]-1) \
+		steps = [vecs[i]/(grid[i]-1) for i in range(2)] if diff == 0 else [vecs[i]/(grid[i]-1)
 			for i in range(2)]
 		poslookup = [[xyz[i][j]/steps[j] for j in range(2)] for i in range(len(xyz))]
 		surfgrid = [[0. for i in range(grid[1]-1*(diff==1))] for j in range(grid[0]-1*(diff==1))]

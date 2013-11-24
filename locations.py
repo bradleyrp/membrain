@@ -12,9 +12,9 @@ elif location == 'light':
 	execfile('plotter.py')
 	erase_when_finished = False
 elif location == 'dark':
-	basedir = '/store-delta/worker/worker-big/membrane-repository/'
+	basedir = '/'
 	locations = '/store-delta/worker/membrain/locations-rpb-trajectory-dark'
-	pickles = '/store-delta/worker/worker-big/membrane-repository/pickle-repository/'
+	pickles = '/store-delta/worker/repo-pickle/'
 	execfile('plotter.py')
 	erase_when_finished = False
 [systems,structures,trajectories] = parse_locations_file(basedir,locations)

@@ -3,59 +3,77 @@ struct=./look-v509/system-input.gro
 ./look-v509/md.part0035.xtc
 
 name=membrane-v530
-struct=./look-v530/system-input.gro
-./look-v530/md.part0004.skip100.xtc
+struct=/home/rpb/worker/repo-membrane/membrane-v530/system-input.gro
+/home/rpb/worker/repo-membrane/membrane-v530/md.part0004.skip100.xtc
 
 #---Note: if proteins in your system, run "editconf -resnr 1" to remove residue numbering redundancies
+#---name, location may be outdated
 name=membrane-v614
 struct=./membrane-v614-analyze/md.part0002.resnr.gro
 ./membrane-v614-analyze/md.part0002.skip10.trr
 ./membrane-v614-analyze/md.part0002.skip10.xtc
 
+#---name, location may be outdated
 name=membrane-v612
 struct=./membrane-v612-analyze/md.part0003.resnr.gro
 ./membrane-v612-analyze/md.part0003.skip10.xtc
 
+#---name, location may be outdated
 name=membrane-v700
 struct=./membrane-v700-analyze/md.part0005.resnr.gro
 ./membrane-v700-analyze/md.part0005.skip10.xtc
 
+#---name, location may be outdated
 name=membrane-v623-stress-test
 struct=./membrane-v623-stress-test/system-input.resnr.gro
 ./membrane-v623-stress-test/md.part0005.skip10.xtc
 ./membrane-v623-stress-test/md.part0007.skip10.trr
 
 #---This entry corresponds to the corrected exo70 antiparallel
+#---name, location may be outdated
 name=membrane-v599
 struct=./membrane-v599-exo70-antiparallel-alt/relevant.gro
 ./membrane-v599-exo70-antiparallel-alt/relevant.xtc
 
+#---name, location may be outdated
 name=membrane-v598
 struct=./membrane-v598-exo70-control/relevant.gro
 ./membrane-v598-exo70-control/relevant.pbc.xtc
 
+#---name, location may be outdated
 name=membrane-v597
 struct=./membrane-v597-exo70-2xmutant/relevant.gro
 ./membrane-v597-exo70-2xmutant/relevant.xtc
 
+#---name, location may be outdated
 name=membrane-v596
 struct=./membrane-v596-exo70-monomer/relevant.gro
 ./membrane-v596-exo70-monomer/relevant.xtc
 
+#---name, location may be outdated
 name=membrane-v595
 struct=./membrane-v595-exo70-parallel/relevant.gro
 ./membrane-v595-exo70-parallel/relevant.xtc
 
+#---name, location may be outdated
 name=membrane-v594
 struct=./membrane-v594-exo70-antiparallel/relevant.gro
 ./membrane-v594-exo70-antiparallel/relevant.xtc
 
+#---name, location may be outdated
 #---Note: if proteins in your system, run "editconf -resnr 1" to remove residue numbering redundancies
 name=membrane-v550
 struct=./membrane-v550-control/md.part0004.po4c2a.gro
 ./membrane-v550-control/md.parts4to7.skip10.po4c2a.xtc
 
+#---name, location may be outdated
 #---Note: if proteins in your system, run "editconf -resnr 1" to remove residue numbering redundancies
 name=membrane-v032
 struct=./membrane-v032-exo70-antiparallel-revisit/md.part0002.resnr.gro
 ./membrane-v032-exo70-antiparallel-revisit/md.part0002.skip10.xtc
+
+#---name, location may be outdated
+#---Note: if proteins in your system, run "editconf -resnr 1" to remove residue numbering redundancies
+name=membrane-v550
+struct=./membrane-v550-control/md.part0004.po4c2a.gro
+./membrane-v550-control/md.parts4to7.skip10.po4c2a.xtc
