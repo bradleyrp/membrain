@@ -283,7 +283,7 @@ class MembraneSet:
 			self.surf.append(rezip-mean(rezip))
 			
 	def midplaner(self,selector,rounder=4.0,framecount=None,start=None,end=None,
-		skip=None,interp='best',protein_selection=None):
+		skip=None,interp='best',protein_selection=None,residues=None):
 		'''Interpolate the molecular dynamics bilayers.'''
 		if framecount == None:
 			if end == None: end = self.nframes
@@ -298,7 +298,7 @@ class MembraneSet:
 		for k in range(start,end,skip):
 			print 'Calculating midplane for frame: '+str(k)+'.'
 			starttime = time.time()
-			self.calculate_midplane(selector,k,rounder=rounder,interp=interp)
+			self.calculate_midplane(selector,k,rounder=rounder,interp=interp,residues=residues)
 			if protein_selection != None:
 				self.protein.append(self.universe.selectAtoms(protein_selection).coordinates())
 				self.protein_index.append(k)
@@ -329,14 +329,22 @@ class MembraneSet:
 				self.protein_index.append(k)
 			print 1./60.*(time.time()-starttime)
 			
-	def calculate_midplane(self,selector,frameno,pbcadjust=1,rounder=4.0,interp='best',storexyz=True):
+	def calculate_midplane(self,selector,frameno,pbcadjust=1,rounder=4.0,interp='best',storexyz=True,
+		residues=None):
 		'''Find the midplane of a molecular dynamics bilayer.'''
 		lenscale = self.lenscale
 		self.gotoframe(frameno)
-		topxyz = array([mean(self.universe.residues[i].selectAtoms(selector).coordinates(),axis=0) 
-			for i in self.monolayer_residues[0]])
-		botxyz = array([mean(self.universe.residues[i].selectAtoms(selector).coordinates(),axis=0) 
-			for i in self.monolayer_residues[1]])
+		#---Use all residues
+		if residues == None:
+			topxyz = array([mean(self.universe.residues[i].selectAtoms(selector).coordinates(),axis=0) 
+				for i in self.monolayer_residues[0]])
+			botxyz = array([mean(self.universe.residues[i].selectAtoms(selector).coordinates(),axis=0) 
+				for i in self.monolayer_residues[1]])
+		else:
+			topxyz = array([mean(self.universe.residues[i].selectAtoms(selector).coordinates(),axis=0) 
+				for r in residues for i in self.monolayer_by_resid[0][self.resnames.index(r)]])
+			botxyz = array([mean(self.universe.residues[i].selectAtoms(selector).coordinates(),axis=0) 
+				for r in residues for i in self.monolayer_by_resid[1][self.resnames.index(r)]])
 		if storexyz:
 			self.xyzs.append([topxyz,botxyz])
 		#---First we wrap PBCs
@@ -520,7 +528,7 @@ class MembraneSet:
 						array(self.surf_mean)/lenscale)))
 	
 	def analyze_undulations(self,qmagfilter=[10**-6,10**6],subset=0,redundant=1,
-		lenscale=None,imagefile=None,plot=False,method=None,plotall=False):
+		lenscale=None,imagefile=None,method=None):
 		'''Compute the undulation spectrum.'''
 		if method == 'before':
 			#---Deprecated/incorrect method. All frames are plotted and fitted before the ensemble average.
@@ -579,63 +587,7 @@ class MembraneSet:
 			self.uqrawmean = array([i for j in mean(self.uqcollect,axis=0) for i in j])
 			self.uqrawstd = array([i for j in std(self.uqcollect,axis=0) for i in j])
 			self.qrawmean = array([i for j in mean(self.qcollect,axis=0) for i in j])
-		#---Optional plotting section. Consider moving this to plotter.py.
-		if plot or plotall:
-			#---Filter the spectrum by regime
-			spectrum = array(sorted(zip(*[self.qrawmean,self.uqrawmean]), key=lambda x: x[0]))[1:]
-			spectrumf = array(filter(lambda x: x[0] >= qmagfilter[0] and x[0] <= qmagfilter[1], spectrum))
-			spectrumf2 = array(filter(lambda x: x[0] >= 1./10.*qmagfilter[0] \
-				and x[0] <= qmagfilter[1]*10., spectrum))
-			#---Start plotting
-			figure(1)
-			ax = subplot(111)
-			ax.set_xscale('log')
-			ax.set_yscale('log')
-			plt.grid(True)
-			plt.xlabel(r"$\left|q\right|$",fontsize=16)
-			plt.ylabel(r"$\left\langle h_{q}h_{-q}\right\rangle$",fontsize=16)
-			plt.title('Undulation Spectrum',fontsize=16)
-			print shape(spectrum)
-			plt.scatter(spectrum[:,0],spectrum[:,1],marker='o',color='k')
-			#---Fitting
-			[bz,az]=polyfit(log(spectrumf[:,0]),log(spectrumf[:,1]),1)
-			#---Compute and display the bending rigidity
-			area = double(mean([i[0]*i[1] for i in self.vecs])/lenscale**2)
-			print 'q-magnitude scaling = '+str(bz)
-			kappa = 1/exp(az)/area
-			print 'kappa = '+str(kappa)
-			leftcom = [mean(log(spectrumf[:,0])),mean(log(spectrumf[:,1]))]
-			az_enforced = leftcom[1]+4.*leftcom[0]
-			kappa_enforced = 1./exp(az_enforced)/area
-			print 'kappa_enforced = '+str(kappa_enforced)
-			#---Plot all points
-			if plotall:
-				spectrumall = array(sorted(zip(*[array(self.qcollect).reshape(-1),
-					array(self.uqcollect).reshape(-1)]), key=lambda x: x[0]))[1:]
-				plt.scatter(spectrumall[:,0],spectrumall[:,1],marker='.',alpha=0.1)
-			#---Fitting
-			ymod=[exp(az)*(i**bz) for i in spectrumf[:,0]]
-			xmod=[i for i in spectrumf[:,0]]
-			ymod2=[exp(az)*(i**bz) for i in spectrumf2[:,0]]
-			xmod2=[i for i in spectrumf2[:,0]]
-			ymod3=[exp(az)*(i**bz) for i in spectrumf2[:,0]]
-			xmod3=[i for i in spectrumf2[:,0]]
-			ymod4=[exp(az_enforced)*(i**-4.) for i in spectrumf2[:,0]]
-			xmod4=[i for i in spectrumf2[:,0]]
-			#---Plot fitted lines
-			plt.plot(xmod2,ymod2,color='#3399FF',linestyle='-',linewidth=2.5)
-			#plt.plot(xmod3,ymod3,color='m',linestyle='-',linewidth=2.0)
-			plt.plot(xmod4,ymod4,color='#FF3399',linestyle='-',linewidth=2.5)
-			plt.plot(xmod,ymod,color='w',marker='o')
-			#---Write bending rigidity on the plot
-			ax.text(0.1, 0.2, r'$\kappa_{'+str('%1.2f'%bz)+'} = %3.2f$'%kappa, transform=ax.transAxes,
-				fontsize=16)
-			ax.text(0.1, 0.1, r"$\kappa_{-4} = %3.2f$"%kappa_enforced, transform=ax.transAxes,fontsize=16)
-			#---Save and show
-			if imagefile != None:
-				plt.savefig(imagefile)
-			plt.show()
-	
+
 #---Radial distribution functions
 	
 	def batch_gr_lipid_ion(self,selector,start=None,end=None,skip=None,framecount=None,label='',mode=None,
@@ -879,8 +831,9 @@ class MembraneSet:
 		poslookup = [[xyz[i][j]/steps[j] for j in range(2)] for i in range(len(xyz))]
 		surfgrid = [[0. for i in range(grid[1]-1*(diff==1))] for j in range(grid[0]-1*(diff==1))]
 		for i in range(len(xyz)): 
+			#---Note: added the round command below changes calculate_midplane time from 0.25 to 0.35!
 			if int(poslookup[i][0]) < grid[0] and int(poslookup[i][1]) < grid[1]:
-				surfgrid[int(poslookup[i][0])][int(poslookup[i][1])] = xyz[i][whichind]
+				surfgrid[int(round(poslookup[i][0]))][int(round(poslookup[i][1]))] = xyz[i][whichind]
 		return surfgrid
 		
 #---Retrieving data

@@ -7,8 +7,8 @@ from membrainrunner import *
 
 #---Analysis parameters
 skip = 1
-framecount = 15
-location = 'dark'
+framecount = 20
+location = 'light'
 execfile('locations.py')
 
 #---Parameters
@@ -23,19 +23,19 @@ director_aamd_asymmetric = ['(name P and not resname CHL1) or (name C3 and resna
 selector_aamd_symmetric = 'name P'
 selector_aamd_asymmetric = '(name P and not resname CHL1) or (name C3 and resname CHL1)'
 #selector_aamd_asymmetric = '(name P and not resname CHL1)'
+residues_aamd_symmetric = ['DOPC','DOPS','PI2P']
+residues_aamd_asymmetric = ['DOPC','DOPS','DOPE','POPC','P35P','PI2P']
 	
 #---Analysis plan
 analysis_plan = slice(-1,None)
 analysis_descriptors = [
-	(['membrane-v509','membrane-v510','membrane-v511'],director_aamd_symmetric,selector_aamd_symmetric,-1),
-	(['membrane-v510'],director_aamd_symmetric,'name P',-1),
-	(['membrane-v511'],director_aamd_symmetric,'name P',-1),
-	(['membrane-v530'],director_aamd_asymmetric,selector_aamd_asymmetric,slice(-1,None))]
+	(['membrane-v509','membrane-v510','membrane-v511'],director_aamd_symmetric,selector_aamd_symmetric,
+		residues_aamd_symmetric,-1),
+	(['membrane-v510'],director_aamd_symmetric,selector_aamd_symmetric,residues_aamd_symmetric,-1),
+	(['membrane-v511'],director_aamd_symmetric,selector_aamd_symmetric,residues_aamd_symmetric,-1),
+	(['membrane-v530'],director_aamd_asymmetric,selector_aamd_asymmetric,residues_aamd_asymmetric,
+		slice(-1,None))]
 	
-#---Notes
-# ensure that you can slice through all available xtcs in the analysis plan above
-# set this up to run on dirac in slices
-
 #---Functions
 #-------------------------------------------------------------------------------------------------------------
 
@@ -50,7 +50,8 @@ def analyze_structure(testno,traj):
 		resolution='cgmd')
 	#---Average structure calculation
 	mset.identify_monolayers(director,startframeno=0)
-	mset.midplaner(selector,skip=skip,rounder=rounder,framecount=framecount)
+	mset.identify_residues(residues)
+	mset.midplaner(selector,residues=residues,skip=skip,rounder=rounder,framecount=framecount)
 	mset.calculate_undulation_spectrum(removeavg=0,redundant=0)
 	mset.analyze_undulations(redundant=0)
 	#---Save the data
@@ -64,7 +65,7 @@ starttime = time.time()
 print 'Starting analysis job.'
 for ad in analysis_descriptors[analysis_plan]:
 	#---Load global variables with calculation specifications used in analysis functions above.
-	(tests,director,selector,trajno) = ad
+	(tests,director,selector,residues,trajno) = ad
 	for t in range(len(tests)):
 		print 'Running calculation: bilayer structure and undulations '+tests[t]+'.'
 		for traj in trajectories[systems.index(tests[t])][trajno]:
