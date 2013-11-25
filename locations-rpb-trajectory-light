@@ -1,41 +1,51 @@
+#---name, location may be outdated
 name=membrane-v509
 struct=./look-v509/system-input.gro
 ./look-v509/md.part0033.skip10.pbcmol.xtc
 
+#---name, location may be outdated
 name=membrane-v510
 struct=./look-v510/system-input.gro
 ./look-v510/md.part0033.skip10.pbcmol.xtc
 
+#---name, location may be outdated
 name=membrane-v532
 struct=quicklook-gr/look-v532/system-input.gro
 quicklook-gr/look-v532/md.part0003.skip50.xtc
 
+#---name, location may be outdated
 name=membrane-v514
 struct=quicklook-gr/look-v514/system-input.gro
 quicklook-gr/look-v514/md.part0008.skip50.xtc
 
+#---name, location may be outdated
 name=membrane-v515
 struct=quicklook-gr/look-v515/system-input.gro
 quicklook-gr/look-v515/md.part0008.skip50.xtc
 
+#---name, location may be outdated
 name=membrane-v530
-struct=quicklook-gr/look-v530/system-input.gro
-quicklook-gr/look-v530/md.part0004.skip50.xtc
+struct=membrane-v530/system-input.gro
+membrane-v530/md.part0004.skip50.xtc
 
+#---name, location may be outdated
 name=membrane-v700
 struct=look-v700/system-input.gro
 look-700/md.part0002.skip10.xtc
 
+#---name, location may be outdated
 #---Note: if proteins in your system, run "editconf -resnr 1" to remove residue numbering redundancies
 name=membrane-v614
 struct=./membrane-v614-analyze/md.part0002.resnr.gro
 ./membrane-v614-analyze/md.part0002.skip10.xtc
 
+#---name, location may be outdated
 #---Note: if proteins in your system, run "editconf -resnr 1" to remove residue numbering redundancies
 name=membrane-v612
 struct=./membrane-v612-analyze/md.part0003.resnr.gro
 ./membrane-v612-analyze/md.part0003.skip10.xtc
 
+#---name, location may be outdated
 #---Note: if proteins in your system, run "editconf -resnr 1" to remove residue numbering redundancies
 name=membrane-v550
 struct=./membrane-v550-control/md.part0004.po4c2a.gro

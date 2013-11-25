@@ -3,14 +3,15 @@
 #---PLOTTERS: LIBRARIES, DEFINITIONS
 #-------------------------------------------------------------------------------------------------------------
 
-#---Import plotting libraries
+#---Plotting libraries
 import numpy as np
 import matplotlib as mpl
 
-#---Remote operation
-mpl.use('Agg')
+#---Remote operation if running batches
+if plot_suppress:
+	mpl.use('Agg')
 
-#---Import plotting libraries
+#---Plotting libraries
 import matplotlib.pyplot as plt
 from matplotlib.pyplot import step
 from matplotlib.ticker import NullFormatter
@@ -18,23 +19,19 @@ from matplotlib import rc
 import pylab
 from datetime import date
 from mpl_toolkits.mplot3d import Axes3D
-#---Note: imports are a mess. Sometimes running execfile('plotter.py') gives you problems with later mpl use.
 
 #---Import libraries
 import numpy.polynomial
 from mayavi import mlab
 
 #---Color definitions
-#---Colors: 0: magnesium, 1: calcium, 2: sodium
 import brewer2mpl
 clrs = brewer2mpl.get_map('Set1', 'qualitative', 5).mpl_colors
 
 #---Neutral fonts
 rc('font',**{'family':'sans-serif','sans-serif':['Helvetica']})
 rc('text', usetex=True)
-#rc('text.latex', preamble='\usepackage{amsmath}')
-rc('text.latex', preamble='\usepackage{sfmath}') # david used this one; didn't work for me
-
+rc('text.latex', preamble='\usepackage{amsmath}')
 
 #---PLOTTERS
 #-------------------------------------------------------------------------------------------------------------
@@ -58,18 +55,23 @@ def meshplot(data,vecs=None,translate=[0.0,0.0,0.0],show='both',wirecolor=None,
 		mesh = mlab.pipeline.delaunay2d(pts)
 		pts.remove()
 		if show == 'both':
-			surf1 = mlab.pipeline.surface(mesh,representation='wireframe',line_width=lsize,color=(0,0,0),vmin=maxmin[0],vmax=maxmin[1],opacity=opacity)
-			surf2 = mlab.pipeline.surface(mesh,representation='surface',color=surfcolor,vmin=maxmin[0],vmax=maxmin[1],opacity=opacity)
+			surf1 = mlab.pipeline.surface(mesh,representation='wireframe',line_width=lsize,color=(0,0,0),
+				vmin=maxmin[0],vmax=maxmin[1],opacity=opacity)
+			surf2 = mlab.pipeline.surface(mesh,representation='surface',color=surfcolor,vmin=maxmin[0],
+				vmax=maxmin[1],opacity=opacity)
 		elif show == 'wire':
 			if wirecolor == None:
-				surf1 = mlab.pipeline.surface(mesh,representation='wireframe',line_width=lsize,color=(0,0,0),vmin=maxmin[0],vmax=maxmin[1],opacity=opacity)
+				surf1 = mlab.pipeline.surface(mesh,representation='wireframe',line_width=lsize,color=(0,0,0),
+					vmin=maxmin[0],vmax=maxmin[1],opacity=opacity)
 			elif wirecolor == 0:
-				surf1 = mlab.pipeline.surface(mesh,representation='wireframe',line_width=lsize,color=None,vmin=maxmin[0],vmax=maxmin[1],opacity=opacity)
+				surf1 = mlab.pipeline.surface(mesh,representation='wireframe',line_width=lsize,color=None,
+					vmin=maxmin[0],vmax=maxmin[1],opacity=opacity)
 			else:
 				surf1 = mlab.pipeline.surface(mesh,representation='wireframe',
 					line_width=lsize,color=wirecolor,vmin=maxmin[0],vmax=maxmin[1],opacity=opacity)
 		elif show == 'surf':
-			surf2 = mlab.pipeline.surface(mesh,representation='surface',color=surfcolor,line_width=lsize,vmin=maxmin[0],vmax=maxmin[1],opacity=opacity)
+			surf2 = mlab.pipeline.surface(mesh,representation='surface',color=surfcolor,line_width=lsize,
+				vmin=maxmin[0],vmax=maxmin[1],opacity=opacity)
 		mlab.axes(y_axis_visibility=False,x_axis_visibility=False,z_axis_visibility=False)
 		mlab.xlabel("x")
 		mlab.ylabel("y")
@@ -98,7 +100,8 @@ def meshplot(data,vecs=None,translate=[0.0,0.0,0.0],show='both',wirecolor=None,
 		mlab.ylabel("y")
 		mlab.zlabel("z")
 
-def meshpoints(data,vecs=None,translate=[0.0,0.0,0.0],scale_mode=None,scale_factor=None,color=(0,0,0),opacity=1,resolution=8):
+def meshpoints(data,vecs=None,translate=[0.0,0.0,0.0],scale_mode=None,scale_factor=None,color=(0,0,0),
+	opacity=1,resolution=8):
 	'''Add points to a mesh plot.'''
 	if len(data) == 1 or (type(data) == numpy.ndarray and len(data) == 3):
 		data = [data]
@@ -632,19 +635,23 @@ def plot_apl_compare(self0,self1,ltypes1=None,ltypes0=None,label='triangles',spe
 	histplots = []
 	for d in range(len(lipid_areas0)):
 		c = clrs[d%len(clrs)]
-		thisplot = hist(mean(lipid_areas0[d],axis=0),normed=True,label=name0+' '+self0.resnames[ltypes0[d]],alpha=0.5,color=c)
+		thisplot = hist(mean(lipid_areas0[d],axis=0),normed=True,label=name0+' '+self0.resnames[ltypes0[d]],
+			alpha=0.5,color=c)
 		histplots.append(thisplot)
-		ax.text(0.7,0.6-d*0.05, r"$A_{"+str(self0.resnames[ltypes0[d]])+"}= "+str('%2.2f'%mean(lipid_areas0[d]))+
-			"\pm"+str('%1.2f'%std(lipid_areas0[d]))+"$",transform=ax.transAxes,fontsize=12)
+		ax.text(0.7,0.6-d*0.05, r"$A_{"+str(self0.resnames[ltypes0[d]])+"}= "+
+			str('%2.2f'%mean(lipid_areas0[d]))+"\pm"+str('%1.2f'%std(lipid_areas0[d]))+"$",
+			transform=ax.transAxes,fontsize=12)
 		y = normpdf(thisplot[1], mean(lipid_areas0[d],axis=0), std(lipid_areas0[d],axis=0))
 		plt.plot(bins, y, 'r--')
 
 	for d in range(len(lipid_areas1)):
 		c = clrs[(d+len(ltypes0))%len(clrs)]
-		thisplot = hist(mean(lipid_areas1[d],axis=0),normed=True,label=name1+' '+self1.resnames[ltypes1[d]],alpha=0.5,color=c)
+		thisplot = hist(mean(lipid_areas1[d],axis=0),normed=True,label=name1+' '+self1.resnames[ltypes1[d]],
+			alpha=0.5,color=c)
 		histplots.append(thisplot)
-		ax.text(0.7,0.6-(d+len(ltypes0))*0.05, r"$A_{"+str(self1.resnames[ltypes1[d]])+"}= "+str('%2.2f'%mean(lipid_areas1[d]))+
-			"\pm"+str('%1.2f'%std(lipid_areas1[d]))+"$",transform=ax.transAxes,fontsize=12)
+		ax.text(0.7,0.6-(d+len(ltypes0))*0.05, r"$A_{"+str(self1.resnames[ltypes1[d]])+"}= "+
+			str('%2.2f'%mean(lipid_areas1[d]))+"\pm"+str('%1.2f'%std(lipid_areas1[d]))+"$",
+			transform=ax.transAxes,fontsize=12)
 		y = normpdf(thisplot[1], mean(lipid_areas0[d],axis=0), std(lipid_areas0[d],axis=0))
 		plt.plot(bins, y, 'r--')
 
@@ -678,8 +685,10 @@ def plot_apl_compare_stacked(selfs,ltypes,label='triangles',specs=None,
 			for mono in monos:
 				print 'Calculating areas: lipid = '+self0.resnames[ltype]+' monolayer '+str(mono)+'.'
 				for fr in range(len(self0.getdata('triangles').label)):
-					points = array(self0.getdata(label).get([['type','points'],['frame',fr],['monolayer',mono]]))
-					tri1 = array(self0.getdata(label).get([['type','lines'],['frame',fr],['monolayer',mono]]))
+					points = array(self0.getdata(label).get([['type','points'],['frame',fr],
+						['monolayer',mono]]))
+					tri1 = array(self0.getdata(label).get([['type','lines'],['frame',fr],
+						['monolayer',mono]]))
 					validres = [self0.monolayer_residues[mono].index(i) 
 						for i in self0.monolayer_by_resid[mono][ltype]]
 					areas0.append([sum([1./6*norm(cross(t[0][0:2]-t[1][0:2],t[2][0:2]-t[1][0:2])) 
@@ -694,19 +703,23 @@ def plot_apl_compare_stacked(selfs,ltypes,label='triangles',specs=None,
 		histplots = []
 		for d in range(len(lipid_areas0)):
 			c = clrs[d%len(clrs)]
-			thisplot = hist(mean(lipid_areas0[d],axis=0),normed=True,label=name0+' '+self0.resnames[ltypes0[d]],alpha=0.5,color=c)
+			thisplot = hist(mean(lipid_areas0[d],axis=0),normed=True,label=name0+' '+
+				self0.resnames[ltypes0[d]],alpha=0.5,color=c)
 			histplots.append(thisplot)
-			ax.text(0.7,0.6-d*0.05, r"$A_{"+str(self0.resnames[ltypes0[d]])+"}= "+str('%2.2f'%mean(lipid_areas0[d]))+
-				"\pm"+str('%1.2f'%std(lipid_areas0[d]))+"$",transform=ax.transAxes,fontsize=12)
+			ax.text(0.7,0.6-d*0.05, r"$A_{"+str(self0.resnames[ltypes0[d]])+"}= "+
+				str('%2.2f'%mean(lipid_areas0[d]))+"\pm"+str('%1.2f'%std(lipid_areas0[d]))+"$",
+				transform=ax.transAxes,fontsize=12)
 			y = normpdf(thisplot[1], mean(lipid_areas0[d],axis=0), std(lipid_areas0[d],axis=0))
 			plt.plot(bins, y, 'r--')
 
 		for d in range(len(lipid_areas1)):
 			c = clrs[(d+len(ltypes0))%len(clrs)]
-			thisplot = hist(mean(lipid_areas1[d],axis=0),normed=True,label=name1+' '+self1.resnames[ltypes1[d]],alpha=0.5,color=c)
+			thisplot = hist(mean(lipid_areas1[d],axis=0),normed=True,label=name1+' '+
+				self1.resnames[ltypes1[d]],alpha=0.5,color=c)
 			histplots.append(thisplot)
-			ax.text(0.7,0.6-(d+len(ltypes0))*0.05, r"$A_{"+str(self1.resnames[ltypes1[d]])+"}= "+str('%2.2f'%mean(lipid_areas1[d]))+
-				"\pm"+str('%1.2f'%std(lipid_areas1[d]))+"$",transform=ax.transAxes,fontsize=12)
+			ax.text(0.7,0.6-(d+len(ltypes0))*0.05, r"$A_{"+str(self1.resnames[ltypes1[d]])+"}= "+
+				str('%2.2f'%mean(lipid_areas1[d]))+"\pm"+str('%1.2f'%std(lipid_areas1[d]))+"$",
+				transform=ax.transAxes,fontsize=12)
 			y = normpdf(thisplot[1], mean(lipid_areas0[d],axis=0), std(lipid_areas0[d],axis=0))
 			plt.plot(bins, y, 'r--')
 		ax.spines['top'].set_visible(False)
@@ -746,11 +759,13 @@ def plot_gr_voronoi_compare(self0,self1,label0=None,label1=None,specs=None,color
 		pdistsz = self0.getdata(name).get(specs)
 		if style == None:
 			thisplot = hist(pdistsz, bins=40, range=(0,60), color=c, 
-				normed=False,weights=[1./len(self0.vecsi) for i in range(len(pdistsz))], alpha=(0.5),label=name)
+				normed=False,weights=[1./len(self0.vecsi) for i in range(len(pdistsz))],
+				alpha=(0.5),label=name)
 			print [sum(thisplot[0][:i]) for i in range(len(thisplot[0])-1)]
 		else:
 			thisplot = hist(pdistsz, bins=40, range=(0,60), color=c, 
-				normed=False,weights=[1./len(self0.vecsi) for i in range(len(pdistsz))],histtype='step',linewidth=3,label=name)
+				normed=False,weights=[1./len(self0.vecsi) for i in range(len(pdistsz))],
+				histtype='step',linewidth=3,label=name)
 			print [sum(thisplot[0][:i]) for i in range(len(thisplot[0])-1)]
 		histplots.append(thisplot)
 
@@ -768,11 +783,13 @@ def plot_gr_voronoi_compare(self0,self1,label0=None,label1=None,specs=None,color
 		pdistsz = self1.getdata(name).get(specs)
 		if style == None:
 			thisplot = hist(pdistsz, bins=40, range=(0,60), color=c, 
-				normed=False, weights=[1./len(self0.vecsi) for i in range(len(pdistsz))],alpha=(0.5),label=name)
+				normed=False, weights=[1./len(self0.vecsi) for i in range(len(pdistsz))],alpha=(0.5),
+				label=name)
 			print [sum(thisplot[0][:i]) for i in range(len(thisplot[0])-1)]
 		else:
 			thisplot = hist(pdistsz, bins=40, range=(0,60), color=c, 
-				normed=False,weights=[1./len(self0.vecsi) for i in range(len(pdistsz))],histtype='step',linewidth=3,label=name)
+				normed=False,weights=[1./len(self0.vecsi) for i in range(len(pdistsz))],histtype='step',
+				linewidth=3,label=name)
 			print [sum(thisplot[0][:i]) for i in range(len(thisplot[0])-1)]
 		histplots.append(thisplot)
 
