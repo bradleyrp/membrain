@@ -37,6 +37,7 @@ analysis_descriptors = [
 
 def analyze_structure(testno,traj):
 	'''Compute the average structure and fluctuations of a CGMD bilayer.'''
+	mset = MembraneSet()
 	#---Load the trajectory
 	gro = structures[systems.index(tests[testno])]
 	basename = traj.split('/')[-1][:-4]

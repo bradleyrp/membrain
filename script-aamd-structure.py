@@ -6,9 +6,9 @@ from membrainrunner import *
 #-------------------------------------------------------------------------------------------------------------
 
 #---Analysis parameters
-skip = 1
-framecount = 20
-location = 'light'
+skip = 20
+framecount = None
+location = 'dirac'
 execfile('locations.py')
 
 #---Parameters
@@ -34,13 +34,14 @@ analysis_descriptors = [
 	(['membrane-v510'],director_aamd_symmetric,selector_aamd_symmetric,residues_aamd_symmetric,-1),
 	(['membrane-v511'],director_aamd_symmetric,selector_aamd_symmetric,residues_aamd_symmetric,-1),
 	(['membrane-v530'],director_aamd_asymmetric,selector_aamd_asymmetric,residues_aamd_asymmetric,
-		slice(-1,None))]
+		slice(1,None))]
 	
 #---Functions
 #-------------------------------------------------------------------------------------------------------------
 
 def analyze_structure(testno,traj):
 	'''Compute the average structure and fluctuations of an AAMD bilayer.'''
+	mset = MembraneSet()
 	#---Load the trajectory
 	gro = structures[systems.index(tests[testno])]
 	basename = traj.split('/')[-1][:-4]
