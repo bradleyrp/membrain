@@ -1,0 +1,4 @@
+2013.11.26.1000
+RPB is running aamd-structures on dirac. 
+Added mset = MembraneSet() to the batch calculation scripts, otherwise they don't do multiple pickles.
+Also started the changelog, which you are reading right now.

@@ -2,8 +2,9 @@
 
 #---Location-specific settings
 if location == 'dirac':
-	basedir = '/home/ryb/storedrive/ryb/membrane-v5xx-master-copy/'
-	locations = '/home/ryb/storedrive/ryb/membrane-v5xx-master-copy/trajectory-map-membrane-v5xx'
+	basedir = '/media/store-pascal/ryb/membrane-v5xx/'
+	locations = '/media/store-pascal/ryb/membrane-v5xx/trajectory-map-membrane-v5xx'
+	pickles = '/media/store-pascal/ryb/worker/repo-pickles/'
 	erase_when_finished = True
 	plot_suppress = True
 elif location == 'light':
