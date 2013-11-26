@@ -34,7 +34,7 @@ analysis_descriptors = [
 	(['membrane-v510'],director_aamd_symmetric,selector_aamd_symmetric,residues_aamd_symmetric,-1),
 	(['membrane-v511'],director_aamd_symmetric,selector_aamd_symmetric,residues_aamd_symmetric,-1),
 	(['membrane-v530'],director_aamd_asymmetric,selector_aamd_asymmetric,residues_aamd_asymmetric,
-		slice(1,None))]
+		slice(3,None))]
 	
 #---Functions
 #-------------------------------------------------------------------------------------------------------------
