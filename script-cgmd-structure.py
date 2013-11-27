@@ -19,7 +19,7 @@ director_cgmd = ['name PO4','name C4A','name C4B']
 selector_cgmd = 'name PO4'
 
 #---Analysis plan
-analysis_plan = slice(-1,None)
+analysis_plan = slice(-2,None)
 analysis_descriptors = [
 	(['membrane-v623-stress-test'],director_cgmd,selector_cgmd,slice(-2,None)),
 	(['membrane-v700'],director_cgmd,selector_cgmd,slice(-1,None)),
@@ -47,7 +47,8 @@ def analyze_structure(testno,traj):
 		resolution='cgmd')
 	#---Average structure calculation
 	mset.identify_monolayers(director,startframeno=0)
-	mset.midplaner(selector,skip=skip,rounder=rounder,framecount=framecount,protein_selection='name BB')
+	#mset.midplaner(selector,skip=skip,rounder=rounder,framecount=framecount,protein_selection='name BB')
+	mset.midplaner(selector,skip=skip,rounder=rounder,framecount=framecount)
 	mset.calculate_undulation_spectrum(removeavg=0,redundant=0)
 	mset.analyze_undulations(redundant=0)
 	#---Save the data
