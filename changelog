@@ -2,3 +2,12 @@
 RPB is running aamd-structures on dirac. 
 Added mset = MembraneSet() to the batch calculation scripts, otherwise they don't do multiple pickles.
 Also started the changelog, which you are reading right now.
+<<<<<<< HEAD
+=======
+
+2013.11.26.1900
+RPB is working on stress code, combining it with the smoother.
+
+2013.11.26.2000
+RPB added a .gitignore to the root directory to drop pyc files since git is complaining that we will lose some changes.
+>>>>>>> 04ae6abc0cde94b35cbe6425db2549185e525ea1

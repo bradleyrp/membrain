@@ -61,12 +61,15 @@ struct=./membrane-v594-exo70-antiparallel/relevant.gro
 ./membrane-v594-exo70-antiparallel/relevant.xtc
 
 #---name, location may be outdated
+<<<<<<< HEAD
 #---Note: if proteins in your system, run "editconf -resnr 1" to remove residue numbering redundancies
 name=membrane-v550
 struct=./membrane-v550-control/md.part0004.po4c2a.gro
 ./membrane-v550-control/md.parts4to7.skip10.po4c2a.xtc
 
 #---name, location may be outdated
+=======
+>>>>>>> 04ae6abc0cde94b35cbe6425db2549185e525ea1
 #---Note: if proteins in your system, run "editconf -resnr 1" to remove residue numbering redundancies
 name=membrane-v032
 struct=./membrane-v032-exo70-antiparallel-revisit/md.part0002.resnr.gro
@@ -75,5 +78,12 @@ struct=./membrane-v032-exo70-antiparallel-revisit/md.part0002.resnr.gro
 #---name, location may be outdated
 #---Note: if proteins in your system, run "editconf -resnr 1" to remove residue numbering redundancies
 name=membrane-v550
+<<<<<<< HEAD
 struct=./membrane-v550-control/md.part0004.po4c2a.gro
 ./membrane-v550-control/md.parts4to7.skip10.po4c2a.xtc
+=======
+#struct=./membrane-v550-control/md.part0004.po4c2a.gro
+#./membrane-v550-control/md.parts4to7.skip10.po4c2a.xtc
+struct=/store-delta/compbio/membrane-v550/u0-sim-copy/system-input.gro
+/store-delta/compbio/membrane-v550/u0-sim-copy/md.part0008.xtc
+>>>>>>> 04ae6abc0cde94b35cbe6425db2549185e525ea1
