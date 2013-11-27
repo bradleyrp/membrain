@@ -6,7 +6,7 @@ from membrainrunner import *
 #-------------------------------------------------------------------------------------------------------------
 
 #---Analysis parameters
-skip = 1
+skip = 10
 framecount = None
 location = 'dark'
 execfile('locations.py')
@@ -17,24 +17,24 @@ rounder = 20.0
 #---Selections
 director_cgmd = ['name PO4','name C4A','name C4B']
 selector_cgmd = 'name PO4'
+cgmd_protein = 'name BB'
 
 #---Analysis plan
-<<<<<<< HEAD
-analysis_plan = slice(-1,None)
-=======
 analysis_plan = slice(-2,None)
->>>>>>> 04ae6abc0cde94b35cbe6425db2549185e525ea1
 analysis_descriptors = [
-	(['membrane-v623-stress-test'],director_cgmd,selector_cgmd,slice(-2,None)),
-	(['membrane-v700'],director_cgmd,selector_cgmd,slice(-1,None)),
-	(['membrane-v614'],director_cgmd,selector_cgmd,slice(0,1)),
-	(['membrane-v599'],director_cgmd,selector_cgmd,slice(-1,None)),
-	(['membrane-v612'],director_cgmd,selector_cgmd,slice(-1,None)),
-	(['membrane-v598'],director_cgmd,selector_cgmd,slice(-1,None)),
-	(['membrane-v595'],director_cgmd,selector_cgmd,slice(-1,None)),
-	(['membrane-v596'],director_cgmd,selector_cgmd,slice(-1,None)),
-	(['membrane-v550'],['name PO4','name C2A'],selector_cgmd,slice(-1,None)),
-	(['membrane-v032'],['name PO4','name C2A'],selector_cgmd,slice(-1,None))]
+	(['membrane-v623-stress-test'],director_cgmd,selector_cgmd,cgmd_protein,slice(-2,None)),
+	(['membrane-v700'],director_cgmd,selector_cgmd,cgmd_protein,slice(-1,None)),
+	(['membrane-v614'],director_cgmd,selector_cgmd,cgmd_protein,slice(0,1)),
+	(['membrane-v599'],director_cgmd,selector_cgmd,cgmd_protein,slice(-1,None)),
+	(['membrane-v612'],director_cgmd,selector_cgmd,cgmd_protein,slice(-1,None)),
+	(['membrane-v598'],director_cgmd,selector_cgmd,cgmd_protein,slice(-1,None)),
+	(['membrane-v595'],director_cgmd,selector_cgmd,cgmd_protein,slice(-1,None)),
+	(['membrane-v596'],director_cgmd,selector_cgmd,cgmd_protein,slice(-1,None)),
+	(['membrane-v032'],['name PO4','name C2A'],selector_cgmd,cgmd_protein,slice(-1,None)),
+	(['membrane-v550'],['name PO4','name C2A'],selector_cgmd,None,slice(-1,None)),
+	(['membrane-v550-stress'],director_cgmd,selector_cgmd,None,slice(-1,None)),
+	(['membrane-v614-stress'],director_cgmd,selector_cgmd,cgmd_protein,slice(-1,None)),
+	(['membrane-v612-stress'],director_cgmd,selector_cgmd,cgmd_protein,slice(-1,None))]
 	
 #---Functions
 #-------------------------------------------------------------------------------------------------------------
@@ -51,12 +51,11 @@ def analyze_structure(testno,traj):
 		resolution='cgmd')
 	#---Average structure calculation
 	mset.identify_monolayers(director,startframeno=0)
-<<<<<<< HEAD
-	mset.midplaner(selector,skip=skip,rounder=rounder,framecount=framecount,protein_selection='name BB')
-=======
-	#mset.midplaner(selector,skip=skip,rounder=rounder,framecount=framecount,protein_selection='name BB')
-	mset.midplaner(selector,skip=skip,rounder=rounder,framecount=framecount)
->>>>>>> 04ae6abc0cde94b35cbe6425db2549185e525ea1
+	if protein_select == None:
+		mset.midplaner(selector,skip=skip,rounder=rounder,framecount=framecount)
+	else:
+		mset.midplaner(selector,skip=skip,rounder=rounder,framecount=framecount,
+			protein_selection=protein_select)
 	mset.calculate_undulation_spectrum(removeavg=0,redundant=0)
 	mset.analyze_undulations(redundant=0)
 	#---Save the data
@@ -70,7 +69,7 @@ starttime = time.time()
 print 'Starting analysis job.'
 for ad in analysis_descriptors[analysis_plan]:
 	#---Load global variables with calculation specifications used in analysis functions above.
-	(tests,director,selector,trajno) = ad
+	(tests,director,selector,protein_select,trajno) = ad
 	for t in range(len(tests)):
 		print 'Running calculation: bilayer structure and undulations '+tests[t]+'.'
 		for traj in trajectories[systems.index(tests[t])][trajno]:

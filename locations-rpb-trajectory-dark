@@ -9,9 +9,10 @@ struct=/home/rpb/worker/repo-membrane/membrane-v530/system-input.gro
 #---Note: if proteins in your system, run "editconf -resnr 1" to remove residue numbering redundancies
 #---name, location may be outdated
 name=membrane-v614
-struct=./membrane-v614-analyze/md.part0002.resnr.gro
+struct=/compbio/membrane-v614-enthx4-12800/md.part0002.resnr.gro
 ./membrane-v614-analyze/md.part0002.skip10.trr
 ./membrane-v614-analyze/md.part0002.skip10.xtc
+/compbio/membrane-v614-enthx4-12800/a5-stress-1.0-berendsen/
 
 #---name, location may be outdated
 name=membrane-v612
@@ -61,15 +62,6 @@ struct=./membrane-v594-exo70-antiparallel/relevant.gro
 ./membrane-v594-exo70-antiparallel/relevant.xtc
 
 #---name, location may be outdated
-<<<<<<< HEAD
-#---Note: if proteins in your system, run "editconf -resnr 1" to remove residue numbering redundancies
-name=membrane-v550
-struct=./membrane-v550-control/md.part0004.po4c2a.gro
-./membrane-v550-control/md.parts4to7.skip10.po4c2a.xtc
-
-#---name, location may be outdated
-=======
->>>>>>> 04ae6abc0cde94b35cbe6425db2549185e525ea1
 #---Note: if proteins in your system, run "editconf -resnr 1" to remove residue numbering redundancies
 name=membrane-v032
 struct=./membrane-v032-exo70-antiparallel-revisit/md.part0002.resnr.gro
@@ -78,12 +70,21 @@ struct=./membrane-v032-exo70-antiparallel-revisit/md.part0002.resnr.gro
 #---name, location may be outdated
 #---Note: if proteins in your system, run "editconf -resnr 1" to remove residue numbering redundancies
 name=membrane-v550
-<<<<<<< HEAD
-struct=./membrane-v550-control/md.part0004.po4c2a.gro
-./membrane-v550-control/md.parts4to7.skip10.po4c2a.xtc
-=======
 #struct=./membrane-v550-control/md.part0004.po4c2a.gro
 #./membrane-v550-control/md.parts4to7.skip10.po4c2a.xtc
 struct=/store-delta/compbio/membrane-v550/u0-sim-copy/system-input.gro
-/store-delta/compbio/membrane-v550/u0-sim-copy/md.part0008.xtc
->>>>>>> 04ae6abc0cde94b35cbe6425db2549185e525ea1
+/store-delta/compbio/membrane-v550/u0-sim-copy/md.part0008.shifted.xtc
+/store-delta/compbio/membrane-v550/u1-stress-1.0-skip10/md.part0008.rerun.trr
+
+name=membrane-v614-stress
+struct=/store-delta/compbio/membrane-v614-enthx4-12800/a5-stress-1.0-berendsen/system-input.resnr.gro
+/store-delta/compbio/membrane-v614-enthx4-12800/a5-stress-1.0-berendsen/md.part0002.rerun.trr
+
+name=membrane-v612-stress
+struct=/store-delta/compbio/membrane-v612-enthx1-12800/a1-stress-1.0-berendsen/system-input.resnr.gro
+/store-delta/compbio/membrane-v612-enthx1-12800/a1-stress-1.0-berendsen/md.part0003.rerun.trr
+
+name=membrane-v550-stress
+struct=/store-delta/compbio/membrane-v550/u0-sim-copy/system-input.gro
+/store-delta/compbio/membrane-v550/u2-stress-1.0/md.part0008.rerun.trr
+

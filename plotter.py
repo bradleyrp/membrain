@@ -56,22 +56,23 @@ def meshplot(data,vecs=None,translate=[0.0,0.0,0.0],show='both',wirecolor=None,
 		pts.remove()
 		if show == 'both':
 			surf1 = mlab.pipeline.surface(mesh,representation='wireframe',line_width=lsize,color=(0,0,0),
-				vmin=maxmin[0],vmax=maxmin[1],opacity=opacity)
+				vmin=maxmin[0],vmax=maxmin[1],opacity=opacity,colormap='blue-red')
 			surf2 = mlab.pipeline.surface(mesh,representation='surface',color=surfcolor,vmin=maxmin[0],
-				vmax=maxmin[1],opacity=opacity)
+				vmax=maxmin[1],opacity=opacity,colormap='blue-red')
 		elif show == 'wire':
 			if wirecolor == None:
 				surf1 = mlab.pipeline.surface(mesh,representation='wireframe',line_width=lsize,color=(0,0,0),
-					vmin=maxmin[0],vmax=maxmin[1],opacity=opacity)
+					vmin=maxmin[0],vmax=maxmin[1],opacity=opacity,colormap='blue-red')
 			elif wirecolor == 0:
 				surf1 = mlab.pipeline.surface(mesh,representation='wireframe',line_width=lsize,color=None,
-					vmin=maxmin[0],vmax=maxmin[1],opacity=opacity)
+					vmin=maxmin[0],vmax=maxmin[1],opacity=opacity,colormap='blue-red')
 			else:
 				surf1 = mlab.pipeline.surface(mesh,representation='wireframe',
-					line_width=lsize,color=wirecolor,vmin=maxmin[0],vmax=maxmin[1],opacity=opacity)
+					line_width=lsize,color=wirecolor,vmin=maxmin[0],vmax=maxmin[1],opacity=opacity,
+					colormap='blue-red')
 		elif show == 'surf':
 			surf2 = mlab.pipeline.surface(mesh,representation='surface',color=surfcolor,line_width=lsize,
-				vmin=maxmin[0],vmax=maxmin[1],opacity=opacity)
+				vmin=maxmin[0],vmax=maxmin[1],opacity=opacity,colormap='blue-red')
 		mlab.axes(y_axis_visibility=False,x_axis_visibility=False,z_axis_visibility=False)
 		mlab.xlabel("x")
 		mlab.ylabel("y")
@@ -219,6 +220,7 @@ def plotter_undulations_2d_zoom(mset,logcolor=False,maxval=None,minval=None,
 def plotter_undulations_summary(mset,logcolor=False,maxval=None,minval=None,
 	imagefile=None,qmagfilter=[10**-6,10**6],lenscale=None,zoom=False):
 	'''Plot the 1D and 2D undulation spectra.'''
+	ax2errors = False
 	lenscale = mset.lenscale if lenscale == None else lenscale
 	#---Plot the 2D spectrum
 	[Lx,Ly] = [mean(mset.vecs[0])/lenscale,mean(mset.vecs[0])/lenscale]
@@ -256,7 +258,8 @@ def plotter_undulations_summary(mset,logcolor=False,maxval=None,minval=None,
 	plt.ylabel(r"$\left\langle h_{q}h_{-q}\right\rangle$",fontsize=18)
 	plt.title('Undulation Spectrum (1D)',fontsize=18)
 	spectrum = array(sorted(zip(*[mset.qrawmean,mset.uqrawmean,mset.uqrawstd]), key=lambda x: x[0]))[1:]
-	#ax2.errorbar(spectrum[:,0],spectrum[:,1],yerr=spectrum[:,2],color='b',fmt='.',alpha=0.2)
+	if ax2errors:
+		ax2.errorbar(spectrum[:,0],spectrum[:,1],yerr=spectrum[:,2],color='b',fmt='.',alpha=0.2)
 	plt.scatter(spectrum[:,0],spectrum[:,1],marker='o',color='k')
 	#---Fitting
 	spectrumf = array(filter(lambda x: x[0] >= qmagfilter[0] and x[0] <= qmagfilter[1], spectrum))
@@ -282,7 +285,6 @@ def plotter_undulations_summary(mset,logcolor=False,maxval=None,minval=None,
 	xmod4=[i for i in spectrumf2[:,0]]
 	#---Plot fitted lines
 	plt.plot(xmod2,ymod2,color='#3399FF',linestyle='-',linewidth=2.5)
-	#plt.plot(xmod3,ymod3,color='m',linestyle='-',linewidth=2.0)
 	plt.plot(xmod4,ymod4,color='#FF3399',linestyle='-',linewidth=2.5)
 	plt.plot(xmod,ymod,marker='.',color='w')
 	#---Write bending rigidity on the plot
@@ -364,6 +366,17 @@ def hinton_custom(W,protblob,protblobplus,domain,maxWeight=None,show=False,filen
 		pylab.show()
 	else:
 		pylab.clf()
+		
+		
+		
+#-------------------------------------------------------------------------------------------------------------
+#-------------------------------------------------------------------------------------------------------------
+#-------------------------------------------------------------------------------------------------------------
+#-------------------------------------------------------------------------------------------------------------
+#-------------------------------------------------------------------------------------------------------------
+#-------------------------------------------------------------------------------------------------------------		
+		
+
 	
 #---PLOTTING FUNCTIONS, HACKED
 #-------------------------------------------------------------------------------------------------------------

@@ -68,7 +68,6 @@ check_surf_mean = 0	#---whether to print the mean surface for
 span = 5			#---How many voxels to move
 voxelsize=1.0		#---Voxel size from the rerun
 with_protein = 0	#---??????????
-flatref = True
 
 '''
 #---Batch settings
@@ -94,9 +93,14 @@ if newone:
 	#file3dpp = pickles+'localpressure.v550.part0008.3Dpp.dat'
 
 #---Curvature calculation via stress tensor, post-post processing
+#-------------------------------------------------------------------------------------------------------------
+
+#---Original stress stuff ??????????
+######## THIS IS WRONG, IT SUBTRACTS THE AVERAGE POSITION
 dat3dpp = array([[float(i) for i in line.strip().split()] for line in open(file3dpp)])
 mset.calculate_average_surface()
 vecs = mean(mset.vecs,axis=0)
+#vecs=array([640,640,230])
 griddims = [int(max(dat3dpp[:,i])) for i in range(3)]
 rawresults = [[[] for j in range(griddims[1]+1)] for i in range(griddims[0]+1)]
 xypts = array([[i,j] for i in linspace(0,vecs[0],griddims[0]+2) for j in linspace(0,vecs[1],griddims[1]+2)])
@@ -104,12 +108,10 @@ unzipsurfmean = mset.unzipgrid(mset.surf_mean,vecs=vecs)
 interp = scipy.interpolate.LinearNDInterpolator(unzipsurfmean[:,0:2],unzipsurfmean[:,2],fill_value=0.0)
 blocksize = (vecs/griddims)
 themeanpos = mean(mset.surf_position)
-if flatref == True:
-	avginterpsurf = array([[round((interp(i,j)+mean(mset.surf_position))/blocksize[2])
-		for i in linspace(0,vecs[0],griddims[0]+2)] for j in linspace(0,vecs[1],griddims[1]+2)])
-else:
-	avginterpsurf = array([[themeanpos/blocksize[2]
-		for i in linspace(0,vecs[0],griddims[0]+2)] for j in linspace(0,vecs[1],griddims[1]+2)])
+#avginterpsurf = array([[round((interp(i,j)+mean(mset.surf_position))/blocksize[2])
+#	for i in linspace(0,vecs[0],griddims[0]+2)] for j in linspace(0,vecs[1],griddims[1]+2)])
+avginterpsurf = array([[themeanpos/blocksize[2]
+	for i in linspace(0,vecs[0],griddims[0]+2)] for j in linspace(0,vecs[1],griddims[1]+2)])
 if ((themeanpos/blocksize[2] - span < 0.0) or 
 	(themeanpos/blocksize[2] + span >  max(dat3dpp[:,2]))):
 	print 'Warning: your span exceeds your box dimensions'
@@ -145,21 +147,16 @@ if with_protein:
 	meshpoints(mset.protein[0]+[-vecs[0]*0,0,-mean(mset.surf_position)-25+50],scale_factor=10,color=(0,0,0),
 		opacity=0.2)
 
-#---Report maximum and mean curvatures assuming kappa = 20 kBT
+#---Print maximum and mean curvatures assuming kappa = 20 kBT
 print (max(array(nearset[1:])[:,2])*10**exag)*(10**5*10**(-9*2))/(20*1.38*10**-23*310*10**9)
 print (min(array(nearset[1:])[:,2])*10**exag)*(10**5*10**(-9*2))/(20*1.38*10**-23*310*10**9)
 print (mean(array(nearset[1:])[:,2])*10**exag)*(10**5*10**(-9*2))/(20*1.38*10**-23*310*10**9)
 
-nprots = 4
-protlen = int(shape(mset.protein[0])[0]/nprots)
-protein_centers = mean([mean(mset.protein,axis=0)[i*protlen:(i+1)*protlen] for i in range(nprots)],axis=1)
+if check_surf_mean:
+	#---plot average structure
+	meshpoints(mset.protein[0]+[-vecs[0]*0,0,-mean(mset.surf_position)-25+50],scale_factor=10,color=(0,0,0),
+		opacity=0.5)
+	meshplot(mset.surf_mean,vecs=mset.vec(0),show='surf')
+	
+#---
 
-fig = plt.figure()
-ax = fig.add_subplot(1, 1, 1)
-dat=mset.rezipgrid(nearset,vecs=vecs)
-plt.imshow(dat,interpolation='nearest',origin='LowerLeft')
-for pt in protein_centers:
-	circ = plt.Circle((int(round(pt[0]/blocksize[0]/(float(griddims[0])/numgridpts))),
-		int(round(pt[1]/blocksize[0]/(float(griddims[0])/numgridpts)))),radius=0.25,color='k',alpha=1.0)
-	ax.add_patch(circ)
-plt.show()
