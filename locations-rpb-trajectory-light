@@ -50,3 +50,15 @@ struct=./membrane-v612-analyze/md.part0003.resnr.gro
 name=membrane-v550
 struct=./membrane-v550-control/md.part0004.po4c2a.gro
 ./membrane-v550-control/md.parts4to7.skip10.po4c2a.xtc
+
+name=membrane-v614-stress
+struct=/store-delta/compbio/membrane-v614-enthx4-12800/a5-stress-1.0-berendsen/system-input.resnr.gro
+/store-delta/compbio/membrane-v614-enthx4-12800/a5-stress-1.0-berendsen/md.part0002.rerun.trr
+
+name=membrane-v612-stress
+struct=/store-delta/compbio/membrane-v612-enthx1-12800/a1-stress-1.0-berendsen/system-input.resnr.gro
+/store-delta/compbio/membrane-v612-enthx1-12800/a1-stress-1.0-berendsen/md.part0003.rerun.trr
+
+name=membrane-v550-stress
+struct=/store-delta/compbio/membrane-v550/u0-sim-copy/system-input.gro
+/store-delta/compbio/membrane-v550/u2-stress-1.0/md.part0008.rerun.trr

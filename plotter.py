@@ -256,7 +256,7 @@ def plotter_undulations_summary(mset,logcolor=False,maxval=None,minval=None,
 	plt.grid(True)
 	plt.xlabel(r"$\left|q\right|$",fontsize=18)
 	plt.ylabel(r"$\left\langle h_{q}h_{-q}\right\rangle$",fontsize=18)
-	plt.title('Undulation Spectrum (1D)',fontsize=18)
+	#plt.title('Undulation Spectrum (1D)',fontsize=18)
 	spectrum = array(sorted(zip(*[mset.qrawmean,mset.uqrawmean,mset.uqrawstd]), key=lambda x: x[0]))[1:]
 	if ax2errors:
 		ax2.errorbar(spectrum[:,0],spectrum[:,1],yerr=spectrum[:,2],color='b',fmt='.',alpha=0.2)
@@ -288,12 +288,13 @@ def plotter_undulations_summary(mset,logcolor=False,maxval=None,minval=None,
 	plt.plot(xmod4,ymod4,color='#FF3399',linestyle='-',linewidth=2.5)
 	plt.plot(xmod,ymod,marker='.',color='w')
 	#---Write bending rigidity on the plot
-	ax2.text(0.1, 0.2, r'$\kappa_{'+str('%1.2f'%bz)+'} = %3.2f$'%kappa, transform=ax2.transAxes,fontsize=16)
-	ax2.text(0.1, 0.1, r"$\kappa_{-4} = %3.2f$"%kappa_enforced, transform=ax2.transAxes,fontsize=16)
+	#ax2.text(0.1, 0.2, r'$\kappa_{'+str('%1.2f'%bz)+'} = %3.2f$'%kappa, transform=ax2.transAxes,fontsize=16)
+	ax2.text(0.1, 0.2, r'$\kappa = %3.2f$'%kappa, transform=ax2.transAxes,fontsize=16)
+	#ax2.text(0.1, 0.1, r"$\kappa_{-4} = %3.2f$"%kappa_enforced, transform=ax2.transAxes,fontsize=16)
 	#---Save and show
-	if imagefile != None:
-		plt.savefig(imagefile)
 	plt.tight_layout()
+	if imagefile != None:
+		plt.savefig(imagefile,dpi=500)
 	if zoom == True:
 		lenscale = mset.lenscale if lenscale == None else lenscale
 		#---Plot the 2D spectrum, zoomed in to the center pattern

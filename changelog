@@ -14,3 +14,7 @@ RPB fixed some of the commit messages by rebase.
 
 2013.11.27.1100
 RPB did major overhaul of stress-smoother. Still in-progress.
+
+2013.11.29.2000
+Major overhauls to the pressure tensor code to handle batch studies of the maps with parameter sweeps, etc.
+

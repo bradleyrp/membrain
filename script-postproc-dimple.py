@@ -23,7 +23,7 @@ Can specify different distance metrics in scipy.spatial.distance.cdist
 #---Analysis parameters
 skip = 1
 framecount = None
-location = 'dark'
+location = 'light'
 execfile('locations.py')
 
 #---Load
@@ -31,12 +31,15 @@ analysis_targets = ['membrane-v614.md.part0002.skip10',
 	'membrane-v612.md.part0003.skip10',
 	'membrane-v550.md.parts4to7.skip10.po4c2a',
 	'membrane-v032.md.part0002']
-systemprefix_in = analysis_targets[2]
+systemprefix_in = analysis_targets[0]
 systemprefix = systemprefix_in+'.cutoff-15'
 startpickle = pickles+'pkl.avgstruct.'+systemprefix_in+'.pkl'
 protein_subset_slice = slice(None)
 startpickle_protein = pickles+'pkl.avgstruct.'+analysis_targets[0]+'.pkl'
 #startpickle_protein = None
+
+mpl.rc('text.latex', preamble='\usepackage{sfmath}')
+mpl.rcParams['axes.linewidth'] = 2.0
 
 #---Settings
 height_direction = 1
@@ -148,14 +151,14 @@ def view_figures_timeseries(params=None,maxhs=None,maxhxys=None,target_zones=Non
 	sigma_x = [abs(params[i][4])/10. for i in validhis]
 	sigma_y = [abs(params[i][5])/10. for i in validhis]
 	nfitpts = [len(i) for i in target_zones]
-	mpl.rcParams.update({'font.size': 16})
+	mpl.rcParams.update({'font.size': 30})
 	fig = plt.figure(figsize=(10,10))
 	ax1 = plt.subplot2grid((4,1),(0,0))
 	ax1.plot(range(len(validhis)),validhs)
 	ax1.set_xlim((0,len(validhis)))
 	ylabel1 = ax1.set_ylabel('$H_{max}$')
 	ax1.grid()
-	plt.title('Framewise measurements and residuals')
+	#plt.title('Framewise measurements and residuals')
 	ax2 = plt.subplot2grid((4,1),(1,0))
 	ax2.plot(range(len(validhis)),sigma_x)
 	ax2.plot(range(len(validhis)),sigma_y)
@@ -201,20 +204,27 @@ def view_figures_curvatures(params=None,maxhs=None,maxhxys=None,
 	print maxhs
 	#---Nanometer correction
 	validhs = [10*maxhs[i] for i in validhis]
-	mpl.rcParams.update({'font.size': 14})
+	mpl.rcParams.update({'font.size': 30})
+	mpl.rcParams.update({'font.style':'sans-serif'})
 	fig = plt.figure(figsize=(8,8))
 	ax = plt.subplot2grid((2,1),(0,0))
 	#---Nanometer correction in the calculation
 	if scales == 'log':
-		ax.hist([log10(i) for i in validhs],histtype='stepfilled',color=colorcodes[0],alpha=0.8)
+		ax.hist([log10(i) for i in validhs],histtype='stepfilled',color=colorcodes[0],alpha=0.8,linewidth=2)
 	elif scales == 'linear':
-		ax.hist([i for i in validhs],histtype='stepfilled',color=colorcodes[0],alpha=0.8,bins=40)		
-	ax.spines['top'].set_visible(False)
-	ax.spines['right'].set_visible(False)
-	ax.spines['bottom'].set_position(('outward', 20))
-	ax.spines['left'].set_position(('outward', 30))
+		ax.hist([i for i in validhs],histtype='stepfilled',color=colorcodes[0],alpha=0.8,bins=40,linewidth=2)		
+	#ax.spines['top'].set_visible(False)
+	#ax.spines['right'].set_visible(False)
+	#ax.spines['bottom'].set_position(('outward', 20))
+	#ax.spines['left'].set_position(('outward', 30))
 	ax.yaxis.set_ticks_position('left')
 	ax.xaxis.set_ticks_position('bottom')
+	for tick in ax.xaxis.get_major_ticks():
+		tick.label.set_fontsize(22) 
+	for tick in ax.yaxis.get_major_ticks():
+		tick.label.set_fontsize(22) 
+	#print ax.get_ticks()
+	#ax.yaxis.set_ticks([i for i in ax.yaxis.get_ticks() if (i%100) == 0])
 	ax.set_xlim((-0.10,0.10))
 	if means == 'linear':
 		mean_validhs = mean(validhs)
@@ -224,12 +234,10 @@ def view_figures_curvatures(params=None,maxhs=None,maxhxys=None,
 		plt.xlabel('Log $H_{max}$ $(nm^{-1})$', labelpad = 10)
 	elif scales == 'linear':
 		plt.xlabel(r'$H_{max}\:(\textsf{nm}^{-1})$', labelpad = 10)	
-	ax.text(0.65,0.75,r'$\left\langle H_{max}\right\rangle='+str('%.3f'%mean_validhs)+
-		r'\:\textsf{nm}^{-1}$'+'\nfitted $'+str(len(validhs))+'/'+str(len(maxhs))+
-		'$ frames',transform=ax.transAxes,fontsize=14)
+	#ax.text(0.65,0.75,r'$\left\langle H_{max}\right\rangle='+str('%.3f'%mean_validhs)+r'\:\textsf{nm}^{-1}$'+'\nfitted $'+str(len(validhs))+'/'+str(len(maxhs))+'$ frames',transform=ax.transAxes,fontsize=28)
 	ylabel1 =plt.ylabel('Frames', labelpad = 10)
 	#plt.title('Fitted $H_{max}$, within $'+str(cutoff_distance)+'$ nm of protein')
-	legend1 = plt.legend(bbox_to_anchor=(1.05, 1), loc=2, borderaxespad=0.)
+	legend1 = plt.legend(bbox_to_anchor=(1.05, 1), loc=2, borderaxespad=0.,prop={'size':22})
 	ax.grid()
 	ax2 = plt.subplot2grid((2,1),(1,0))
 	#---Nanometer correction below
@@ -240,21 +248,25 @@ def view_figures_curvatures(params=None,maxhs=None,maxhxys=None,
 		sigma_x = [log10(abs(params[i][4])/10.) for i in validhis]
 		sigma_y = [log10(abs(params[i][5])/10.) for i in validhis]
 	if scales == 'log':
-		histplot2 = ax2.hist(sigma_x,color=colorcodes[1],alpha=0.6,histtype='stepfilled')
-		histplot1 = ax2.hist(sigma_y,color=colorcodes[2],alpha=0.6,histtype='stepfilled')
+		histplot2 = ax2.hist(sigma_x,color=colorcodes[1],alpha=0.8,histtype='stepfilled',linewidth=2)
+		histplot1 = ax2.hist(sigma_y,color=colorcodes[2],alpha=0.8,histtype='stepfilled',linewidth=2)
 	elif scales == 'linear':
-		histplot2 = ax2.hist(sigma_x,color=colorcodes[1],alpha=0.6,histtype='stepfilled',bins=250)
-		histplot1 = ax2.hist(sigma_y,color=colorcodes[2],alpha=0.6,histtype='stepfilled',bins=250)
+		histplot2 = ax2.hist(sigma_x,color=colorcodes[1],alpha=0.8,histtype='stepfilled',bins=250,linewidth=2)
+		histplot1 = ax2.hist(sigma_y,color=colorcodes[2],alpha=0.8,histtype='stepfilled',bins=250,linewidth=2)
 		ax2.set_xlim((0,50))
 		print 'Extent data are really skewed. Consider norming this one.'
 		print 10**mean([log10(abs(params[i][4])/10.) for i in validhis])
 		print 10**mean([log10(abs(params[i][5])/10.) for i in validhis])
-	ax2.spines['top'].set_visible(False)
-	ax2.spines['right'].set_visible(False)
-	ax2.spines['bottom'].set_position(('outward', 20))
-	ax2.spines['left'].set_position(('outward', 30))
+	#ax2.spines['top'].set_visible(False)
+	#ax2.spines['right'].set_visible(False)
+	#ax2.spines['bottom'].set_position(('outward', 20))
+	#ax2.spines['left'].set_position(('outward', 30))
 	ax2.yaxis.set_ticks_position('left')
 	ax2.xaxis.set_ticks_position('bottom')
+	for tick in ax2.xaxis.get_major_ticks():
+		tick.label.set_fontsize(22)
+	for tick in ax2.yaxis.get_major_ticks():
+		tick.label.set_fontsize(22) 
 	if sigma_calc == 'mean':
 		sigma_a_calc = mean(sigma_x)
 		sigma_b_calc = mean(sigma_y)
@@ -268,20 +280,16 @@ def view_figures_curvatures(params=None,maxhs=None,maxhxys=None,
 		sigma_b_calc = hist2[1][argmax(hist2[0])]
 	if scales == 'log-transformed':
 		plt.xlabel('Log extent $(\sigma_a,\sigma_b)$ $\log_{10}$(nm)', labelpad = 10)
-		ax2.text(0.05,0.65,r'$\sigma_a='+str('%.3f'%sigma_a_calc)+'$ $\\textsf{nm}$'+
-			'\n'+r'$\sigma_b='+str('%.3f'%sigma_b_calc)+'$ $\\textsf{nm}$',
-			transform=ax2.transAxes,fontsize=14)
+		#ax2.text(0.05,0.65,r'$\sigma_a='+str('%.3f'%sigma_a_calc)+'$ $\\textsf{nm}$'+'\n'+r'$\sigma_b='+str('%.3f'%sigma_b_calc)+'$ $\\textsf{nm}$',transform=ax2.transAxes,fontsize=14)
 	elif scales == 'linear':
 		plt.xlabel(r'Extent $(\sigma_a,\sigma_b)\:(\textsf{nm})$', labelpad = 10)
-		ax2.text(0.65,0.75,r'$\sigma_a='+str('%.3f'%sigma_a_calc)+r'\:\textsf{nm}$'+'\n'+r'$\sigma_b='+
-			str('%.3f'%sigma_b_calc)+r'\:\textsf{nm}$'+'\nfitted $'+str(len(validhs))+'/'+str(len(maxhs))+
-			'$ frames',transform=ax2.transAxes,fontsize=14)
-	plt.title('Fitted extent ($\sigma_a,\sigma_b$), within $'+str(cutoff_distance)+'$ nm of protein')
+		#ax2.text(0.65,0.75,r'$\sigma_a='+str('%.3f'%sigma_a_calc)+r'\:\textsf{nm}$'+'\n'+r'$\sigma_b='+str('%.3f'%sigma_b_calc)+r'\:\textsf{nm}$'+'\nfitted $'+str(len(validhs))+'/'+str(len(maxhs))+'$ frames',transform=ax2.transAxes,fontsize=14)
+	#plt.title('Fitted extent ($\sigma_a,\sigma_b$), within $'+str(cutoff_distance)+'$ nm of protein')
 	ylabel2 = plt.ylabel('Frames', labelpad = 10)
-	legend2 = plt.legend(bbox_to_anchor=(1.05, 1), loc=2, borderaxespad=0.)
+	legend2 = plt.legend(bbox_to_anchor=(1.05, 1), loc=2, borderaxespad=0.,prop={'size':22})
 	ax2.grid()
 	plt.tight_layout()
-	plt.savefig(pickles+'result.fig.dimple.'+systemprefix+extrasuffix+'.png',dpi=300,
+	plt.savefig(pickles+'result.fig.dimple.'+systemprefix+extrasuffix+'.png',dpi=500,
 		bbox_extra_artists=[ylabel1,ylabel2],bbox_inches='tight')
 	plt.close()
 
@@ -317,7 +325,7 @@ else:
 	result_data.addnote('filter_low = '+str(curvature_filter[0]))
 	result_data.addnote('filter_high = '+str(curvature_filter[1]))
 	result_data.addnote('height_direction = '+str(height_direction))
-	pickledump(result_data,'pkl.data.dimple.'+systemprefix+'.pkl',directory=pickles)
+	pickledump(result_data,'pkl.dimple.'+systemprefix+'.pkl',directory=pickles)
 	
 #---If you need to recalculate the maximum curvature magnitudes
 if 0:
@@ -332,4 +340,4 @@ maxhs = result_data.get(['type','maxhs'])
 maxhxys = result_data.get(['type','maxhxys'])
 target_zones = result_data.get(['type','target_zones'])
 view_figures_curvatures(params=params,maxhs=maxhs,maxhxys=maxhxys)
-view_figures_timeseries(params=params,maxhs=maxhs,maxhxys=maxhxys,target_zones=target_zones)
+#view_figures_timeseries(params=params,maxhs=maxhs,maxhxys=maxhxys,target_zones=target_zones)

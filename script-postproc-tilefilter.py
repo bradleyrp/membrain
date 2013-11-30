@@ -1,7 +1,6 @@
 #!/usr/bin/python -i
 
 from membrainrunner import *
-execfile('plotter.py')
 import numpy as N
 import pylab
 from scipy.optimize import curve_fit
@@ -28,16 +27,20 @@ skip = 1
 framecount = None
 location = 'light'
 execfile('locations.py')
+execfile('plotter.py')
 
 #---Procedure
 make_figs = 0
 do_single = 1
-do_batch = 1
+do_batch = 0
 
 #---Settings
 height_direction = 1
 cutoff_distance = 5.
 cutoff_distance_sweep = [1.,2.,3.,4.,5.,6.,7.,8.,9.,10.,12.,14.,16.,18.,20.,24.,28.,30.,40.,50.]
+
+mpl.rc('text.latex', preamble='\usepackage{sfmath}')
+mpl.rcParams['axes.linewidth'] = 2.0
 
 #---Load
 analysis_targets = ['membrane-v614.md.part0002.skip10',
@@ -46,11 +49,11 @@ analysis_targets = ['membrane-v614.md.part0002.skip10',
 	'membrane-v598.relevant.pbc',
 	'membrane-v598.relevant.pbc',
 	'membrane-v550.md.parts4to7.skip10.po4c2a']
-systemprefix_in = analysis_targets[-1]
+systemprefix_in = analysis_targets[2]
 startpickle = pickles+'pkl.avgstruct.'+systemprefix_in+'.pkl'
 systemprefix = systemprefix_in+'.cutoff-5'
 startpickle_protein = pickles+'pkl.avgstruct.'+analysis_targets[0]+'.pkl'
-startpickle_protein = None
+#startpickle_protein = None
 protein_subset_slice = slice(None)
 
 #---Colors
@@ -150,7 +153,7 @@ def view_example_mean(filename=None):
 	
 def view_figures(area_counts):
 	'''Generate figures and print results.'''
-	mpl.rcParams.update({'font.size': 14})
+	mpl.rcParams.update({'font.size': 30})
 	area_per_tile = product(vecs[0:2])/100./((mset.griddims[0]-1)*(mset.griddims[1]-1))
 	fig = plt.figure(figsize=(8,8))
 	ax = plt.subplot2grid((2,1),(0,0))
@@ -162,29 +165,37 @@ def view_figures(area_counts):
 	ax.fill_between(t, negarea,posarea, facecolor=colorcodes[zvals[-1]], alpha=0.5,where=negarea>posarea)
 	ax.fill_between(t, posarea,negarea, facecolor=colorcodes[zvals[1]], alpha=0.5,where=negarea<posarea)
 	ax.set_xlim((0,len(area_counts)))
-	ax.spines['top'].set_visible(False)
-	ax.spines['right'].set_visible(False)
-	ax.spines['bottom'].set_position(('outward', 20))
-	ax.spines['left'].set_position(('outward', 30))
+	#ax.spines['top'].set_visible(False)
+	#ax.spines['right'].set_visible(False)
+	#ax.spines['bottom'].set_position(('outward', 20))
+	#ax.spines['left'].set_position(('outward', 30))
 	ax.yaxis.set_ticks_position('left')
 	ax.xaxis.set_ticks_position('bottom')
+	for tick in ax.xaxis.get_major_ticks():
+		tick.label.set_fontsize(22) 
+	for tick in ax.yaxis.get_major_ticks():
+		tick.label.set_fontsize(22) 	
 	plt.xlabel('Frame', labelpad = 10)
 	ylabel1 =plt.ylabel('Area ($nm^2$)', labelpad = 10)
-	plt.title('Tile area (within $'+str(cutoff_distance)+'$ nm of protein) by midplane height')
-	legend1 = plt.legend(bbox_to_anchor=(1.05, 1), loc=2, borderaxespad=0.)
+	#plt.title('Tile area (within $'+str(cutoff_distance)+'$ nm of protein) by midplane height')
+	legend1 = plt.legend(bbox_to_anchor=(1.05, 1), loc=2, borderaxespad=0.,prop={'size':22})
 	ax.grid()
 	ax2 = plt.subplot2grid((2,1),(1,0))
 	histplot2 = ax2.hist(posarea,color=colorcodes[zvals[1]],alpha=0.8,label='$z>0$')
 	histplot1 = ax2.hist(negarea,color=colorcodes[zvals[-1]],alpha=0.8,label='$z<0$')
-	ax2.spines['top'].set_visible(False)
-	ax2.spines['right'].set_visible(False)
-	ax2.spines['bottom'].set_position(('outward', 20))
-	ax2.spines['left'].set_position(('outward', 30))
+	#ax2.spines['top'].set_visible(False)
+	#ax2.spines['right'].set_visible(False)
+	#ax2.spines['bottom'].set_position(('outward', 20))
+	#ax2.spines['left'].set_position(('outward', 30))
+	for tick in ax2.xaxis.get_major_ticks():
+		tick.label.set_fontsize(22) 
+	for tick in ax2.yaxis.get_major_ticks():
+		tick.label.set_fontsize(22) 	
 	ax2.yaxis.set_ticks_position('left')
 	ax2.xaxis.set_ticks_position('bottom')
 	ylabel2 = plt.ylabel('Frames', labelpad = 10)
 	plt.xlabel('Area ($nm^2$)', labelpad = 10)
-	legend2 = plt.legend(bbox_to_anchor=(1.05, 1), loc=2, borderaxespad=0.)
+	legend2 = plt.legend(bbox_to_anchor=(1.05, 1), loc=2, borderaxespad=0.,prop={'size':22})
 	ax2.grid()
 	plt.tight_layout()
 	plt.savefig(pickles+'result.fig.tilefilter.areas.'+systemprefix+'.png',dpi=300,
@@ -199,7 +210,7 @@ def view_figures(area_counts):
 	fp.close()
 	
 def view_figures_sweep(area_counts_sweep):	
-	mpl.rcParams.update({'font.size': 14})
+	mpl.rcParams.update({'font.size': 30})
 	area_per_tile = product(vecs[0:2])/100./((mset.griddims[0]-1)*(mset.griddims[1]-1))
 	fig = plt.figure(figsize=(8,8))
 	ax = plt.subplot2grid((1,1),(0,0))
@@ -227,10 +238,10 @@ def view_figures_sweep(area_counts_sweep):
 	ax.set_ylim((0.0,1))
 	plt.xlabel('Distance from protein ($nm$)', labelpad = 10)
 	ylabel1 =plt.ylabel('Area fraction', labelpad = 10)
-	plt.title(mytitle)
+	#plt.title(mytitle)
 	ax.grid()
 	plt.tight_layout()
-	plt.savefig(pickles+'result.fig.tilefilter.area-sweep.'+systemprefix_in+'.png',dpi=300,
+	plt.savefig(pickles+'result.fig.tilefilter.area-sweep.'+systemprefix_in+'.png',dpi=500,
 		bbox_extra_artists=[ylabel1])
 	plt.close()
 	
