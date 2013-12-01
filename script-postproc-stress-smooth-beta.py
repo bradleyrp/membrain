@@ -2,7 +2,7 @@
 
 from membrainrunner import *
 
-location = 'light'
+location = 'dark'
 execfile('locations.py')
 
 execfile('plotter.py')
@@ -70,15 +70,17 @@ tests = [
 	[3,4,64,1],
 	[3,32,64,1],
 	[3,64,16,1]]
+datdir3dpp = 'localpressure.v614.framewise'
+
 #---Parameters, sweep on the best one from above
-scan_span = [3]
-scan_nnum = [2,4,5,8,10,12,16,18,20,24,28,32,40,50,64,128,196,250,400]
+scan_span = [4]
+#scan_nnum = [2,4,5,8,10,12,16,18,20,24,28,32,40,50,64,128,196,250,400]
+scan_nnum = [2,4,16,32,64,128]
 scan_numgridpts = [64]
 scan_distance_factor = [1]
 ordering = [scan_span,scan_nnum,scan_numgridpts,scan_distance_factor]
 tests = [[i,j,k,l] for i in ordering[0] for j in ordering[1] for k in ordering[2] for l in ordering[3]]
 
-	
 #---Storing the results
 storedir = pickles+'localpressure.results.2013.11.27.1800.test'
 logfile = pickles+'localpressure.results.2013.11.27.1800.test'+'/'+\
@@ -87,6 +89,7 @@ logfile = pickles+'localpressure.results.2013.11.27.1800.test'+'/'+\
 #---Type of looping or parameter sweeps to do
 batch_parameter_sweep = False
 batch_comparison = False
+batch_parameter_sweep_framewise = True
 
 mpl.rc('text.latex', preamble='\usepackage{sfmath}')
 mpl.rcParams.update({'font.style':'sans-serif'})
@@ -166,6 +169,7 @@ def calculate_stressmap(span,nnnum,numgridpts,distance_factor,imagefile=None,run
 	
 def plot_stressmap(dat,protein_centers,nprots,numgridpts,imagefile=None,plotvisible=False):
 	'''Plot a single stress map.'''
+	fig = plt.figure()	
 	plt.imshow(array(dat).T,interpolation='nearest',origin='LowerLeft')
 	if nprots > 0:
 		for pt in protein_centers:
@@ -383,5 +387,49 @@ if batch_parameter_sweep:
 				fp.write(str(item)+'\t')
 			fp.write('\n')
 		fp.close()
+	print 'Job complete and it took '+str(1./60*(time.time()-starttime))+' minutes.'
+
+#---Run a large parameter sweep of each system individually
+if batch_parameter_sweep_framewise:
+	starttime = time.time()
+	print 'Starting analysis job.'
+	(systemname,msetfile,picklefile,nprots) = analysis_descriptors[0]
+	mset = unpickle(pickles+msetfile)
+	test = [4,32,64,1]
+	logmaxminmean = []
+	span,nnum,numgridpts,distance_factor = test
+	for frame in range(len(mset.surf)):
+		print 'running frame = '+str(frame)
+		file3dpp = pickles+'/'+datdir3dpp+'/'+'md.part0002.fr'+str('%04d'%frame)+'.lp.dat3d'
+		dat3dpp = array([[float(i) for i in line.strip().split()] for line in open(file3dpp)])
+		griddims = [int(max(dat3dpp[:,i])) for i in range(3)]
+		vecs = mean(mset.vecs,axis=0)
+		blocksize = (vecs/griddims)
+		unzipsurfmean = mset.unzipgrid(mset.surf[frame],vecs=vecs)
+		themeanpos = mset.surf_position[frame]
+		rawresults = [[[] for j in range(griddims[1]+1)] for i in range(griddims[0]+1)]
+		xypts = array([[i,j] for i in linspace(0,vecs[0],griddims[0]+2) for j in linspace(0,vecs[1],
+			griddims[1]+2)])
+		interp = scipy.interpolate.LinearNDInterpolator(unzipsurfmean[:,0:2],unzipsurfmean[:,2],
+			fill_value=0.0)
+		avginterpsurf = array([[round((interp(i,j)+themeanpos)/blocksize[2]) 
+			for i in linspace(0,vecs[0],griddims[0]+2)] for j in linspace(0,vecs[1],griddims[1]+2)])
+		if ((themeanpos/blocksize[2] - span < 0.0) or 
+			(themeanpos/blocksize[2] + span >  max(dat3dpp[:,2]))):
+			print 'Warning: your span exceeds your box dimensions'
+		res = calculate_stressmap(span,nnum,numgridpts,distance_factor,plotunsmoothed=False,
+			brokeversion=False)
+		plot_stressmap(res[0],res[1],nprots,numgridpts,imagefile=None,plotvisible=True)
+
+	'''
+	if erase_when_finished:
+		del mset
+	fp = open(logfile+'.'+systemname,'w')
+	for line in logmaxminmean:
+		for item in line:
+			fp.write(str(item)+'\t')
+		fp.write('\n')
+	fp.close()
+	'''
 	print 'Job complete and it took '+str(1./60*(time.time()-starttime))+' minutes.'
 
