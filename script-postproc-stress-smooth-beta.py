@@ -426,7 +426,7 @@ if batch_parameter_sweep_framewise:
 			brokeversion=False)
 		res_collection.append(res)
 		#plot_stressmap(res[0],res[1],nprots,numgridpts,imagefile=None,plotvisible=True)
-
+	pickle.dump(res_collection,open('/home/rpb/v550rescol','w'))
 	'''
 	if erase_when_finished:
 		del mset
