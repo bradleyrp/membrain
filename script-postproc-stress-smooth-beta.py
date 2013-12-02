@@ -2,7 +2,7 @@
 
 from membrainrunner import *
 
-location = 'dark'
+location = 'light'
 execfile('locations.py')
 
 execfile('plotter.py')
@@ -170,6 +170,7 @@ def calculate_stressmap(span,nnnum,numgridpts,distance_factor,imagefile=None,run
 def plot_stressmap(dat,protein_centers,nprots,numgridpts,imagefile=None,plotvisible=False):
 	'''Plot a single stress map.'''
 	fig = plt.figure()	
+	ax = plt.subplot2grid((1,4),(0,0))
 	plt.imshow(array(dat).T,interpolation='nearest',origin='LowerLeft')
 	if nprots > 0:
 		for pt in protein_centers:
@@ -398,6 +399,7 @@ if batch_parameter_sweep_framewise:
 	test = [4,32,64,1]
 	logmaxminmean = []
 	span,nnum,numgridpts,distance_factor = test
+	res_collection = []
 	for frame in range(len(mset.surf)):
 		print 'running frame = '+str(frame)
 		file3dpp = pickles+'/'+datdir3dpp+'/'+'md.part0002.fr'+str('%04d'%frame)+'.lp.dat3d'
@@ -419,7 +421,8 @@ if batch_parameter_sweep_framewise:
 			print 'Warning: your span exceeds your box dimensions'
 		res = calculate_stressmap(span,nnum,numgridpts,distance_factor,plotunsmoothed=False,
 			brokeversion=False)
-		plot_stressmap(res[0],res[1],nprots,numgridpts,imagefile=None,plotvisible=True)
+		res_collection.append(res)
+		#plot_stressmap(res[0],res[1],nprots,numgridpts,imagefile=None,plotvisible=True)
 
 	'''
 	if erase_when_finished:
