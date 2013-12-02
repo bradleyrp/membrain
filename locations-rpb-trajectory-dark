@@ -80,6 +80,7 @@ struct=/store-delta/compbio/membrane-v550/u0-sim-copy/system-input.gro
 name=membrane-v614-stress
 struct=/store-delta/compbio/membrane-v614-enthx4-12800/a5-stress-1.0-berendsen/system-input.resnr.gro
 /store-delta/compbio/membrane-v614-enthx4-12800/a5-stress-1.0-berendsen/md.part0002.rerun.trr
+/store-delta/compbio/membrane-v614-enthx4-12800/a4-stress-1.0-framewise/md.part0002.skip10.trr
 
 name=membrane-v612-stress
 struct=/store-delta/compbio/membrane-v612-enthx1-12800/a1-stress-1.0-berendsen/system-input.resnr.gro

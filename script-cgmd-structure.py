@@ -20,7 +20,7 @@ selector_cgmd = 'name PO4'
 cgmd_protein = 'name BB'
 
 #---Analysis plan
-analysis_plan = slice(-4,-3)
+analysis_plan = slice(-2,-1)
 analysis_descriptors = [
 	(['membrane-v623-stress-test'],director_cgmd,selector_cgmd,cgmd_protein,slice(-2,None)),
 	(['membrane-v700'],director_cgmd,selector_cgmd,cgmd_protein,slice(-1,None)),
