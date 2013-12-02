@@ -6,7 +6,7 @@ from membrainrunner import *
 #-------------------------------------------------------------------------------------------------------------
 
 #---Analysis parameters
-skip = 10
+skip = 2
 framecount = None
 location = 'dark'
 execfile('locations.py')
@@ -20,7 +20,7 @@ selector_cgmd = 'name PO4'
 cgmd_protein = 'name BB'
 
 #---Analysis plan
-analysis_plan = slice(-2,None)
+analysis_plan = slice(-4,-3)
 analysis_descriptors = [
 	(['membrane-v623-stress-test'],director_cgmd,selector_cgmd,cgmd_protein,slice(-2,None)),
 	(['membrane-v700'],director_cgmd,selector_cgmd,cgmd_protein,slice(-1,None)),
@@ -32,7 +32,8 @@ analysis_descriptors = [
 	(['membrane-v596'],director_cgmd,selector_cgmd,cgmd_protein,slice(-1,None)),
 	(['membrane-v032'],['name PO4','name C2A'],selector_cgmd,cgmd_protein,slice(-1,None)),
 	(['membrane-v550'],['name PO4','name C2A'],selector_cgmd,None,slice(-1,None)),
-	(['membrane-v550-stress'],director_cgmd,selector_cgmd,None,slice(-1,None)),
+	(['membrane-v550'],director_cgmd,selector_cgmd,None,slice(1,2)),
+	(['membrane-v550-stress'],director_cgmd,selector_cgmd,None,slice(1,2)),
 	(['membrane-v614-stress'],director_cgmd,selector_cgmd,cgmd_protein,slice(-1,None)),
 	(['membrane-v612-stress'],director_cgmd,selector_cgmd,cgmd_protein,slice(-1,None))]
 	

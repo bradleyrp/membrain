@@ -74,6 +74,7 @@ name=membrane-v550
 #./membrane-v550-control/md.parts4to7.skip10.po4c2a.xtc
 struct=/store-delta/compbio/membrane-v550/u0-sim-copy/system-input.gro
 /store-delta/compbio/membrane-v550/u0-sim-copy/md.part0008.shifted.xtc
+/store-delta/compbio/membrane-v550/u0-sim-copy/md.part0008.shifted.trr
 /store-delta/compbio/membrane-v550/u1-stress-1.0-skip10/md.part0008.rerun.trr
 
 name=membrane-v614-stress
