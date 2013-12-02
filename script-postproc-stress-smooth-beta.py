@@ -57,6 +57,8 @@ analysis_descriptors = [
 	['v612.part0003	','pkl.structures.membrane-v612-stress.md.part0003.rerun.pkl',
 		'localpressure.v612.part0003.3Dpp.dat',2],
 	['v550.part0008','pkl.structures.membrane-v550.md.part0008.rerun.pkl',
+		'localpressure.v550.part0008.3Dpp.dat',0],
+	['v550.part0008','pkl.structures.membrane-v550.md.part0008.rerun.pkl',
 		'localpressure.v550.part0008.3Dpp.dat',0]]
 tests = [[3,32,16,1],
 	[3,32,64,1],
@@ -71,6 +73,7 @@ tests = [
 	[3,32,64,1],
 	[3,64,16,1]]
 datdir3dpp = 'localpressure.v614.framewise'
+datdir3dpp = 'localpressure.v550.framewise'
 
 #---Parameters, sweep on the best one from above
 scan_span = [4]
@@ -394,7 +397,7 @@ if batch_parameter_sweep:
 if batch_parameter_sweep_framewise:
 	starttime = time.time()
 	print 'Starting analysis job.'
-	(systemname,msetfile,picklefile,nprots) = analysis_descriptors[0]
+	(systemname,msetfile,picklefile,nprots) = analysis_descriptors[2]
 	mset = unpickle(pickles+msetfile)
 	test = [4,32,64,1]
 	logmaxminmean = []
@@ -402,7 +405,7 @@ if batch_parameter_sweep_framewise:
 	res_collection = []
 	for frame in range(len(mset.surf)):
 		print 'running frame = '+str(frame)
-		file3dpp = pickles+'/'+datdir3dpp+'/'+'md.part0002.fr'+str('%04d'%frame)+'.lp.dat3d'
+		file3dpp = pickles+'/'+datdir3dpp+'/'+'md.part0008.fr'+str('%04d'%frame)+'.lp.dat3d'
 		dat3dpp = array([[float(i) for i in line.strip().split()] for line in open(file3dpp)])
 		griddims = [int(max(dat3dpp[:,i])) for i in range(3)]
 		vecs = mean(mset.vecs,axis=0)
