@@ -12,6 +12,7 @@ if plot_suppress:
 	mpl.use('Agg')
 
 #---Plotting libraries
+#changed the following line to suit dark, which is having compatibility issues because new packages
 import matplotlib.pyplot as plt
 from matplotlib.pyplot import step
 from matplotlib.ticker import NullFormatter
@@ -29,9 +30,11 @@ import brewer2mpl
 clrs = brewer2mpl.get_map('Set1', 'qualitative', 5).mpl_colors
 
 #---Neutral fonts
-rc('font',**{'family':'sans-serif','sans-serif':['Helvetica']})
-rc('text', usetex=True)
-rc('text.latex', preamble='\usepackage{amsmath}')
+mpl.rc('font',**{'family':'sans-serif','sans-serif':['Helvetica']})
+mpl.rc('text', usetex=True)
+#if you use amsmath, it gives you serif fonts and I don't know why argh
+#mpl.rc('text.latex', preamble='\usepackage{amsmath}')
+mpl.rc('text.latex', preamble='\usepackage{sfmath}')
 
 #---PLOTTERS
 #-------------------------------------------------------------------------------------------------------------
@@ -251,16 +254,16 @@ def plotter_undulations_summary(mset,logcolor=False,maxval=None,minval=None,
 	plt.yticks(ytickx,yticky)
 	#---Plot the 1D spectrum
 	ax2 = plt.subplot2grid((1,2+(1 if zoom==True else 0)), (0,0))
+	ax2.set_xlabel(r"$\left|q\right|$",fontsize=18)
+	ax2.set_ylabel(r"$\left\langle z_{q}z_{-q}\right\rangle$",fontsize=18)
 	ax2.set_xscale('log')
 	ax2.set_yscale('log')
-	plt.grid(True)
-	plt.xlabel(r"$\left|q\right|$",fontsize=18)
-	plt.ylabel(r"$\left\langle h_{q}h_{-q}\right\rangle$",fontsize=18)
+	ax2.grid(True)
 	#plt.title('Undulation Spectrum (1D)',fontsize=18)
 	spectrum = array(sorted(zip(*[mset.qrawmean,mset.uqrawmean,mset.uqrawstd]), key=lambda x: x[0]))[1:]
 	if ax2errors:
 		ax2.errorbar(spectrum[:,0],spectrum[:,1],yerr=spectrum[:,2],color='b',fmt='.',alpha=0.2)
-	plt.scatter(spectrum[:,0],spectrum[:,1],marker='o',color='k')
+	ax2.scatter(spectrum[:,0],spectrum[:,1],marker='o',color='k')
 	#---Fitting
 	spectrumf = array(filter(lambda x: x[0] >= qmagfilter[0] and x[0] <= qmagfilter[1], spectrum))
 	spectrumf2 = array(filter(lambda x: x[0] >= 1./10.*qmagfilter[0] and x[0] <= qmagfilter[1]*10., spectrum))
@@ -284,9 +287,9 @@ def plotter_undulations_summary(mset,logcolor=False,maxval=None,minval=None,
 	ymod4=[exp(az_enforced)*(i**-4.) for i in spectrumf2[:,0]]
 	xmod4=[i for i in spectrumf2[:,0]]
 	#---Plot fitted lines
-	plt.plot(xmod2,ymod2,color='#3399FF',linestyle='-',linewidth=2.5)
-	plt.plot(xmod4,ymod4,color='#FF3399',linestyle='-',linewidth=2.5)
-	plt.plot(xmod,ymod,marker='.',color='w')
+	ax2.plot(xmod2,ymod2,color='#FF3399',linestyle='-',linewidth=2.5)
+	ax2.plot(xmod4,ymod4,color='#3399FF',linestyle='-',linewidth=2.5)
+	#ax2.plot(xmod,ymod,marker='.',color='w')
 	#---Write bending rigidity on the plot
 	#ax2.text(0.1, 0.2, r'$\kappa_{'+str('%1.2f'%bz)+'} = %3.2f$'%kappa, transform=ax2.transAxes,fontsize=16)
 	ax2.text(0.1, 0.2, r'$\kappa = %3.2f$'%kappa, transform=ax2.transAxes,fontsize=16)

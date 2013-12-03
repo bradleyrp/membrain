@@ -5,7 +5,7 @@ from membrainrunner import *
 location = 'dark'
 execfile('locations.py')
 
-#execfile('plotter.py')
+execfile('plotter.py')
 # temp mods
 import numpy as np
 import scipy.interpolate
@@ -63,9 +63,12 @@ analysis_descriptors = [
 	['v550.part0008','pkl.structures.membrane-v550.md.part0008.rerun.pkl',
 		'localpressure.v550.part0008.3Dpp.dat',0],
 	['v612.part0003','pkl.structures.membrane-v612-stress.md.part0003.pkl',
-                'localpressure.v612.part0003.3Dpp.dat',2],
+		'localpressure.v612.part0003.3Dpp.dat',2],
 	['v612.part0003','pkl.structures.membrane-v614-stress.md.part0002.pkl',
-		'localpressure.v614.part0002.3Dpp.dat',4]]
+		'localpressure.v614.part0002.3Dpp.dat',4],
+	['v550.part0008','pkl.structures.membrane-v550-stress.md.part0008.shifted.pkl',
+		'localpressure.v550.part0008.3Dpp.dat',0]]
+		
 tests = [[3,32,16,1],
 	[3,32,64,1],
 	[3,32,20,1],
@@ -78,8 +81,8 @@ tests = [
 	[3,4,64,1],
 	[3,32,64,1],
 	[3,64,16,1]]
-datdir3dpp = 'localpressure.v614.framewise'
-#datdir3dpp = 'localpressure.v550.framewise'
+#datdir3dpp = 'localpressure.v614.framewise'
+datdir3dpp = 'localpressure.v550.framewise'
 #datdir3dpp = 'localpressure.v612.framewise'
 
 #---Parameters, sweep on the best one from above
@@ -100,13 +103,17 @@ logfile = pickles+'localpressure.results.2013.11.27.1800.test'+'/'+\
 batch_parameter_sweep = False
 batch_comparison = False
 batch_parameter_sweep_framewise = True
-'''
+framewise_out_name = 'pkl.stressdecomp.membrane-v614.part0002.pkl'
+framewise_out_name = 'pkl.stressdecomp.membrane-v550.part0008.pkl'
+framewise_test = [4,32,64,1]
+framewise_part = 8
+
 mpl.rc('text.latex', preamble='\usepackage{sfmath}')
 mpl.rcParams.update({'font.style':'sans-serif'})
 mpl.rcParams.update({'font.size': 16})
 from mpl_toolkits.axes_grid1 import make_axes_locatable
 from mpl_toolkits.axes_grid1.inset_locator import inset_axes
-'''	
+	
 #---FUNCTIONS
 #-------------------------------------------------------------------------------------------------------------
 
@@ -406,13 +413,14 @@ if batch_parameter_sweep_framewise:
 	print 'Starting analysis job.'
 	(systemname,msetfile,picklefile,nprots) = analysis_descriptors[-1]
 	mset = unpickle(pickles+msetfile)
-	test = [4,32,64,1]
+	test = framewise_test
 	logmaxminmean = []
 	span,nnum,numgridpts,distance_factor = test
 	res_collection = []
 	for frame in range(len(mset.surf)):
 		print 'running frame = '+str(frame)
-		file3dpp = pickles+'/'+datdir3dpp+'/'+'md.part0002.fr'+str('%04d'%frame)+'.lp.dat3d'
+		file3dpp = pickles+'/'+datdir3dpp+'/'+'md.part'+str('%04d'%framewise_part)+'.fr'+str('%04d'%frame)+\
+			'.lp.dat3d'
 		dat3dpp = array([[float(i) for i in line.strip().split()] for line in open(file3dpp)])
 		griddims = [int(max(dat3dpp[:,i])) for i in range(3)]
 		vecs = mean(mset.vecs,axis=0)
@@ -433,16 +441,6 @@ if batch_parameter_sweep_framewise:
 			brokeversion=False)
 		res_collection.append(res)
 		#plot_stressmap(res[0],res[1],nprots,numgridpts,imagefile=None,plotvisible=True)
-	pickle.dump(res_collection,open(pickles+'pkl.stressdecomp.membrane-v614.part0002.pkl','w'))
-	'''
-	if erase_when_finished:
-		del mset
-	fp = open(logfile+'.'+systemname,'w')
-	for line in logmaxminmean:
-		for item in line:
-			fp.write(str(item)+'\t')
-		fp.write('\n')
-	fp.close()
-	'''
+	pickle.dump(res_collection,open(pickles+framewise_out_name,'w'))
 	print 'Job complete and it took '+str(1./60*(time.time()-starttime))+' minutes.'
 

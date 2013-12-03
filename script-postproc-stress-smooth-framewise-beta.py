@@ -2,7 +2,7 @@
 if 0:
 	from membrainrunner import *
 
-	location = 'light'
+	location = 'dark'
 	execfile('locations.py')
 
 	execfile('plotter.py')
@@ -10,9 +10,9 @@ if 0:
 	import scipy.integrate
 	import os
 
-	mpl.rc('text.latex', preamble='\usepackage{sfmath}')
-	mpl.rcParams.update({'font.style':'sans-serif'})
-	mpl.rcParams.update({'font.size': 16})
+	#mpl.rcParams.update({'font.style':'sans-serif'})
+	#mpl.rcParams.update({'font.size': 16})
+	#mpl.rc('text.latex', preamble='\usepackage{sfmath}')
 	from mpl_toolkits.axes_grid1 import make_axes_locatable
 	from mpl_toolkits.axes_grid1.inset_locator import inset_axes
 	from scipy import ndimage
@@ -28,12 +28,12 @@ if 0:
 	raw_maps_names = [
 		'pkl.stressdecomp.membrane-v614.part0002.pkl',
 		'pkl.stressdecomp.membrane-v612.part0003.pkl',
-		'v550rescol']
+		'pkl.stressdecomp.membrane-v550.part0008.pkl']
 
 	pickle_structure_names = [
 		'pkl.structures.membrane-v614-stress.md.part0002.pkl',
 		'pkl.structures.membrane-v612-stress.md.part0003.pkl',
-		'pkl.structures.membrane-v550-stress.md.part0008.rerun.pkl']
+		'pkl.structures.membrane-v550-stress.md.part0008.shifted.pkl']
 
 	#---MAIN
 	#-------------------------------------------------------------------------------------------------------------
@@ -94,14 +94,14 @@ if plot_domains:
 		
 		
 	#version 2
-	if 1:
-		thresh = 0.1
+	if 0:
+		thresh = 0.02
 		#thresh = 0.03
 		#---lacks PBCs
-		doms_sizes = [[],[],[]]
-		for k in range(1):
+		doms_sizes_neg = [[],[],[]]
+		for k in range(3):
 			print 'system = '+str(k)
-			for i in range(10):
+			for i in range(len(raw_maps[k])):
 				print 'frame = '+str(i)
 				heatmap = raw_maps[k][i][0];
 				disc0 = array([[(1 if abs(heatmap[i][j]) > thresh else 0) 
@@ -111,20 +111,79 @@ if plot_domains:
 					for i in range(shape(heatmap)[0])] 
 					for j in range(shape(heatmap)[1])])
 				disc3 = disc0 + disc1
-				disc = (disc3==0) + (disc3==1)
-				doms,num = ndimage.measurements.label(1-disc)
-				doms_sizes[k].extend([sum(doms==i) for i in range(num)])
+				doms,num = ndimage.measurements.label(disc3==0)
+				doms_sizes_neg[k].extend([sum(doms==i) for i in range(num)])
+		#thresh = 0.03
+		#---lacks PBCs
+		doms_sizes_poz = [[],[],[]]
+		for k in range(3):
+			print 'system = '+str(k)
+			for i in range(len(raw_maps[k])):
+				print 'frame = '+str(i)
+				heatmap = raw_maps[k][i][0];
+				disc0 = array([[(1 if abs(heatmap[i][j]) > thresh else 0) 
+					for i in range(shape(heatmap)[0])] 
+					for j in range(shape(heatmap)[1])])
+				disc1 = array([[(1 if heatmap[i][j] > 0 else -1) 
+					for i in range(shape(heatmap)[0])] 
+					for j in range(shape(heatmap)[1])])
+				disc3 = disc0 + disc1
+				doms,num = ndimage.measurements.label(disc3==2)
+				doms_sizes_poz[k].extend([sum(doms==i) for i in range(num)])
 	if 1:
-		nbins = 12
-		hist0 = numpy.histogram([i for i in doms_sizes[0] if i > 1500],bins=nbins)
-		hist1 = numpy.histogram([i for i in doms_sizes[1] if i > 1500],bins=nbins)
-		hist2 = numpy.histogram([i for i in doms_sizes[2] if i > 1500],bins=nbins)
-		plt.plot(hist0[1][1:],hist0[0],color='b',alpha=1.,lw=2,label=r'$\textbf{{ENTH}\ensuremath{\times}4}$')
-		plt.plot(hist1[1][1:],hist0[0],color='c',alpha=1.,lw=2,label=r'$\textbf{{ENTH}\ensuremath{\times}1}$')
-		plt.plot(hist2[1][1:],hist0[0],color='k',alpha=1.,lw=2,label=r'$\textbf{{control}}$')
+		# compare poz neg
+		clrs = brewer2mpl.get_map('Paired', 'qualitative', 8).mpl_colors
+		
+		nbins = 10
+		minsize = 1500
+		hist0a = numpy.histogram([i for i in doms_sizes_neg[0] if i > minsize],bins=nbins)
+		hist1a = numpy.histogram([i for i in doms_sizes_neg[1] if i > minsize],bins=nbins)
+		hist2a = numpy.histogram([i for i in doms_sizes_neg[2] if i > minsize],bins=nbins)
+		hist0b = numpy.histogram([i for i in doms_sizes_poz[0] if i > minsize],bins=nbins)
+		hist1b = numpy.histogram([i for i in doms_sizes_poz[1] if i > minsize],bins=nbins)
+		hist2b = numpy.histogram([i for i in doms_sizes_poz[2] if i > minsize],bins=nbins)
+				
+		fig = plt.figure()
+		plt.title(r'continuous peak domain area')
+		ax0 = plt.subplot2grid((3,1),(0,0))
+		ax0.plot(hist0a[1][1:],hist0a[0],color=clrs[1],alpha=1.,lw=2,label=r'$\textbf{+ {ENTH}\ensuremath{\times}4}$')
+		ax0.plot(hist0b[1][1:],hist0b[0],color=clrs[0],alpha=1.,lw=2,label=r'$\textbf{- {ENTH}\ensuremath{\times}4}$')
+		ax0.legend(loc=2)
+		ax0.set_ylim((0,50))
+		ax0.set_xlim((3500,3900))
+		ax1 = plt.subplot2grid((3,1),(1,0))
+		ax1.plot(hist1a[1][1:],hist1a[0],color=clrs[3],alpha=1.,lw=2,label=r'$\textbf{+ {ENTH}\ensuremath{\times}1}$')
+		ax1.plot(hist1b[1][1:],hist1b[0],color=clrs[2],alpha=1.,lw=2,label=r'$\textbf{- {ENTH}\ensuremath{\times}1}$')
+		ax1.legend(loc=2)
+		ax1.set_ylim((0,50))
+		ax1.set_xlim((3500,3900))
+		ax2 = plt.subplot2grid((3,1),(2,0))
+		ax2.plot(hist2a[1][1:],hist2a[0],color=clrs[5],alpha=1.,lw=2,label=r'$\textbf{+ {control}}$')
+		ax2.plot(hist2b[1][1:],hist2b[0],color=clrs[4],alpha=1.,lw=2,label=r'$\textbf{- {control}}$')
+		ax2.legend(loc=2)
+		ax2.set_ylim((0,50))
+		ax2.set_xlim((3500,3900))
+		plt.xlabel(r'domain area $(\textbf{{nm}^{2}})$',labelpad = 10,fontsize=16)
+		plt.tight_layout() 
+		plt.savefig(pickles+'stress-framewise-histograms-plus-minus.png',dpi=500,bbox_inches='tight')
+		plt.show()
+	if 0:
+		#combine poz neg
+		clrs = brewer2mpl.get_map('Paired', 'qualitative', 8).mpl_colors
+		
+		nbins = 10
+		minsize = 1500
+		hist0 = numpy.histogram([i for i in concatenate((doms_sizes_neg[0],doms_sizes_poz[0])) if i > minsize],bins=nbins)
+		hist1 = numpy.histogram([i for i in concatenate((doms_sizes_neg[1],doms_sizes_poz[1])) if i > minsize],bins=nbins)
+		hist2 = numpy.histogram([i for i in concatenate((doms_sizes_neg[2],doms_sizes_poz[2])) if i > minsize],bins=nbins)
+				
+		plt.plot(hist0[1][1:],hist0[0],color=clrs[1],alpha=1.,lw=2,label=r'$\textbf{+ {ENTH}\ensuremath{\times}4}$')
+		plt.plot(hist1[1][1:],hist1[0],color=clrs[3],alpha=1.,lw=2,label=r'$\textbf{+ {ENTH}\ensuremath{\times}1}$')
+		plt.plot(hist2[1][1:],hist2[0],color=clrs[5],alpha=1.,lw=2,label=r'$\textbf{+ {control}}$')
 		plt.legend()
 		plt.tight_layout() 
 		plt.show()
+	#plt.imshow(array(disc).T,interpolation='nearest');plt.show()
 #-------------------------------------------------------------------------------------------------------------
 #-------------------------------------------------------------------------------------------------------------	
 
