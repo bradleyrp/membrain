@@ -92,7 +92,7 @@ logfile = pickles+'localpressure.results.2013.11.27.1800.test'+'/'+\
 #---Type of looping or parameter sweeps to do
 batch_parameter_sweep = False
 batch_comparison = False
-batch_parameter_sweep_framewise = True
+batch_parameter_sweep_framewise = False
 
 mpl.rc('text.latex', preamble='\usepackage{sfmath}')
 mpl.rcParams.update({'font.style':'sans-serif'})

@@ -1,0 +1,231 @@
+#!/usr/bin/python -i
+if 0:
+	from membrainrunner import *
+
+	location = 'light'
+	execfile('locations.py')
+
+	execfile('plotter.py')
+	import scipy.interpolate
+	import scipy.integrate
+	import os
+
+	mpl.rc('text.latex', preamble='\usepackage{sfmath}')
+	mpl.rcParams.update({'font.style':'sans-serif'})
+	mpl.rcParams.update({'font.size': 16})
+	from mpl_toolkits.axes_grid1 import make_axes_locatable
+	from mpl_toolkits.axes_grid1.inset_locator import inset_axes
+	from scipy import ndimage
+
+	'''
+	This script follows script-postproc-stress-smooth-beta.py, run in framewise mode.
+	It plots the stress map results.
+	'''
+
+	#---PARAMETERS
+	#-------------------------------------------------------------------------------------------------------------
+
+	raw_maps_names = [
+		'pkl.stressdecomp.membrane-v614.part0002.pkl',
+		'pkl.stressdecomp.membrane-v612.part0003.pkl',
+		'v550rescol']
+
+	pickle_structure_names = [
+		'pkl.structures.membrane-v614-stress.md.part0002.pkl',
+		'pkl.structures.membrane-v612-stress.md.part0003.pkl',
+		'pkl.structures.membrane-v550-stress.md.part0008.rerun.pkl']
+
+	#---MAIN
+	#-------------------------------------------------------------------------------------------------------------
+
+	raw_maps = []
+	for name in raw_maps_names:
+		print 'Loading maps from '+name
+		raw_maps.append(pickle.load(open(pickles+name,'r')))
+	msets = []
+	for name in pickle_structure_names:
+		print 'Loading structures from '+name
+		msets.append(pickle.load(open(pickles+name,'r')))
+
+plot_maps = False
+plot_hist = False
+plot_domains = True
+
+#-------------------------------------------------------------------------------------------------------------
+#-------------------------------------------------------------------------------------------------------------
+
+if plot_domains:
+	#version 1
+	if 0:
+		#---lacks PBCs
+		doms_sizes = [[],[],[]]
+		for k in range(3):
+			print 'system = '+str(k)
+			for i in range(len(raw_maps[k])):
+				print 'frame = '+str(i)
+				heatmap = raw_maps[k][i][0];
+				disc = array([[(1 if heatmap[i][j]>0 else 0) 
+					for i in range(shape(heatmap)[0])] 
+					for j in range(shape(heatmap)[1])])
+				doms,num = ndimage.measurements.label(1-disc)
+				doms_sizes[k].extend([sum(doms==i) for i in range(num)])
+	if 0:
+		nbins = 12
+		fig = plt.figure()
+		ax = fig.add_subplot(111)
+		plt.rc('font', family='sans-serif')
+		ax.grid(True)
+		hist0 = numpy.histogram([i for i in doms_sizes[0] if i > 1500],bins=nbins)
+		hist1 = numpy.histogram([i for i in doms_sizes[1] if i > 1500],bins=nbins)
+		hist2 = numpy.histogram([i for i in doms_sizes[2] if i > 1500],bins=nbins)
+		plt.plot(hist0[1][1:],hist0[0],color='b',alpha=1.,lw=2,label=r'$\textbf{{ENTH}\ensuremath{\times}4}$')
+		plt.plot(hist1[1][1:],hist0[0],color='c',alpha=1.,lw=2,label=r'$\textbf{{ENTH}\ensuremath{\times}1}$')
+		plt.plot(hist2[1][1:],hist0[0],color='k',alpha=1.,lw=2,label=r'$\textbf{{control}}$')
+		ax.set_ylim((0,50))
+		plt.xlabel(r'connected domain size $\mathsf{(nm^{2})}$',labelpad = 10,fontsize=20)
+		plt.ylabel('Frequency', labelpad = 10,fontsize=20)
+		plt.title(r'connected $+/-$ curvature domains')
+		plt.legend()
+		plt.tight_layout() 
+		plt.savefig(pickles+'stress-framewise-domains.png',dpi=500,bbox_inches='tight')
+		#plt.show()
+		plt.cla()
+		
+		
+		
+	#version 2
+	if 1:
+		thresh = 0.1
+		#thresh = 0.03
+		#---lacks PBCs
+		doms_sizes = [[],[],[]]
+		for k in range(1):
+			print 'system = '+str(k)
+			for i in range(10):
+				print 'frame = '+str(i)
+				heatmap = raw_maps[k][i][0];
+				disc0 = array([[(1 if abs(heatmap[i][j]) > thresh else 0) 
+					for i in range(shape(heatmap)[0])] 
+					for j in range(shape(heatmap)[1])])
+				disc1 = array([[(1 if heatmap[i][j] > 0 else -1) 
+					for i in range(shape(heatmap)[0])] 
+					for j in range(shape(heatmap)[1])])
+				disc3 = disc0 + disc1
+				disc = (disc3==0) + (disc3==1)
+				doms,num = ndimage.measurements.label(1-disc)
+				doms_sizes[k].extend([sum(doms==i) for i in range(num)])
+	if 1:
+		nbins = 12
+		hist0 = numpy.histogram([i for i in doms_sizes[0] if i > 1500],bins=nbins)
+		hist1 = numpy.histogram([i for i in doms_sizes[1] if i > 1500],bins=nbins)
+		hist2 = numpy.histogram([i for i in doms_sizes[2] if i > 1500],bins=nbins)
+		plt.plot(hist0[1][1:],hist0[0],color='b',alpha=1.,lw=2,label=r'$\textbf{{ENTH}\ensuremath{\times}4}$')
+		plt.plot(hist1[1][1:],hist0[0],color='c',alpha=1.,lw=2,label=r'$\textbf{{ENTH}\ensuremath{\times}1}$')
+		plt.plot(hist2[1][1:],hist0[0],color='k',alpha=1.,lw=2,label=r'$\textbf{{control}}$')
+		plt.legend()
+		plt.tight_layout() 
+		plt.show()
+#-------------------------------------------------------------------------------------------------------------
+#-------------------------------------------------------------------------------------------------------------	
+
+if plot_hist:
+	pdist0 = [i for j in mean([i[0] for i in raw_maps[0]],axis=0) for i in j]
+	pdist1 = [i for j in mean([i[0] for i in raw_maps[1]],axis=0) for i in j]
+	pdist2 = [i for j in mean([i[0] for i in raw_maps[2]],axis=0) for i in j]
+	fig = plt.figure()
+	ax = fig.add_subplot(111)
+	plt.rc('font', family='sans-serif')
+	ax.grid(True)
+	nbins = 20
+	hist0 = numpy.histogram(pdist0,bins=nbins)
+	hist1 = numpy.histogram(pdist1,bins=nbins)
+	hist2 = numpy.histogram(pdist2,bins=nbins)
+	plt.plot(hist0[1][1:],hist0[0],color='b',alpha=1.,lw=2,label=r'$\textbf{{ENTH}\ensuremath{\times}4}$')
+	plt.plot(hist1[1][1:],hist1[0],color='c',alpha=1.,lw=2,label=r'$\textbf{{ENTH}\ensuremath{\times}1}$')
+	plt.plot(hist2[1][1:],hist2[0],color='k',alpha=1.,lw=2,label=r'$\textbf{{control}}$')
+	plt.xlabel(r'$\mathsf{C_{0}(nm^{-1})}$',labelpad = 10,fontsize=20)
+	plt.ylabel('Frequency', labelpad = 10,fontsize=20)
+	ax.set_xlim((-0.05,0.05))
+	plt.title('spontaneous curvature')
+	fig.tight_layout()
+	plt.legend()
+	plt.tight_layout() 
+	plt.savefig(pickles+'stress-framewise-histograms.png',dpi=500,bbox_inches='tight')
+	#plt.show()
+	plt.cla()
+
+if plot_maps:
+	nprots_list = [4,2,0]
+	prot_centers = []
+	for m in range(len(msets)):
+		mset = msets[m]
+		nprots = nprots_list[m]
+		if nprots > 0:
+			protlen = int(shape(mset.protein[0])[0]/nprots)
+			protlenshow = protlen
+			prot_centers.append(mean([mean(mset.protein,axis=0)[i*protlen:i*protlen+protlenshow]
+				for i in range(nprots)],axis=1))
+		else:
+			prot_centers.append(None)
+	vecs = mean(msets[0].vecs,axis=0)
+	span,nnum,numgridpts,distance_factor = [4,32,64,1]
+	result_stack = [[mean([i[0] for i in raw_maps[j]],axis=0),prot_centers[j]] for j in range(len(raw_maps))]
+	fig = plt.figure()	
+	gs = mpl.gridspec.GridSpec(4,1,width_ratios=[1,1,2,1],height_ratios=[1])
+	plt.rc('font', family='sans-serif')
+	extremum = max([max([max(i) for i in result_stack[j][0]]) for j in range(3)])
+	ax0 = plt.subplot2grid((1,4),(0,0))
+	ax0.set_title(r'$\textbf{{ENTH}\ensuremath{\times}4}$')
+	ax0.set_xticklabels([])
+	ax0.set_yticklabels([])
+	ax0.set_adjustable('box-forced')
+	dat = result_stack[0][0]
+	protein_centers = result_stack[0][1]
+	nprots = 4
+	if nprots > 0:
+		for pt in protein_centers:
+			circ = plt.Circle((int(round(pt[0]/vecs[0]*numgridpts)),
+				int(round(pt[1]/vecs[0]*numgridpts))),radius=1.5/64*numgridpts,color='k',
+				alpha=1.0)
+			ax0.add_patch(circ)
+	ax0.imshow(array(dat).T,interpolation='nearest',origin='LowerLeft',vmax=extremum,vmin=-extremum,
+		cmap='bwr',extent=[0,numgridpts,0,numgridpts])
+	ax1 = plt.subplot2grid((1,4),(0,1))
+	ax1.set_title(r'$\textbf{{ENTH}\ensuremath{\times}1}$')
+	ax1.set_xticklabels([])
+	ax1.set_yticklabels([])
+	ax1.set_adjustable('box-forced')
+	dat = result_stack[1][0]
+	protein_centers = result_stack[1][1]
+	nprots = 2
+	if nprots > 0:
+		for pt in protein_centers:
+			circ = plt.Circle((int(round(pt[0]/vecs[0]*numgridpts)),
+				int(round(pt[1]/vecs[0]*numgridpts))),radius=1.5/64*numgridpts,color='k',
+				alpha=1.0)
+			ax1.add_patch(circ)
+
+	ax1.imshow(array(dat).T,interpolation='nearest',origin='LowerLeft',vmax=extremum,vmin=-extremum,
+		cmap='bwr',extent=[0,numgridpts,0,numgridpts])
+	ax2 = plt.subplot2grid((1,4), (0,2),colspan=1)
+	ax2.set_title(r'$\textbf{{control}}$')
+	ax2.set_xticklabels([])
+	ax2.set_yticklabels([])
+	ax2.set_adjustable('box-forced')
+	dat = result_stack[2][0]
+	img = ax2.imshow(array(dat).T,interpolation='nearest',origin='LowerLeft',vmax=extremum,vmin=-extremum,
+		cmap='bwr',extent=[0,numgridpts,0,numgridpts])
+	cax = inset_axes(ax2,
+		         width="5%",
+		         height="100%",
+		         bbox_transform=ax2.transAxes,
+		         bbox_to_anchor=(0.3, 0.1, 1.05, 0.95),
+		         loc= 1)
+	fig.colorbar(img,cax=cax)
+	cax.tick_params(labelsize=10) 
+	cax.set_ylabel(r'$\mathsf{C_{0}(nm^{-1})}$',fontsize=10)
+	plt.tight_layout()
+	plt.savefig(pickles+'stress-framewise-comparison.png',dpi=500,bbox_inches='tight')
+	#plt.show()
+	plt.cla()
+
