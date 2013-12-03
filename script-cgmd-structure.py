@@ -6,7 +6,7 @@ from membrainrunner import *
 #-------------------------------------------------------------------------------------------------------------
 
 #---Analysis parameters
-skip = 2
+skip = 1
 framecount = None
 location = 'dark'
 execfile('locations.py')
@@ -20,7 +20,7 @@ selector_cgmd = 'name PO4'
 cgmd_protein = 'name BB'
 
 #---Analysis plan
-analysis_plan = slice(-2,-1)
+analysis_plan = slice(-1,None)
 analysis_descriptors = [
 	(['membrane-v623-stress-test'],director_cgmd,selector_cgmd,cgmd_protein,slice(-2,None)),
 	(['membrane-v700'],director_cgmd,selector_cgmd,cgmd_protein,slice(-1,None)),
@@ -35,7 +35,8 @@ analysis_descriptors = [
 	(['membrane-v550'],director_cgmd,selector_cgmd,None,slice(1,2)),
 	(['membrane-v550-stress'],director_cgmd,selector_cgmd,None,slice(1,2)),
 	(['membrane-v614-stress'],director_cgmd,selector_cgmd,cgmd_protein,slice(-1,None)),
-	(['membrane-v612-stress'],director_cgmd,selector_cgmd,cgmd_protein,slice(-1,None))]
+	(['membrane-v612-stress'],director_cgmd,selector_cgmd,cgmd_protein,slice(-1,None)),
+	(['membrane-v550-stress'],director_cgmd,selector_cgmd,None,slice(-1,None))]
 	
 #---Functions
 #-------------------------------------------------------------------------------------------------------------
@@ -53,10 +54,10 @@ def analyze_structure(testno,traj):
 	#---Average structure calculation
 	mset.identify_monolayers(director,startframeno=0)
 	if protein_select == None:
-		mset.midplaner(selector,skip=skip,rounder=rounder,framecount=framecount)
+		mset.midplaner(selector,skip=skip,rounder=rounder,framecount=framecount,end=150)
 	else:
 		mset.midplaner(selector,skip=skip,rounder=rounder,framecount=framecount,
-			protein_selection=protein_select)
+			protein_selection=protein_select,end=150)
 	mset.calculate_undulation_spectrum(removeavg=0,redundant=0)
 	mset.analyze_undulations(redundant=0)
 	#---Save the data
