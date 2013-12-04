@@ -2,7 +2,7 @@
 if 0:
 	from membrainrunner import *
 
-	location = 'dark'
+	location = 'light'
 	execfile('locations.py')
 
 	execfile('plotter.py')
@@ -130,7 +130,7 @@ if plot_domains:
 				disc3 = disc0 + disc1
 				doms,num = ndimage.measurements.label(disc3==2)
 				doms_sizes_poz[k].extend([sum(doms==i) for i in range(num)])
-	if 1:
+	if 0:
 		# compare poz neg
 		clrs = brewer2mpl.get_map('Paired', 'qualitative', 8).mpl_colors
 		
@@ -184,6 +184,84 @@ if plot_domains:
 		plt.tight_layout() 
 		plt.show()
 	#plt.imshow(array(disc).T,interpolation='nearest');plt.show()
+	
+	#playing with images
+	if 0:
+		heatmap = raw_maps[0][1][0];
+		#plt.imshow(array(heatmap).T,interpolation='nearest');plt.show()
+		tmp=ndimage.label(heatmap)
+		im = ndimage.gaussian_filter(heatmap, sigma=256/(4.*40))
+		maskp = im > im.mean()
+		label_im, nb_labels = ndimage.label(mask)
+		plt.imshow(label_im);plt.show()
+		maskp = im < im.mean()
+		
+	#using this analysis to compare positive and negative areas
+	
+	avg = [[],[],[]]
+	if 1:
+		control_mean = mean([raw_maps[2][i][0] for i in range(len(raw_maps[2]))])
+		doms_sizes_poz = [[],[],[]]
+		doms_sizes_neg = [[],[],[]]
+		for k in range(3):
+			print 'system = '+str(k)
+			for i in range(len(raw_maps[k])):
+				print 'frame = '+str(i)
+				heatmap = raw_maps[k][i][0];
+				tmp=ndimage.label(heatmap)
+				#---use this and it looks like control is smoother on histogram
+				#im = ndimage.gaussian_filter(heatmap, sigma=256/(4.*40))
+				#---use this and it looks opposite
+				#im = ndimage.gaussian_filter(heatmap, sigma=256/(4.*50))
+				#---another filtering attempt
+				im = ndimage.gaussian_filter(heatmap, sigma=256/(4.*20),mode='wrap')
+				maskp = im > im.mean()
+				maskp = im > control_mean
+				doms_sizes_poz[k].append(sum(im > im.mean())/4096.)
+				doms_sizes_neg[k].append(sum(im < im.mean())/4096.)
+				avg[k].append(maskp)
+		numgridpts = 64
+		avgmeans = [mean(avg[i],axis=0)-0.5 for i in range(3)]
+		#avgmeans = [std(avg[i],axis=0) for i in range(3)]
+		#avgmeans = [avg[i][0]-0.5 for i in range(3)]
+		extremum = max([max([max(i) for i in avgmeans[j]]) for j in range(3)])
+		ax0 = plt.subplot2grid((1,3), (0,0))
+		ax0.imshow(array(avgmeans[0]).T,interpolation='nearest',origin='LowerLeft',vmax=extremum,vmin=-extremum,
+			cmap='bwr',extent=[0,numgridpts,0,numgridpts])
+		ax1 = plt.subplot2grid((1,3), (0,1))
+		ax1.imshow(array(avgmeans[1]).T,interpolation='nearest',origin='LowerLeft',vmax=extremum,vmin=-extremum,
+			cmap='bwr',extent=[0,numgridpts,0,numgridpts])
+		ax2 = plt.subplot2grid((1,3), (0,2))
+		ax2.imshow(array(avgmeans[2]).T,interpolation='nearest',origin='LowerLeft',vmax=extremum,vmin=-extremum,
+			cmap='bwr',extent=[0,numgridpts,0,numgridpts])
+		plt.show()
+	if 0:
+		nbins = 15
+		minsize = 0
+		hist0 = numpy.histogram([i for i in concatenate((doms_sizes_neg[0],doms_sizes_poz[0])) if i > minsize],bins=nbins)
+		hist1 = numpy.histogram([i for i in concatenate((doms_sizes_neg[1],doms_sizes_poz[1])) if i > minsize],bins=nbins)
+		hist2 = numpy.histogram([i for i in concatenate((doms_sizes_neg[2],doms_sizes_poz[2])) if i > minsize],bins=nbins)
+		plt.plot(hist0[1][1:],hist0[0],color=clrs[1],alpha=1.,lw=2,label=r'$\textbf{+ {ENTH}\ensuremath{\times}4}$')
+		plt.plot(hist1[1][1:],hist1[0],color=clrs[3],alpha=1.,lw=2,label=r'$\textbf{+ {ENTH}\ensuremath{\times}1}$')
+		plt.plot(hist2[1][1:],hist2[0],color=clrs[5],alpha=1.,lw=2,label=r'$\textbf{+ {control}}$')
+		plt.legend()
+		plt.tight_layout() 
+		plt.show()
+
+	if 0:
+		nbins = 15
+		minsize = 0
+		hist0 = numpy.histogram(avgmeans[0],bins=nbins)
+		hist1 = numpy.histogram(avgmeans[1],bins=nbins)
+		hist2 = numpy.histogram(avgmeans[2],bins=nbins)
+		plt.plot(hist0[1][1:],hist0[0],color=clrs[1],alpha=1.,lw=2,label=r'$\textbf{+ {ENTH}\ensuremath{\times}4}$')
+		plt.plot(hist1[1][1:],hist1[0],color=clrs[3],alpha=1.,lw=2,label=r'$\textbf{+ {ENTH}\ensuremath{\times}1}$')
+		plt.plot(hist2[1][1:],hist2[0],color=clrs[5],alpha=1.,lw=2,label=r'$\textbf{+ {control}}$')
+		plt.legend()
+		plt.tight_layout() 
+		plt.show()
+
+		
 #-------------------------------------------------------------------------------------------------------------
 #-------------------------------------------------------------------------------------------------------------	
 
