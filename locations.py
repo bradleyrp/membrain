@@ -19,6 +19,6 @@ elif location == 'dark':
 	locations = '/store-delta/worker/membrain/locations-rpb-trajectory-dark'
 	pickles = '/store-delta/worker/repo-pickles/'
 	plot_suppress = False
-	#execfile('plotter.py')
+	execfile('plotter.py')
 	erase_when_finished = False
 [systems,structures,trajectories] = parse_locations_file(basedir,locations)

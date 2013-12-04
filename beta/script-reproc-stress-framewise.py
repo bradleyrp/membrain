@@ -2,7 +2,7 @@
 if 0:
 	from membrainrunner import *
 
-	location = 'light'
+	location = 'dark'
 	execfile('locations.py')
 
 	execfile('plotter.py')
@@ -10,21 +10,25 @@ if 0:
 	import scipy.integrate
 	import os
 
-	#mpl.rcParams.update({'font.style':'sans-serif'})
-	#mpl.rcParams.update({'font.size': 16})
-	#mpl.rc('text.latex', preamble='\usepackage{sfmath}')
 	from mpl_toolkits.axes_grid1 import make_axes_locatable
 	from mpl_toolkits.axes_grid1.inset_locator import inset_axes
 	from scipy import ndimage
 
 	'''
-	This script follows script-postproc-stress-smooth-beta.py, run in framewise mode.
-	It plots the stress map results.
+	Script for reprocessing stress, framewise
+	
+	Created 2013.12.03 by RPB
+	
+	This program will open pickles with saved framewise first moment maps of the voxel-wise tension in bilayer 
+		simulations and re-process them in order to study the distribution of spontaneous curvature. The previous
+		script already incorporates bending rigidity, and it is important to remember that this study is only 
+		qualitative at this point.
 	'''
 
 	#---PARAMETERS
 	#-------------------------------------------------------------------------------------------------------------
 
+	#---Pickles containing kC0 plots from script-postproc-stress.py
 	raw_maps_names = [
 		'pkl.stressdecomp.membrane-v614.part0002.pkl',
 		'pkl.stressdecomp.membrane-v612.part0003.pkl',
@@ -34,7 +38,7 @@ if 0:
 		'pkl.structures.membrane-v614-stress.md.part0002.pkl',
 		'pkl.structures.membrane-v612-stress.md.part0003.pkl',
 		'pkl.structures.membrane-v550-stress.md.part0008.shifted.pkl']
-
+		
 	#---MAIN
 	#-------------------------------------------------------------------------------------------------------------
 
@@ -47,12 +51,14 @@ if 0:
 		print 'Loading structures from '+name
 		msets.append(pickle.load(open(pickles+name,'r')))
 
-plot_maps = False
-plot_hist = False
-plot_domains = True
 
-#-------------------------------------------------------------------------------------------------------------
-#-------------------------------------------------------------------------------------------------------------
+plot_maps = 1
+plot_hist = 1
+plot_domains = 0
+
+show_plots = True
+
+
 
 if plot_domains:
 	#version 1
@@ -88,7 +94,8 @@ if plot_domains:
 		plt.legend()
 		plt.tight_layout() 
 		plt.savefig(pickles+'stress-framewise-domains.png',dpi=500,bbox_inches='tight')
-		#plt.show()
+		if show_plots:
+			plt.show()
 		plt.cla()
 		
 		
@@ -200,7 +207,8 @@ if plot_domains:
 	
 	avg = [[],[],[]]
 	if 1:
-		control_mean = mean([raw_maps[2][i][0] for i in range(len(raw_maps[2]))])
+		clrs = brewer2mpl.get_map('Paired', 'qualitative', 8).mpl_colors
+		control_mean = mean([raw_maps[2][i][0] for i in range(len(raw_maps[2]))])+0.00048502604166666415
 		doms_sizes_poz = [[],[],[]]
 		doms_sizes_neg = [[],[],[]]
 		for k in range(3):
@@ -224,7 +232,7 @@ if plot_domains:
 		avgmeans = [mean(avg[i],axis=0)-0.5 for i in range(3)]
 		#avgmeans = [std(avg[i],axis=0) for i in range(3)]
 		#avgmeans = [avg[i][0]-0.5 for i in range(3)]
-		extremum = max([max([max(i) for i in avgmeans[j]]) for j in range(3)])
+		extremum = max([max([max(abs(i)) for i in avgmeans[j]]) for j in range(3)])
 		ax0 = plt.subplot2grid((1,3), (0,0))
 		ax0.imshow(array(avgmeans[0]).T,interpolation='nearest',origin='LowerLeft',vmax=extremum,vmin=-extremum,
 			cmap='bwr',extent=[0,numgridpts,0,numgridpts])
@@ -248,8 +256,8 @@ if plot_domains:
 		plt.tight_layout() 
 		plt.show()
 
-	if 0:
-		nbins = 15
+	if 1:
+		nbins = 10
 		minsize = 0
 		hist0 = numpy.histogram(avgmeans[0],bins=nbins)
 		hist1 = numpy.histogram(avgmeans[1],bins=nbins)
@@ -265,6 +273,7 @@ if plot_domains:
 #-------------------------------------------------------------------------------------------------------------
 #-------------------------------------------------------------------------------------------------------------	
 
+#---??????????????????????????????????????????????????????????????????????????????????????????????????????????
 if plot_hist:
 	pdist0 = [i for j in mean([i[0] for i in raw_maps[0]],axis=0) for i in j]
 	pdist1 = [i for j in mean([i[0] for i in raw_maps[1]],axis=0) for i in j]
@@ -288,9 +297,12 @@ if plot_hist:
 	plt.legend()
 	plt.tight_layout() 
 	plt.savefig(pickles+'stress-framewise-histograms.png',dpi=500,bbox_inches='tight')
-	#plt.show()
+	if show_plots:
+		plt.show()
+
 	plt.cla()
 
+#---??????????????????????????????????????????????????????????????????????????????????????????????????????????
 if plot_maps:
 	nprots_list = [4,2,0]
 	prot_centers = []
@@ -363,6 +375,7 @@ if plot_maps:
 	cax.set_ylabel(r'$\mathsf{C_{0}(nm^{-1})}$',fontsize=10)
 	plt.tight_layout()
 	plt.savefig(pickles+'stress-framewise-comparison.png',dpi=500,bbox_inches='tight')
-	#plt.show()
+	if show_plots:
+		plt.show()
 	plt.cla()
 
