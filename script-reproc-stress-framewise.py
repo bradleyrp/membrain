@@ -1,56 +1,56 @@
 #!/usr/bin/python -i
-if 1:
-	from membrainrunner import *
 
-	location = 'dark'
-	execfile('locations.py')
+from membrainrunner import *
 
-	execfile('plotter.py')
-	import scipy.interpolate
-	import scipy.integrate
-	import os
+location = 'light'
+execfile('locations.py')
 
-	from mpl_toolkits.axes_grid1 import make_axes_locatable
-	from mpl_toolkits.axes_grid1.inset_locator import inset_axes
-	from scipy import ndimage
+execfile('plotter.py')
+import scipy.interpolate
+import scipy.integrate
+import subprocess
 
-	'''
-	Script for reprocessing stress, framewise
+from mpl_toolkits.axes_grid1 import make_axes_locatable
+from mpl_toolkits.axes_grid1.inset_locator import inset_axes
+from scipy import ndimage
 
-	Created 2013.12.03 by RPB
+'''
+Script for reprocessing stress, framewise
 
-	This program will open pickles with saved framewise first moment maps of the voxel-wise tension in bilayer 
-		simulations and re-process them in order to study the distribution of spontaneous curvature. The previous
-		script already incorporates bending rigidity, and it is important to remember that this study is only 
-		qualitative at this point.
-	
-	Needs: video
-	'''
+Created 2013.12.03 by RPB
 
-	#---PARAMETERS
-	#-------------------------------------------------------------------------------------------------------------
+This program will open pickles with saved framewise first moment maps of the voxel-wise tension in bilayer 
+	simulations and re-process them in order to study the distribution of spontaneous curvature. The previous
+	script already incorporates bending rigidity, and it is important to remember that this study is only 
+	qualitative at this point.
 
-	#---Pickles containing kC0 plots from script-postproc-stress.py
-	raw_maps_names = [
-		'pkl.stressdecomp.membrane-v614.part0002.pkl',
-		'pkl.stressdecomp.membrane-v612.part0003.pkl',
-		'pkl.stressdecomp.membrane-v550.part0008.pkl']
-	pickle_structure_names = [
-		'pkl.structures.membrane-v614-stress.md.part0002.pkl',
-		'pkl.structures.membrane-v612-stress.md.part0003.pkl',
-		'pkl.structures.membrane-v550-stress.md.part0008.shifted.pkl']
-	
-	#---MAIN
-	#-------------------------------------------------------------------------------------------------------------
+Needs: video
+'''
 
-	raw_maps = []
-	for name in raw_maps_names:
-		print 'Loading maps from '+name
-		raw_maps.append(pickle.load(open(pickles+name,'r')))
-	msets = []
-	for name in pickle_structure_names:
-		print 'Loading structures from '+name
-		msets.append(pickle.load(open(pickles+name,'r')))
+#---PARAMETERS
+#-------------------------------------------------------------------------------------------------------------
+
+#---Pickles containing kC0 plots from script-postproc-stress.py
+raw_maps_names = [
+	'pkl.stressdecomp.membrane-v614.part0002.pkl',
+	'pkl.stressdecomp.membrane-v612.part0003.pkl',
+	'pkl.stressdecomp.membrane-v550.part0008.pkl']
+pickle_structure_names = [
+	'pkl.structures.membrane-v614-stress.md.part0002.pkl',
+	'pkl.structures.membrane-v612-stress.md.part0003.pkl',
+	'pkl.structures.membrane-v550-stress.md.part0008.shifted.pkl']
+
+#---MAIN
+#-------------------------------------------------------------------------------------------------------------
+
+raw_maps = []
+for name in raw_maps_names:
+	print 'Loading maps from '+name
+	raw_maps.append(pickle.load(open(pickles+name,'r')))
+msets = []
+for name in pickle_structure_names:
+	print 'Loading structures from '+name
+	msets.append(pickle.load(open(pickles+name,'r')))
 
 #---plots
 plot_maps = 0
@@ -63,16 +63,21 @@ if plot_plus_minus_basic:
 	plot_plus_minus_stacked = 1
 	plot_plus_minus_both = 1
 #---plot maps, histograms, and videos for +/- curvature domains (advanced version)
-plot_plus_minus = 1
+plot_plus_minus = 0
 if plot_plus_minus:
 	plot_advanced_hist0 = 0
 	plot_advanced_hist = 1
+plot_plus_minus_video = 1
+if plot_plus_minus_video:
+	render_video_full = 1
+	render_video_full_smooth = 1
+	render_video_full_width = 5
 
 #---plotting parameters
-save_plots = True
+save_plots = 1
 if save_plots:
-	show_plots = False
-show_titles = False
+	show_plots = 0
+show_titles = 0
 
 #---file names
 plot_maps_file = 'stress-framewise-comparison.png'
@@ -82,6 +87,7 @@ plot_plus_minus_stacked_file = 'stress-framewise-histograms-plus-minus.png'
 plot_plus_minus_both_file = 'stress-framewise-histograms-plus-minus.png'
 plot_advanced_maps_file = 'stress-framewise-maps.png'
 plot_advanced_hist_file = 'stress-framewise-histograms.png'
+plot_video_filebase = 'stress-framewise-plusminus-maps'
 
 #---plot maps, histograms, and videos for +/- curvature domains (advanced version)
 if plot_plus_minus:	
@@ -216,6 +222,109 @@ if plot_plus_minus:
 		if save_plots:
 			plt.savefig(pickles+plot_advanced_hist_file,dpi=500,bbox_inches='tight')
 		plt.cla()
+		
+#---plot maps, histograms, and videos for +/- curvature domains (advanced version)
+if plot_plus_minus_video:	
+	nprots_list = [4,2,0]
+	prot_centers = []
+	for m in range(len(msets)):
+		mset = msets[m]
+		nprots = nprots_list[m]
+		if nprots > 0:
+			protlen = int(shape(mset.protein[0])[0]/nprots)
+			protlenshow = protlen
+			prot_centers.append(mean([mean(mset.protein,axis=0)[i*protlen:i*protlen+protlenshow]
+				for i in range(nprots)],axis=1))
+		else:
+			prot_centers.append(None)
+	vecs = mean(msets[0].vecs,axis=0)
+	span,nnum,numgridpts,distance_factor = [4,32,64,1]
+	result_stack = [[mean([i[0] for i in raw_maps[j]],axis=0),prot_centers[j]] for j in range(len(raw_maps))]
+	avg = [[],[],[]]
+	clrs = brewer2mpl.get_map('Paired', 'qualitative', 8).mpl_colors
+	control_mean = mean([raw_maps[2][i][0] for i in range(len(raw_maps[2]))])+0.00048502604166666415
+	doms_sizes_poz = [[],[],[]]
+	doms_sizes_neg = [[],[],[]]
+	for k in range(3):
+		print 'system = '+str(k)
+		for i in range(len(raw_maps[k])):
+			print 'frame = '+str(i)
+			heatmap = raw_maps[k][i][0];
+			tmp=ndimage.label(heatmap)
+			#---use this and it looks like control is smoother on histogram
+			#im = ndimage.gaussian_filter(heatmap, sigma=256/(4.*40))
+			#---use this and it looks opposite
+			#im = ndimage.gaussian_filter(heatmap, sigma=256/(4.*50))
+			#---another filtering attempt
+			im = ndimage.gaussian_filter(heatmap, sigma=256/(4.*20),mode='wrap')
+			maskp = im > im.mean()
+			maskp = im > control_mean
+			doms_sizes_poz[k].append(sum(im > im.mean())/4096.)
+			doms_sizes_neg[k].append(sum(im < im.mean())/4096.)
+			avg[k].append(maskp)
+	avgmeans_stack = [[avg[i][j]-0.5 for i in range(3)] for j in range(len(avg[0]))]
+	print 'precomputing maps ...'
+	if render_video_full:
+		precomp_maps = [[raw_maps[k][fr][0] for k in range(3)] for fr in range(len(avg[0]))]
+		extremum = 0.5
+	else:
+		precomp_maps = avgmeans_stack[fr]
+		extremum = 0.5
+	if render_video_full_smooth:
+		precomp_maps = [[ndimage.gaussian_filter(precomp_maps[fr][i],
+			sigma=256/(4.*render_video_full_width)) for i in range(3)] for fr in range(len(avg[0]))]
+		extremum = np.max(np.abs(precomp_maps))
+		print 'extremum = '+str(extremum)
+	for fr in range(len(avg[0])):
+		print 'rendering frame '+str(fr)
+		avgmeans = precomp_maps[fr]
+		fig = plt.figure()
+		numgridpts = 64
+		ax0 = plt.subplot2grid((1,3), (0,0))
+		ax0.set_title(r'$\textbf{{ENTH}\ensuremath{\times}4}$')
+		nprots = 4
+		if nprots > 0:
+			protlen = int(shape(msets[0].protein[0])[0]/nprots)
+			protein_centers = mean([msets[0].protein[fr][i*protlen:i*protlen+protlenshow] 
+				for i in range(nprots)],axis=1)
+			for pt in protein_centers:
+				circ = plt.Circle((int(round(pt[0]/vecs[0]*numgridpts)),
+					int(round(pt[1]/vecs[0]*numgridpts))),radius=1.5/64*numgridpts,color='k',
+					alpha=1.0)
+				ax0.add_patch(circ)
+		ax0.imshow(array(avgmeans[0]).T,interpolation='nearest',origin='LowerLeft',
+			vmax=extremum,vmin=-extremum,
+			cmap='bwr',extent=[0,numgridpts,0,numgridpts])
+		ax1 = plt.subplot2grid((1,3), (0,1))
+		ax1.set_title(r'$\textbf{{ENTH}\ensuremath{\times}1}$')
+		protein_centers = result_stack[1][1]
+		nprots = 1
+		if nprots > 0:
+			protlen = int(shape(msets[1].protein[0])[0]/nprots)
+			protein_centers = mean([msets[1].protein[fr][i*protlen:i*protlen+protlenshow] 
+				for i in range(nprots)],axis=1)
+			for pt in protein_centers:
+				circ = plt.Circle((int(round(pt[0]/vecs[0]*numgridpts)),
+					int(round(pt[1]/vecs[0]*numgridpts))),radius=1.5/64*numgridpts,color='k',
+					alpha=1.0)
+				ax1.add_patch(circ)
+		ax1.imshow(array(avgmeans[1]).T,interpolation='nearest',origin='LowerLeft',
+			vmax=extremum,vmin=-extremum,
+			cmap='bwr',extent=[0,numgridpts,0,numgridpts])
+		ax2 = plt.subplot2grid((1,3), (0,2))
+		ax2.set_title(r'$\textbf{{control}}$')
+		img = ax2.imshow(array(avgmeans[2]).T,interpolation='nearest',origin='LowerLeft',
+			vmax=extremum,vmin=-extremum,
+			cmap='bwr',extent=[0,numgridpts,0,numgridpts])
+		plt.tight_layout() 
+		plt.savefig(pickles+plot_video_filebase+'.fr.'+str('%04d'%fr)+'.png',dpi=500,bbox_inches='tight')
+		plt.cla()
+		plt.close()
+	print 'done rendering. run this:'
+	print r"ffmpeg -i stress-framewise-plusminus-maps.fr.%04d.png -vcodec mpeg1video -qscale 0  ",
+	print r"-filter:v 'setpts=2.0*PTS' ./untitled.mpg"
+	subprocess.call(['ffmpeg','-i',pickles+'/'+plot_video_filebase+'.fr.%04d.png','-vcodec','mpeg1video','-qscale','0','-filter:v','setpts=2.0*PTS',pickles+'/'+plot_video_filebase+'.mpeg'])
+	for fr in range(len(avg[0])): subprocess.call(['rm',pickles+'/'+plot_video_filebase+'.fr.'+str('%04d'%fr)+'.png'])
 
 #---Plot the domain size for connected positive and negative curvature domains (version 1)
 if plot_connected_domains_basic:
@@ -253,6 +362,7 @@ if plot_connected_domains_basic:
 	if show_plots:
 		plt.show()
 	plt.cla()
+	plt.close()
 		
 #---Basic method for computing positive vs negative spontaneous curvature (C0) domain sizes		
 if plot_plus_minus_basic:		
@@ -328,6 +438,7 @@ if plot_plus_minus_basic:
 	if save_plots:
 		plt.savefig(pickles+plot_plus_minus_stacked_file,dpi=500,bbox_inches='tight')
 	plt.cla()
+	plt.close()
 	#---Plots histograms for the total domain size for each system
 	nbins = 10
 	minsize = 1500
@@ -353,6 +464,7 @@ if plot_plus_minus_basic:
 	if save_plots:
 		plt.savefig(pickles+plot_plus_minus_both_file,dpi=500,bbox_inches='tight')
 	plt.cla()
+	plt.close()
 
 #---Plot spontaneous curvature (C0) distribution, averaged across all voxels and all frames (together)
 if plot_hist:
@@ -383,6 +495,7 @@ if plot_hist:
 	if show_plots:
 		plt.show()
 	plt.cla()
+	plt.close()
 
 #---Plot spontaneous curvature (C0) maps, averaged over all frames
 if plot_maps:
@@ -460,4 +573,5 @@ if plot_maps:
 	if show_plots:
 		plt.show()
 	plt.cla()
+	plt.close()
 
