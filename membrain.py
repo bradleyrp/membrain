@@ -758,7 +758,7 @@ class MembraneSet:
 		
 	def makemesh(self,data,vecs,grid,method='best'):
 		'''Approximates an unstructured mesh with a regular one.'''
-		if method == 'best': method = 'bilinear'
+		if method == 'best': method = 'bilinear_cubic'
 		if method == 'bilinear_triangle_interpolation':
 			dat1 = self.wrappbc(data,vecs,mode='grow')
 			dat2 = Delaunay(dat1[:,0:2])
@@ -791,9 +791,21 @@ class MembraneSet:
 				results.append([xypts[i][0],xypts[i][1],height])
 			return array(results)
 		if method == 'bilinear':
+			starttime = time.time()
 			xypts = array([[i,j] for i in linspace(0,vecs[0],grid[0]) for j in linspace(0,vecs[1],grid[1])])
 			interp = scipy.interpolate.LinearNDInterpolator(data[:,0:2],data[:,2],fill_value=0.0)
+			print 'time: ',
+			print 1./60.*(time.time()-starttime)
 			return array([[i[0],i[1],interp(i[0],i[1])] for i in xypts])
+		if method == 'bilinear_cubic':
+			starttime = time.time()
+			xypts = array([[i,j] for i in linspace(0,vecs[0],grid[0]) for j in linspace(0,vecs[1],grid[1])])
+			interp = scipy.interpolate.LinearNDInterpolator(data[:,0:2],data[:,2],fill_value=0.0)
+			bilinear_pts = array([[i[0],i[1],interp(i[0],i[1])] for i in xypts])
+			result = scipy.interpolate.griddata(bilinear_pts[:,0:2],bilinear_pts[:,2],bilinear_pts[:,0:2],
+				method='cubic')
+			print 1./60.*(time.time()-starttime)
+			return array([[bilinear_pts[i,0],bilinear_pts[i,1],result[i]] for i in range(len(result))])
 		elif method == 'rbf':
 			subj = self.wrappbc(data,vecs,mode='grow')
 			print '---Generating radial basis function object.'
