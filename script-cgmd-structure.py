@@ -36,7 +36,9 @@ analysis_descriptors = [
 	(['membrane-v550-stress'],director_cgmd,selector_cgmd,None,slice(1,2)),
 	(['membrane-v614-stress'],director_cgmd,selector_cgmd,cgmd_protein,slice(-1,None)),
 	(['membrane-v612-stress'],director_cgmd,selector_cgmd,cgmd_protein,slice(-1,None)),
-	(['membrane-v550-stress'],director_cgmd,selector_cgmd,None,slice(-1,None))]
+	(['membrane-v550-stress'],director_cgmd,selector_cgmd,None,slice(-1,None)),
+	(['membrane-v594'],director_cgmd,selector_cgmd,None,slice(-1,None)),
+	(['membrane-v595'],director_cgmd,selector_cgmd,None,slice(-1,None))]
 	
 #---Functions
 #-------------------------------------------------------------------------------------------------------------

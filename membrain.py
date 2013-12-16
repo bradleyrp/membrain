@@ -15,6 +15,7 @@ import pickle
 import collections
 import time
 import random
+import subprocess
 
 #---Set up visualization
 os.environ['ETS_TOOLKIT'] = 'qt4'

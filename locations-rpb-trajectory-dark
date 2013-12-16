@@ -51,15 +51,13 @@ name=membrane-v596
 struct=./membrane-v596-exo70-monomer/relevant.gro
 ./membrane-v596-exo70-monomer/relevant.xtc
 
-#---name, location may be outdated
 name=membrane-v595
-struct=./membrane-v595-exo70-parallel/relevant.gro
-./membrane-v595-exo70-parallel/relevant.xtc
+struct=./membrane-v595-exo70-parallel/s0-trajectory/md.part0000.gro
+./membrane-v595-exo70-parallel/s0-trajectory/md.part0000.xtc
 
-#---name, location may be outdated
 name=membrane-v594
-struct=./membrane-v594-exo70-antiparallel/relevant.gro
-./membrane-v594-exo70-antiparallel/relevant.xtc
+struct=./membrane-v594-exo70-antiparallel/s0-trajectory/md.part0000.gro
+./membrane-v594-exo70-antiparallel/s0-trajectory/md.part0000.xtc
 
 #---name, location may be outdated
 #---Note: if proteins in your system, run "editconf -resnr 1" to remove residue numbering redundancies

@@ -8,7 +8,7 @@ from membrainrunner import *
 #---Analysis parameters
 skip = 1
 framecount = 5
-location = 'light'
+location = ''
 execfile('locations.py')
 
 #---Parameters
