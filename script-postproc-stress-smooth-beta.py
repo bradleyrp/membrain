@@ -52,7 +52,7 @@ scan_numgridpts = [64]
 scan_distance_factor = [1]
 
 #---Analysis plan
-analysis_plan = slice(-1,None)
+analysis_plan = slice(-3,-2)
 analysis_descriptors = [
 	['v614.part0002','pkl.structures.membrane-v614-stress.md.part0002.rerun.pkl',
 		'localpressure.v614.part0002.3Dpp.dat',4],
@@ -67,27 +67,39 @@ analysis_descriptors = [
 	['v612.part0003','pkl.structures.membrane-v614-stress.md.part0002.pkl',
 		'localpressure.v614.part0002.3Dpp.dat',4],
 	['v550.part0008','pkl.structures.membrane-v550-stress.md.part0008.shifted.pkl',
-		'localpressure.v550.part0008.3Dpp.dat',0]]
+		'localpressure.v550.part0008.3Dpp.dat',0],
+	['v596.part0000','pkl.structures.membrane-v596.md.part0000.pkl',
+		'localpressure.v596.part0000.3Dpp.dat',0],
+	['v595.part0000','pkl.structures.membrane-v595.md.part0000.pkl',
+                'localpressure.v595.part0000.3Dpp.dat',0],
+	['v594.part0000','pkl.structures.membrane-v594.md.part0000.pkl',
+                'localpressure.v594.part0000.3Dpp.dat',0]]
 		
+#---Parameter combinations
 tests = [[3,32,16,1],
 	[3,32,64,1],
 	[3,32,20,1],
 	[3,4,20,1]]
 tests = [tests[-2]]
-#---Selected parameters which look good
 tests = [
 	[3,2,16,1],
 	[4,32,64,1],
 	[3,4,64,1],
 	[3,32,64,1],
 	[3,64,16,1]]
-#datdir3dpp = 'localpressure.v614.framewise'
-datdir3dpp = 'localpressure.v550.framewise'
-#datdir3dpp = 'localpressure.v612.framewise'
+
+#---Framewise stress map locations
+dd3pplist = ['localpressure.v614.framewise',
+	'localpressure.v550.framewise',
+	'localpressure.v612.framewise',
+	'/store-delta/compbio/membrane-v596-exo70-monomer/a1-stress-1.0-framewise/results',
+	'/store-delta/compbio/membrane-v595-exo70-parallel/a1-stress-1.0-framewise/results',
+	'/store-delta/compbio/membrane-v594-exo70-antiparallel/a1-stress-1.0-framewise/results']
+datdir3dpp = dd3pplist[-3]
 
 #---Parameters, sweep on the best one from above
 scan_span = [4]
-#scan_nnum = [2,4,5,8,10,12,16,18,20,24,28,32,40,50,64,128,196,250,400]
+scan_nnum = [2,4,5,8,10,12,16,18,20,24,28,32,40,50,64,128,196,250,400]
 scan_nnum = [2,4,16,32,64,128]
 scan_numgridpts = [64]
 scan_distance_factor = [1]
@@ -105,9 +117,11 @@ batch_comparison = False
 batch_parameter_sweep_framewise = True
 framewise_out_name = 'pkl.stressdecomp.membrane-v614.part0002.pkl'
 framewise_out_name = 'pkl.stressdecomp.membrane-v550.part0008.pkl'
+framewise_out_name = 'pkl.stressdecomp.membrane-v594.part0008.pkl'
 framewise_test = [4,32,64,1]
-framewise_part = 8
+framewise_part = 0
 
+#---Extra imports
 mpl.rc('text.latex', preamble='\usepackage{sfmath}')
 mpl.rcParams.update({'font.style':'sans-serif'})
 mpl.rcParams.update({'font.size': 16})
@@ -407,7 +421,7 @@ if batch_parameter_sweep:
 		fp.close()
 	print 'Job complete and it took '+str(1./60*(time.time()-starttime))+' minutes.'
 
-#---Run a large parameter sweep of each system individually
+#---Perform the framewise analysis and dump to a datfile for reprocessing.
 if batch_parameter_sweep_framewise:
 	starttime = time.time()
 	print 'Starting analysis job.'
@@ -419,8 +433,10 @@ if batch_parameter_sweep_framewise:
 	res_collection = []
 	for frame in range(len(mset.surf)):
 		print 'running frame = '+str(frame)
+		#---Previously stored the frames in the pickle directory - now found with the simulations
 		file3dpp = pickles+'/'+datdir3dpp+'/'+'md.part'+str('%04d'%framewise_part)+'.fr'+str('%04d'%frame)+\
 			'.lp.dat3d'
+		file3dpp = datdir3dpp+'/'+'md.part'+str('%04d'%framewise_part)+'.fr'+str('%04d'%frame)+'.lp.dat3d'
 		dat3dpp = array([[float(i) for i in line.strip().split()] for line in open(file3dpp)])
 		griddims = [int(max(dat3dpp[:,i])) for i in range(3)]
 		vecs = mean(mset.vecs,axis=0)

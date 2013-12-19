@@ -40,6 +40,16 @@ pickle_structure_names = [
 	'pkl.structures.membrane-v612-stress.md.part0003.pkl',
 	'pkl.structures.membrane-v550-stress.md.part0008.shifted.pkl']
 
+#---Pickles containing kC0 plots from script-postproc-stress.py
+raw_maps_names = [
+        'pkl.stressdecomp.membrane-v614.part0002.pkl',
+        'pkl.stressdecomp.membrane-v595.part0000.pkl',
+        'pkl.stressdecomp.membrane-v550.part0008.pkl']
+pickle_structure_names = [
+        'pkl.structures.membrane-v614-stress.md.part0002.pkl',
+        'pkl.structures.membrane-v596.md.part0000.pkl',
+        'pkl.structures.membrane-v550-stress.md.part0008.shifted.pkl']
+
 #---MAIN
 #-------------------------------------------------------------------------------------------------------------
 
@@ -63,11 +73,11 @@ if plot_plus_minus_basic:
 	plot_plus_minus_stacked = 1
 	plot_plus_minus_both = 1
 #---plot maps, histograms, and videos for +/- curvature domains (advanced version)
-plot_plus_minus = 0
+plot_plus_minus = 1
 if plot_plus_minus:
 	plot_advanced_hist0 = 0
 	plot_advanced_hist = 1
-plot_plus_minus_video = 1
+plot_plus_minus_video = 0
 if plot_plus_minus_video:
 	render_video_full = 1
 	render_video_full_smooth = 1
@@ -91,7 +101,7 @@ plot_video_filebase = 'stress-framewise-plusminus-maps'
 
 #---plot maps, histograms, and videos for +/- curvature domains (advanced version)
 if plot_plus_minus:	
-	nprots_list = [4,2,0]
+	nprots_list = [4,0,0]
 	prot_centers = []
 	for m in range(len(msets)):
 		mset = msets[m]
@@ -225,7 +235,7 @@ if plot_plus_minus:
 		
 #---plot maps, histograms, and videos for +/- curvature domains (advanced version)
 if plot_plus_minus_video:	
-	nprots_list = [4,2,0]
+	nprots_list = [4,0,0]
 	prot_centers = []
 	for m in range(len(msets)):
 		mset = msets[m]
@@ -298,7 +308,7 @@ if plot_plus_minus_video:
 		ax1 = plt.subplot2grid((1,3), (0,1))
 		ax1.set_title(r'$\textbf{{ENTH}\ensuremath{\times}1}$')
 		protein_centers = result_stack[1][1]
-		nprots = 1
+		nprots = 0
 		if nprots > 0:
 			protlen = int(shape(msets[1].protein[0])[0]/nprots)
 			protein_centers = mean([msets[1].protein[fr][i*protlen:i*protlen+protlenshow] 
@@ -499,7 +509,7 @@ if plot_hist:
 
 #---Plot spontaneous curvature (C0) maps, averaged over all frames
 if plot_maps:
-	nprots_list = [4,2,0]
+	nprots_list = [4,0,0]
 	prot_centers = []
 	for m in range(len(msets)):
 		mset = msets[m]

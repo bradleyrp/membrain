@@ -48,16 +48,22 @@ struct=./membrane-v597-exo70-2xmutant/relevant.gro
 
 #---name, location may be outdated
 name=membrane-v596
-struct=./membrane-v596-exo70-monomer/relevant.gro
-./membrane-v596-exo70-monomer/relevant.xtc
+struct=./membrane-v596-exo70-monomer/s0-trajectory/md.part0000.gro
+./membrane-v596-exo70-monomer/s0-trajectory/md.part0000.xtc
 
 name=membrane-v595
 struct=./membrane-v595-exo70-parallel/s0-trajectory/md.part0000.gro
 ./membrane-v595-exo70-parallel/s0-trajectory/md.part0000.xtc
 
-name=membrane-v594
+name=membrane-v594-relevant
 struct=./membrane-v594-exo70-antiparallel/s0-trajectory/md.part0000.gro
 ./membrane-v594-exo70-antiparallel/s0-trajectory/md.part0000.xtc
+./membrane-v594-exo70-antiparallel/s1-trajectory-full/md.10to50ns.xtc
+name=membrane-v594
+struct=./membrane-v594-exo70-antiparallel/s1-trajectory-full/system-input.gro
+./membrane-v594-exo70-antiparallel/s1-trajectory-full/md.10to50ns.xtc
+
+
 
 #---name, location may be outdated
 #---Note: if proteins in your system, run "editconf -resnr 1" to remove residue numbering redundancies
