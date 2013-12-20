@@ -47,10 +47,59 @@ mset.identify_monolayers(director,startframeno=0)
 #mset.midplaner(selector,skip=skip,rounder=rounder,framecount=framecount,protein_selection=protein_select,end=150)
 
 selector = selector_cgmd
-self = mset
+self = mset	
 
-topxyz = array([mean(self.universe.residues[i].selectAtoms(selector).coordinates(),axis=0) 
-	for i in self.monolayer_residues[0]])
-botxyz = array([mean(self.universe.residues[i].selectAtoms(selector).coordinates(),axis=0) 
-	for i in self.monolayer_residues[1]])
+
+def analyze_tilt(testno,traj):
+	''' fdfdsa ''' 
+	mset = MembraneSet()
+	#---Load the trajectory
+	gro = structures[systems.index(tests[testno])]
+	basename = traj.split('/')[-1][:-4]
+	sel_surfacer = sel_cgmd_surfacer
+	print 'Accessing '+basename+'.'
+	mset.load_trajectory((basedir+'/'+gro,basedir+'/'+traj),
+		resolution='cgmd')
+	#---Average structure calculation
+	mset.identify_monolayers(director,startframeno=0)
+
+
+	'''Compute the average structure and fluctuations of a CGMD bilayer.'''
+	mset = MembraneSet()
+	#---Load the trajectory
+	gro = structures[systems.index(tests[testno])]
+	basename = traj.split('/')[-1][:-4]
+	sel_surfacer = sel_cgmd_surfacer
+	print 'Accessing '+basename+'.'
+	mset.load_trajectory((basedir+'/'+gro,basedir+'/'+traj),
+		resolution='cgmd')
+	#---Average structure calculation
+	mset.identify_monolayers(director,startframeno=0)
+	if protein_select == None:
+		mset.midplaner(selector,skip=skip,rounder=rounder,framecount=framecount)
+	else:
+		mset.midplaner(selector,skip=skip,rounder=rounder,framecount=framecount,
+			protein_selection=protein_select)
+	mset.calculate_undulation_spectrum(removeavg=0,redundant=0)
+	mset.analyze_undulations(redundant=0)
+	#---Save the data
+	pickledump(mset,'pkl.structures.'+tests[testno]+'.'+basename+'.pkl',directory=pickles)
+	return mset
+
+#---MAIN
+#-------------------------------------------------------------------------------------------------------------
+
+starttime = time.time()
+print 'Starting analysis job.'
+for ad in analysis_descriptors[analysis_plan]:
+	#---Load global variables with calculation specifications used in analysis functions above.
+	(tests,director,selector,protein_select,trajno) = ad
+	for t in range(len(tests)):
+		print 'Running calculation: bilayer structure and undulations '+tests[t]+'.'
+		for traj in trajectories[systems.index(tests[t])][trajno]:
+			#---Run the analysis function on the desired system
+			mset = analyze_structure(t,traj)
+			if erase_when_finished:
+				del mset
+print 'Job complete and it took '+str(1./60*(time.time()-starttime))+' minutes.'
 

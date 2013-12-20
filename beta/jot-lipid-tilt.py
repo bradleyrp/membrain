@@ -2,15 +2,16 @@
 
 from mayavi import mlab
 
+'''
 def normalize_v3(arr):
-    ''' Normalize a numpy array of 3 component vectors shape=(n,3) '''
+    #Normalize a numpy array of 3 component vectors shape=(n,3)
     lens = numpy.sqrt( arr[:,0]**2 + arr[:,1]**2 + arr[:,2]**2 )
     arr[:,0] /= lens
     arr[:,1] /= lens
     arr[:,2] /= lens                
     return arr
-
-if 1:
+'''
+if 0:
 	vecs = mset.vec(0)
 	topxyz_wrapped = self.wrappbc(topxyz,vecs,mode='grow')
 	dtri = scipy.spatial.Delaunay(topxyz_wrapped[:,0:2])
@@ -67,7 +68,7 @@ if 0:
 	topxyz_wrapped = self.wrappbc(topxyz,vecs,mode='grow')
 	dtri = scipy.spatial.Delaunay(topxyz_wrapped[:,0:2])
 	find_neighbors = lambda x,triang: list(set(indx for simplex in triang.simplices if x in simplex for indx in simplex if indx != x))
-
+'''
 #unit normal vector of plane defined by points a, b, and c
 def unit_normal(a, b, c):
     x = np.linalg.det([[1,a[1],a[2]],
@@ -97,7 +98,7 @@ def poly_area(poly):
         total[2] += prod[2]
     result = np.dot(total, unit_normal(poly[0], poly[1], poly[2]))
     return abs(result/2)
-
+'''
 if 0:
 	# unpacked the find_neighbors and then tried it on a single point to make sure it works
 	#meshplot(array([topxyz_wrapped[k] for k in [i for j in [simplex for simplex in dtri.simplices if x in simplex] for i in j]]))
@@ -140,7 +141,7 @@ if 0:
 	meshplot(array([topxyz_wrapped[k] for k in find_neighbors(0,dtri)+[0]]))
 	meshpoints(5.*array(vecnorm(tmp5))+topxyz_wrapped[0])
 	#meshplot(topxyz_wrapped,show='wire')
-	
+'''	
 def surface_norms_slooooooooooow(dtri):
 	ans = []
 	for ind in range(len(topxyz)):
@@ -152,7 +153,7 @@ def surface_norms_slooooooooooow(dtri):
 		tmp5 = np.sum(tmp4,axis=0)
 		ans.append(5.*array(vecnorm(tmp5))+topxyz_wrapped[ind])
 	return ans
-	
+'''	
 #def surface_norms():
 	# pre-calculate triangle areas
 	# pre-compute all triangle normals
@@ -171,10 +172,10 @@ if 0:
 	#simp_areas = [poly_area([pts[j] for j in i]) for i in dtri.simplices]
 	
 	# rotating through vertices in a triangle
-	ttt = [[(i-j)%3 for i in range(3)] for j in range(3)]
+	ttt = [[(i+j)%3 for i in range(3)] for j in range(3)]
 	print 'calculating triangle face normals'
 	#trifaces = [[np.cross(pts[j[i[0]]],pts[j[i[1]]]) for i in ttt] for j in dtri.simplices]
-	trifaces = [[np.cross(pts[j[i[1]]]-j[i[0]],pts[j[i[2]]]-j[i[0]]) for i in ttt] for j in dtri.simplices]
+	trifaces = [[np.cross(pts[j[i[1]]]-pts[j[i[0]]],pts[j[i[2]]]-pts[j[i[0]]]) for i in ttt] for j in dtri.simplices]
 	#needs fixed
 	print 'calculating simplex areas'
 	simp_areas = [abs(1./2*np.dot(vecnorm(i[0]),np.sum(i,axis=0))) for i in trifaces]
@@ -185,14 +186,14 @@ if 0:
 	print 'summing'
 	for s in range(len(dtri.simplices)):
 		for p in range(3):
-			ptsnorms[dtri.simplices[s][p]] += array(vecnorm(trifaces[s][p]))*([-1,-1,-1] if vecnorm(trifaces[s][p])[2] > 0. else [1,1,1])*simp_areas[s]
+			ptsnorms[dtri.simplices[s][p]] += array(vecnorm(trifaces[s][p]))*([1,1,1] if vecnorm(trifaces[s][p])[2] > 0. else [-1,-1,-1])*simp_areas[s]
 			#ptsareas[dtri.simplices[s][p]] += simp_areas[s]
 	ptsnorms = [2*array(vecnorm(i)) for i in ptsnorms]
 	print 1./60.*(time.time()-starttime)
 	meshpoints(array(ptsnorms)+array(pts))
 	meshplot(topxyz_wrapped)	
 
-if 1:
+if 0:
 	# test a single point
 	ind = 1
 	exneisimps = find_neighbors(ind,dtri)+[ind]
@@ -201,8 +202,71 @@ if 1:
 	
 	whichsimps = [i for i in range(len(dtri.simplices)) if ind in dtri.simplices[i]]
 	j = dtri.simplices[whichsimps[0]]
-	tmp = [vecnorm(np.cross(pts[j[i[1]]]-j[i[0]],pts[j[i[2]]]-j[i[0]])) for i in ttt]
+	tmp = [array(vecnorm(np.cross(pts[j[i[1]]]-pts[j[i[0]]],pts[j[i[2]]]-pts[j[i[0]]]))) for i in ttt]
 	
-	meshplot(array([topxyz_wrapped[k] for k in find_neighbors(ind,dtri)+[ind]]))
+	meshplot(array([topxyz_wrapped[k] for k in find_neighbors(ind,dtri)+[ind]]),show='wire')
 	#meshpoints([pts[i]+ptsnorms[(-i+2)%3] for i in list(dtri.simplices[whichsimps[0]])])
-	meshpoints([pts[dtri.simplices[whichsimps[0]][i]+tmp[i] for i in range(3)])
+	#meshpoints([pts[dtri.simplices[whichsimps[0]][i]]+tmp[i] for i in range(3)],color=(0,0,0))
+	#meshpoints(pts[dtri.simplices[whichsimps[0]][2]]+tmp[1],color=(1,1,1))
+	sometri = [pts[dtri.simplices[whichsimps[0]][i]] for i in range(3)]
+	meshplot(sometri)
+	meshpoints([array(vecnorm(np.cross(sometri[1]-sometri[0],sometri[2]-sometri[0]))+sometri[0]),
+		array(vecnorm(np.cross(sometri[2]-sometri[1],sometri[0]-sometri[1]))+sometri[1]),
+		array(vecnorm(np.cross(sometri[0]-sometri[2],sometri[1]-sometri[2]))+sometri[2])],color=(1,1,1))
+	reorder = [0,1,2]
+	meshpoints([tmp[i]+pts[j[reorder[i]]] for i in range(3)],color=(0,0,0))
+	#meshpoints([tmp[i]+sometri[i] for i in range(3)],color=(0,0,0))
+	# checking 90 degrees
+	'''
+	ex1 = array(vecnorm(np.cross(sometri[1]-sometri[0],sometri[2]-sometri[0]))+sometri[0])
+	ex1 = np.cross(sometri[1]-sometri[0],sometri[2]-sometri[0])
+	ex2 = sometri[1]-sometri[0]
+	ex1 = sometri[2]-sometri[1]
+	print np.arccos(np.dot(ex1,ex2)/np.linalg.norm(ex1)/np.linalg.norm(ex2))
+	meshpoints(sometri[0]+(ex2))
+	meshpoints(sometri[0]+(ex1),color=(1,1,1))
+	meshpoints(sometri)
+	'''
+
+#---single lipid tilt and density frame
+if 0:
+	starttime = time.time()
+	vecnorm = lambda vec: [i/np.linalg.norm(vec) for i in vec]
+	find_neighbors = lambda x,triang: list(set(indx for simplex in triang.simplices 
+		if x in simplex for indx in simplex if indx !=x))
+	print 'getting points'
+	topxyz = array([mean(self.universe.residues[i].selectAtoms(selector).coordinates(),axis=0) 
+		for i in self.monolayer_residues[0]])
+	#botxyz = array([mean(self.universe.residues[i].selectAtoms(selector).coordinates(),axis=0) 
+	#	for i in self.monolayer_residues[1]])
+	toptailxyz = array([mean(self.universe.residues[i].selectAtoms(''.join([i+' or ' for i in director[1:-1]]+[director[-1]])).coordinates(),axis=0) 
+		for i in self.monolayer_residues[0]])
+	vecs = mset.vec(0)
+	topxyz_wrapped = self.wrappbc(topxyz,vecs,mode='grow')
+	dtri = scipy.spatial.Delaunay(topxyz_wrapped[:,0:2])
+	pts = topxyz_wrapped
+	point_permute = [[(i+j)%3 for i in range(3)] for j in range(3)]
+	print 'calculating triangle face normals'
+	trifaces = [[np.cross(pts[j[i[1]]]-pts[j[i[0]]],pts[j[i[2]]]-pts[j[i[0]]]) 
+		for i in point_permute] for j in dtri.simplices]
+	print 'calculating simplex areas'
+	simp_areas = [abs(1./2*np.dot(vecnorm(i[0]),np.sum(i,axis=0))) for i in trifaces]
+	print 1./60.*(time.time()-starttime)	
+	ptsareas = np.zeros(len(dtri.points))
+	ptsnorms = np.zeros([len(dtri.points),3])
+	print 'summing'
+	for s in range(len(dtri.simplices)):
+		for p in range(3):
+			ptsnorms[dtri.simplices[s][p]] += array(vecnorm(trifaces[s][p]))*([1,1,1] 
+				if vecnorm(trifaces[s][p])[2] > 0. else [-1,-1,-1])*simp_areas[s]
+	ptsnorms = [array(vecnorm(i)) for i in ptsnorms]
+if 1:
+	print 'calculating angle'
+	vecslipids = [toptailxyz[i]-topxyz[i] for i in range(len(topxyz))]
+	#print 1./60.*(time.time()-starttime)
+	#meshpoints(array(ptsnorms)+array(pts))
+	#meshplot(topxyz_wrapped)
+	angles = [1./pi*arccos(np.dot(vecslipids[i],ptsnorms[i])/np.linalg.norm(vecslipids[i])/np.linalg.norm(ptsnorms[i])) for i in range(len(topxyz))]
+	plotthat = [[topxyz[i][0],topxyz[i][1],50*angles[i]] for i in range(len(topxyz))]
+	meshplot(plotthat)
+
