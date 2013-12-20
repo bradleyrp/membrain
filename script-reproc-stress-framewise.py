@@ -2,7 +2,7 @@
 
 from membrainrunner import *
 
-location = 'light'
+location = ''
 execfile('locations.py')
 
 execfile('plotter.py')
