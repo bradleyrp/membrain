@@ -38,6 +38,11 @@ class MembraneData:
 		elif self.calctype == 'dimple':
 			self.struct = {'frame':0,'type':1}
 			self.struct_opts = {'type' : {'params':0,'maxhs':1,'maxhxys':2,'target_zones':3,'frameno':4}}
+		elif self.calctype == 'tilt':
+			self.struct = {'frame':0,'type':1,'monolayer':2,'lipid':3}
+			self.struct_opts = {'type' : {'angle':0,'area':1}}
+		elif self.calctype == 'lipid_positions':
+			self.struct = {'frame':0,'monolayer':2,'lipid':3}
 		if label != None:
 			self.description = label
 		else:

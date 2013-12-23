@@ -18,3 +18,13 @@ RPB did major overhaul of stress-smoother. Still in-progress.
 2013.11.29.2000
 Major overhauls to the pressure tensor code to handle batch studies of the maps with parameter sweeps, etc.
 
+2013.12.20.0900
+Summary of current stress tensor workflow
+	It's necessary to explain these codes because they have lots of bells and whistles
+	This all needs cleaned up and better commented.
+	Right now, you have to run script-cgmd-structures.py and create a structure pickle.
+	Simultaneously run the framewise pressure analysis.
+	Third step is to run script-prostproc-stress-smooth-beta.py
+	In this file you have to specify the framewise out name, the location of the stress tensor files, and the analysis descriptor
+	When that's done, use stressdecomp and structures to run the reproc script
+	This needs cleaned up and the pickles need to be organized properly

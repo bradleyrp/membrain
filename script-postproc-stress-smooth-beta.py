@@ -52,7 +52,7 @@ scan_numgridpts = [64]
 scan_distance_factor = [1]
 
 #---Analysis plan
-analysis_plan = slice(-3,-2)
+analysis_plan = slice(-1,None)
 analysis_descriptors = [
 	['v614.part0002','pkl.structures.membrane-v614-stress.md.part0002.rerun.pkl',
 		'localpressure.v614.part0002.3Dpp.dat',4],
@@ -73,7 +73,15 @@ analysis_descriptors = [
 	['v595.part0000','pkl.structures.membrane-v595.md.part0000.pkl',
                 'localpressure.v595.part0000.3Dpp.dat',0],
 	['v594.part0000','pkl.structures.membrane-v594.md.part0000.pkl',
-                'localpressure.v594.part0000.3Dpp.dat',0]]
+                'localpressure.v594.part0000.3Dpp.dat',0],
+	['v594.part10to50','pkl.structures.membrane-v594.md.part10to50.pkl',
+		'localpressure.v594.part10to50.3Dpp.dat',1],
+	['v596.part10to50','pkl.structures.membrane-v596.md.part10to50.pkl',
+		'localpressure.v594.part10to50.3Dpp.dat',1],
+	['v700.part0006.360000-460000-200','pkl.structures.membrane-v700.md.part0006.360000-460000-200.pkl',
+		'localpressure.v700.part0006.360000-460000-200.3Dpp.dat',1],
+	['v701.part0003.60000-160000-200','pkl.structures.membrane-v701.md.part0003.60000-160000-200.pkl',
+		'localpressure.v701.part0003.60000-160000-200.3Dpp.dat',1]]
 		
 #---Parameter combinations
 tests = [[3,32,16,1],
@@ -94,8 +102,12 @@ dd3pplist = ['localpressure.v614.framewise',
 	'localpressure.v612.framewise',
 	'/store-delta/compbio/membrane-v596-exo70-monomer/a1-stress-1.0-framewise/results',
 	'/store-delta/compbio/membrane-v595-exo70-parallel/a1-stress-1.0-framewise/results',
-	'/store-delta/compbio/membrane-v594-exo70-antiparallel/a1-stress-1.0-framewise/results']
-datdir3dpp = dd3pplist[-3]
+	'/store-delta/compbio/membrane-v594-exo70-antiparallel/a1-stress-1.0-framewise/results',
+	'/store-delta/compbio/membrane-v594-exo70-antiparallel/a2-stress-1.0-framewise/results',
+	'/store-delta/compbio/membrane-v596-exo70-monomer/a2-stress-1.0-framewise/results',
+	'/home/rpb/compbio-alt/membrane-v700-exo70-dilute/a2-stress-1.0-framewise/results',
+	'/home/rpb/compbio-alt/membrane-v701-exo70-anti-dilute/a1-stress-1.0-framewise/results']
+datdir3dpp = dd3pplist[-1]
 
 #---Parameters, sweep on the best one from above
 scan_span = [4]
@@ -117,9 +129,12 @@ batch_comparison = False
 batch_parameter_sweep_framewise = True
 framewise_out_name = 'pkl.stressdecomp.membrane-v614.part0002.pkl'
 framewise_out_name = 'pkl.stressdecomp.membrane-v550.part0008.pkl'
-framewise_out_name = 'pkl.stressdecomp.membrane-v594.part0008.pkl'
+framewise_out_name = 'pkl.stressdecomp.membrane-v594.10to50.pkl'
+framewise_out_name = 'pkl.stressdecomp.membrane-v596.10to50.pkl'
+framewise_out_name = 'pkl.stressdecomp.membrane-v700.md.part0006.360000-460000-200.pkl'
+framewise_out_name = 'pkl.stressdecomp.membrane-v701.md.part0003.60000-160000-200.pkl'
 framewise_test = [4,32,64,1]
-framewise_part = 0
+framewise_part = 3 ############################# don't forget to change this
 
 #---Extra imports
 mpl.rc('text.latex', preamble='\usepackage{sfmath}')

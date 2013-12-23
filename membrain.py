@@ -25,6 +25,7 @@ from MDAnalysis import *
 
 #---Mathematics libraries
 from numpy import *
+import numpy as np
 import scipy.spatial
 import scipy.interpolate
 
@@ -284,9 +285,15 @@ class MembraneSet:
 			self.surf.append(rezip-mean(rezip))
 			
 	def midplaner(self,selector,rounder=4.0,framecount=None,start=None,end=None,
-		skip=None,interp='best',protein_selection=None,residues=None):
+		skip=None,interp='best',protein_selection=None,residues=None,timeslice=None):
 		'''Interpolate the molecular dynamics bilayers.'''
-		if framecount == None:
+		if timeslice != None:
+			start = int((float(timeslice[0])-self.time_start)/timeslice[2])
+			end = int((float(timeslice[1])-self.time_start)/timeslice[2])
+			skip = int(float(timeslice[2])/self.time_dt)
+			print 'Starting midplaner with [start,end,skip] = ['+\
+				str(start)+','+str(end)+','+str(skip)+']'
+		elif framecount == None:
 			if end == None: end = self.nframes
 			if start == None: start = 0
 			if skip == None: skip = 1
@@ -336,6 +343,7 @@ class MembraneSet:
 		lenscale = self.lenscale
 		self.gotoframe(frameno)
 		#---Use all residues
+		#---Note: if you are getting an error below, you probably have redundant residue numbers.
 		if residues == None:
 			topxyz = array([mean(self.universe.residues[i].selectAtoms(selector).coordinates(),axis=0) 
 				for i in self.monolayer_residues[0]])
@@ -588,6 +596,85 @@ class MembraneSet:
 			self.uqrawmean = array([i for j in mean(self.uqcollect,axis=0) for i in j])
 			self.uqrawstd = array([i for j in std(self.uqcollect,axis=0) for i in j])
 			self.qrawmean = array([i for j in mean(self.qcollect,axis=0) for i in j])
+			
+#---Lipid packing and tilt properties
+
+	def tilter(self,selector,director,framecount=None,start=None,end=None,
+		skip=None,protein_selection=None,residues=None):
+		''' !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!! '''
+		if framecount == None:
+			if end == None: end = self.nframes
+			if start == None: start = 0
+			if skip == None: skip = 1
+		else:
+			start = 0
+			end = self.nframes
+			skip = int(float(self.nframes)/framecount)
+			skip = 1 if skip < 1 else skip
+		#self.griddims = [int(round(self.vec(1)[0]/rounder)),int(round(self.vec(1)[1]/rounder))]
+
+		result_data = MembraneData('tilt')
+		result_data_position = MembraneData('lipid_positions')
+		for fr in range(start,end,skip):
+			print 'Calculating surface normals and tilt for frame: '+str(fr)+'.'
+			starttime = time.time()
+			self.gotoframe(fr)
+			#self.calculate_midplane(selector,k,rounder=rounder,interp=interp,residues=residues)
+			#-start mod
+			starttime = time.time()
+			vecnorm = lambda vec: [i/np.linalg.norm(vec) for i in vec]
+			find_neighbors = lambda x,triang: list(set(indx for simplex in triang.simplices 
+				if x in simplex for indx in simplex if indx !=x))
+			print 'getting points'
+			topxyz = array([mean(self.universe.residues[i].selectAtoms(selector).coordinates(),axis=0) 
+				for i in self.monolayer_residues[0]])
+			#botxyz = array([mean(self.universe.residues[i].selectAtoms(selector).coordinates(),axis=0) 
+			#	for i in self.monolayer_residues[1]])
+			toptailxyz = array([mean(self.universe.residues[i].selectAtoms(''.join([i+' or ' 
+				for i in director[1:-1]]+[director[-1]])).coordinates(),axis=0) 
+				for i in self.monolayer_residues[0]])
+			topxyz_wrapped = self.wrappbc(topxyz,self.vec(fr),mode='grow')
+			dtri = scipy.spatial.Delaunay(topxyz_wrapped[:,0:2])
+			pts = topxyz_wrapped
+			point_permute = [[(i+j)%3 for i in range(3)] for j in range(3)]
+			print 'calculating triangle face normals'
+			trifaces = [[np.cross(pts[j[i[1]]]-pts[j[i[0]]],pts[j[i[2]]]-pts[j[i[0]]]) 
+				for i in point_permute] for j in dtri.simplices]
+			print 'calculating simplex areas'
+			simp_areas = [abs(1./2*np.dot(vecnorm(i[0]),np.sum(i,axis=0))) for i in trifaces]
+			print 1./60.*(time.time()-starttime)	
+			ptsareas = np.zeros(len(dtri.points))
+			ptsnorms = np.zeros([len(dtri.points),3])
+			print 'summing'
+			for s in range(len(dtri.simplices)):
+				for p in range(3):
+					ptsnorms[dtri.simplices[s][p]] += array(vecnorm(trifaces[s][p]))*([1,1,1] 
+						if vecnorm(trifaces[s][p])[2] > 0. else [-1,-1,-1])*simp_areas[s]
+				ptsareas[dtri.simplices[s][p]] += simp_areas[s]
+			ptsnorms = [array(vecnorm(i)) for i in ptsnorms]
+			print 'calculating angle'
+			vecslipids = [toptailxyz[i]-topxyz[i] for i in range(len(topxyz))]
+			#print 1./60.*(time.time()-starttime)
+			#meshpoints(array(ptsnorms)+array(pts))
+			#meshplot(topxyz_wrapped)
+			angles = [1./pi*arccos(np.dot(vecslipids[i],ptsnorms[i])/np.linalg.norm(
+				vecslipids[i])/np.linalg.norm(ptsnorms[i])) for i in range(len(topxyz))]
+			#plotthat = [[topxyz[i][0],topxyz[i][1],50*angles[i]] for i in range(len(topxyz))]
+			#meshplot(plotthat)
+			#areas = [1./3.*sum() for i in range(len(topxyz))]
+			[1./pi*arccos(np.dot(vecslipids[i],ptsnorms[i])/np.linalg.norm(
+				vecslipids[i])/np.linalg.norm(ptsnorms[i])) for i in range(len(topxyz))]
+			result_data.add([[[angles],[]],[[ptsareas],[]]],[fr])
+			result_data_position.add([topxyz,[]],[fr])
+			if protein_selection != None:
+				self.protein.append(self.universe.selectAtoms(protein_selection).coordinates())
+				self.protein_index.append(fr)
+		self.store.append(result_data)
+		self.store.append(result_data_position)
+		del result_data
+		del result_data_position
+		#-end mod
+		print 1./60.*(time.time()-starttime)
 
 #---Radial distribution functions
 	

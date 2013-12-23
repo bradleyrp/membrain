@@ -2,17 +2,17 @@
 
 from membrainrunner import *
 
-#---PARAMETERS
+#---Settings
 #-------------------------------------------------------------------------------------------------------------
 
 #---Analysis parameters
 skip = 1
-framecount = 5
-location = ''
+framecount = None
+location = 'dark'
 execfile('locations.py')
 
 #---Parameters
-rounder = 10.0
+rounder = 20.0
 
 #---Selections
 director_cgmd = ['name PO4','name C4A','name C4B']
@@ -22,48 +22,31 @@ cgmd_protein = 'name BB'
 #---Analysis plan
 analysis_plan = slice(-1,None)
 analysis_descriptors = [
-	(['membrane-v614'],director_cgmd,selector_cgmd,cgmd_protein,slice(-1,None))]
-
-#---FUNCTIONS
+	(['membrane-v623-stress-test'],director_cgmd,selector_cgmd,cgmd_protein,slice(-2,None)),
+	(['membrane-v700'],director_cgmd,selector_cgmd,cgmd_protein,slice(-1,None)),
+	(['membrane-v614'],director_cgmd,selector_cgmd,cgmd_protein,slice(0,1)),
+	(['membrane-v599'],director_cgmd,selector_cgmd,cgmd_protein,slice(-1,None)),
+	(['membrane-v612'],director_cgmd,selector_cgmd,cgmd_protein,slice(-1,None)),
+	(['membrane-v598'],director_cgmd,selector_cgmd,cgmd_protein,slice(-1,None)),
+	(['membrane-v595'],director_cgmd,selector_cgmd,cgmd_protein,slice(-1,None)),
+	(['membrane-v596'],director_cgmd,selector_cgmd,cgmd_protein,slice(-1,None)),
+	(['membrane-v032'],['name PO4','name C2A'],selector_cgmd,cgmd_protein,slice(-1,None)),
+	(['membrane-v550'],['name PO4','name C2A'],selector_cgmd,None,slice(-1,None)),
+	(['membrane-v550'],director_cgmd,selector_cgmd,None,slice(1,2)),
+	(['membrane-v550-stress'],director_cgmd,selector_cgmd,None,slice(1,2)),
+	(['membrane-v614-stress'],director_cgmd,selector_cgmd,cgmd_protein,slice(-1,None)),
+	(['membrane-v612-stress'],director_cgmd,selector_cgmd,cgmd_protein,slice(-1,None)),
+	(['membrane-v550-stress'],director_cgmd,selector_cgmd,None,slice(-1,None)),
+	(['membrane-v594'],director_cgmd,selector_cgmd,cgmd_protein,slice(-1,None)),
+	(['membrane-v595'],director_cgmd,selector_cgmd,cgmd_protein,slice(-1,None)),
+	(['membrane-v596'],director_cgmd,selector_cgmd,cgmd_protein,slice(-1,None)),
+	(['membrane-v594'],director_cgmd,selector_cgmd,cgmd_protein,slice(-1,None)),
+	(['membrane-v700'],director_cgmd,selector_cgmd,cgmd_protein,slice(-1,None))]
+	
+#---Functions
 #-------------------------------------------------------------------------------------------------------------
 
-ad = analysis_descriptors[analysis_plan][0]
-(tests,director,selector,protein_select,trajno) = ad
-testno = 0
-t = testno
-traj = trajectories[systems.index(tests[t])][trajno][0]
-
-'''...'''
-mset = MembraneSet()
-#---Load the trajectory
-gro = structures[systems.index(tests[testno])]
-basename = traj.split('/')[-1][:-4]
-sel_surfacer = sel_cgmd_surfacer
-print 'Accessing '+basename+'.'
-mset.load_trajectory((basedir+'/'+gro,basedir+'/'+traj),
-	resolution='cgmd')
-#---Average structure calculation
-mset.identify_monolayers(director,startframeno=0)
-#mset.midplaner(selector,skip=skip,rounder=rounder,framecount=framecount,protein_selection=protein_select,end=150)
-
-selector = selector_cgmd
-self = mset	
-
-
-def analyze_tilt(testno,traj):
-	''' fdfdsa ''' 
-	mset = MembraneSet()
-	#---Load the trajectory
-	gro = structures[systems.index(tests[testno])]
-	basename = traj.split('/')[-1][:-4]
-	sel_surfacer = sel_cgmd_surfacer
-	print 'Accessing '+basename+'.'
-	mset.load_trajectory((basedir+'/'+gro,basedir+'/'+traj),
-		resolution='cgmd')
-	#---Average structure calculation
-	mset.identify_monolayers(director,startframeno=0)
-
-
+def analyze_structure(testno,traj):
 	'''Compute the average structure and fluctuations of a CGMD bilayer.'''
 	mset = MembraneSet()
 	#---Load the trajectory

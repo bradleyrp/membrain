@@ -23,9 +23,9 @@ elif location == 'light':
 	erase_when_finished = False
 #---Set data locations according to system: RPB desktop
 elif location == 'dark':
-	basedir = '/store-delta/compbio/'
-	locations = '/store-delta/worker/membrain/locations-rpb-trajectory-dark'
-	pickles = '/store-delta/worker/repo-pickles/'
+	basedir = '/'
+	locations = '/home/rpb/worker/membrain/locations-rpb-trajectory-dark'
+	pickles = '/home/rpb/worker/repo-pickles/'
 	plot_suppress = False
 	execfile('plotter.py')
 	erase_when_finished = False
