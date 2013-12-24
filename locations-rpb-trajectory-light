@@ -1,7 +1,25 @@
-#---name, location may be outdated
+name=membrane-v530
+struct=membrane-v530/system-input.gro
+membrane-v530/md.part0004.skip50.xtc
+
 name=membrane-v509
-struct=./look-v509/system-input.gro
-./look-v509/md.part0033.skip10.pbcmol.xtc
+struct=membrane-v509/system-input.gro
+membrane-v509/md.part0009.skip2.shift2.pbcmol.xtc
+
+name=membrane-v534
+struct=membrane-v534/system-input.gro
+membrane-v534/md.part0003.pbcmol.xtc
+
+name=membrane-v533
+struct=membrane-v533/system-input.gro
+membrane-v533/md.part0004.3590.3790.xtc
+
+########################################################
+
+#---name, location may be outdated
+#name=membrane-v509
+#struct=./look-v509/system-input.gro
+#./look-v509/md.part0033.skip10.pbcmol.xtc
 
 #---name, location may be outdated
 name=membrane-v510
@@ -22,11 +40,6 @@ quicklook-gr/look-v514/md.part0008.skip50.xtc
 name=membrane-v515
 struct=quicklook-gr/look-v515/system-input.gro
 quicklook-gr/look-v515/md.part0008.skip50.xtc
-
-#---name, location may be outdated
-name=membrane-v530
-struct=membrane-v530/system-input.gro
-membrane-v530/md.part0004.skip50.xtc
 
 #---name, location may be outdated
 name=membrane-v700

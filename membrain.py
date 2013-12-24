@@ -769,6 +769,57 @@ class MembraneSet:
 			pdists2d = [[linalg.norm(lipids_in[i][0:2]-ions_in[binned[i][j]][0:2]) for j in range(len(binned[i]))]
 				for i in range(len(lipids_in))  if len(binned[i]) != 0]
 			return [pdistsz,pdists2d]
+			
+	def batch_gr_lipid(self,selector,start=None,end=None,skip=None,framecount=None,label='',mode=None,
+		monolayer_rep=None,monos=None):
+		'''Calculate the radial distribution function between lipids in two-dimensions.'''
+		if framecount == None:
+			if end == None: end = self.nframes
+			if start == None: start = 0
+			if skip == None: skip = 1
+		else:
+			start = 0
+			end = self.nframes
+			skip = int(float(self.nframes)/framecount)
+			skip = 1 if skip < 1 else skip
+		print 'Starting g(r) calculation.'
+		if end == 0 or end == None: end = self.nframes
+		#---Identify monolayers
+		if monolayer_rep != None: self.monolayer_rep = monolayer_rep
+		if self.monolayer_residues == []:
+			self.identify_monolayers()
+		#---Select atoms
+		allselect_lipids1 = self.universe.selectAtoms(selector[0])
+		validresids = list(set.intersection(set(self.monolayer_residues[0]),
+			set([i-1 for i in allselect_lipids1.resids()])))
+		sel1 = sum([allselect_lipids1.residues[allselect_lipids1.resids().index(i+1)].selectAtoms(selector[0])
+			for i in validresids])
+		validresids = list(set.intersection(set(self.monolayer_residues[1]),
+			set([i-1 for i in allselect_lipids1.resids()])))
+		sel2 = sum([allselect_lipids.residues[allselect_lipids.resids().index(i+1)].selectAtoms(selector[0])
+			for i in validresids])
+		self.selections.append(sel1)
+		self.selections.append(sel2)
+
+		#---finish code in jot-lipid-gr.py and integrate it here
+
+		allselect_lipids2 = self.universe.selectAtoms(selector[1])
+
+		self.selections.append(allselect_ions)
+		#---Process the frames
+		result_data = MembraneData('grvoronoi' if mode == 'voronoi_bin' else 'gr',label=label)
+		for k in range(start,end,skip):
+			print '---Calculating RDF, frame: '+str(k)
+			if monos == None:
+				result_data.add([self.calculate_gr_lipid_ion_1d(k,whichmono=0,detectside=1,mode=mode),
+					self.calculate_gr_lipid_ion_1d(k,whichmono=1,detectside=1,mode=mode)],[k])
+			else:
+				result_data.add([self.calculate_gr_lipid_ion_1d(k,whichmono=mono,detectside=1,mode=mode) 
+					for mono in [0,1] if mono in monos],[k])
+		self.store.append(result_data)
+		del result_data
+		#---Clear selections
+		self.selections = []
 
 #---Making regular, triangulated meshes
 
