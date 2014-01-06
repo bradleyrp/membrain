@@ -1,7 +1,14 @@
+#!/usr/bin/python -i
+
+from membrainrunner import *
 import numpy
+from scipy.spatial import Delaunay
 import memint
 import time
 import math
+location = ''
+execfile('locations.py')
+execfile('plotter.py')
 
 pts = numpy.array([1.12312,2,3,4,5,6,7,8,9,0,0,0])
 #pts = numpy.array([[1,2,3],[4,5,6],[7,8,9],[0,0,0]])

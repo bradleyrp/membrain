@@ -1,6 +1,6 @@
 #!/bin/sh
 
-#touch memint.cpp
+touch memint.cpp
 python setup.py build
 cp build/lib.linux-x86_64-2.7/memint.so ./
 echo

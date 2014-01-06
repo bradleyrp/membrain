@@ -81,7 +81,9 @@ analysis_descriptors = [
 	['v700.part0006.360000-460000-200','pkl.structures.membrane-v700.md.part0006.360000-460000-200.pkl',
 		'localpressure.v700.part0006.360000-460000-200.3Dpp.dat',1],
 	['v701.part0003.60000-160000-200','pkl.structures.membrane-v701.md.part0003.60000-160000-200.pkl',
-		'localpressure.v701.part0003.60000-160000-200.3Dpp.dat',1]]
+		'localpressure.v701.part0003.60000-160000-200.3Dpp.dat',1],
+	['v700.part0002.100000-200000-200','pkl.structures.membrane-v700.md.part0002.100000-200000-200.pkl',
+		'localpressure.v700.part0002.100000-200000-200.3Dpp.dat',1]]
 		
 #---Parameter combinations
 tests = [[3,32,16,1],
@@ -106,7 +108,8 @@ dd3pplist = ['localpressure.v614.framewise',
 	'/store-delta/compbio/membrane-v594-exo70-antiparallel/a2-stress-1.0-framewise/results',
 	'/store-delta/compbio/membrane-v596-exo70-monomer/a2-stress-1.0-framewise/results',
 	'/home/rpb/compbio-alt/membrane-v700-exo70-dilute/a2-stress-1.0-framewise/results',
-	'/home/rpb/compbio-alt/membrane-v701-exo70-anti-dilute/a1-stress-1.0-framewise/results']
+	'/home/rpb/compbio-alt/membrane-v701-exo70-anti-dilute/a1-stress-1.0-framewise/results',
+	'/home/rpb/compbio-alt/membrane-v700-exo70-dilute/a3-stress-1.0-framewise-100000-200000/results']
 datdir3dpp = dd3pplist[-1]
 
 #---Parameters, sweep on the best one from above
@@ -133,6 +136,7 @@ framewise_out_name = 'pkl.stressdecomp.membrane-v594.10to50.pkl'
 framewise_out_name = 'pkl.stressdecomp.membrane-v596.10to50.pkl'
 framewise_out_name = 'pkl.stressdecomp.membrane-v700.md.part0006.360000-460000-200.pkl'
 framewise_out_name = 'pkl.stressdecomp.membrane-v701.md.part0003.60000-160000-200.pkl'
+framewise_out_name = 'pkl.stressdecomp.membrane-v700.md.part0002.100000-200000-200.pkl'
 framewise_test = [4,32,64,1]
 framewise_part = 3 ############################# don't forget to change this
 

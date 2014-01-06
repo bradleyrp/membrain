@@ -1,14 +1,21 @@
 #!/usr/bin/python -i
 
-if 0:
+if 1:
 
 	from membrainrunner import *
 
 	location = ''
 	execfile('locations.py')
 	execfile('plotter.py')
+	
+	tilt_pickles = ['pkl.tilt.membrane-v599-select.md.part0003.select.nosol.pkl',
+		'pkl.tilt.membrane-v701.md.part0003.60000-160000-200.pkl',
+		'pkl.tilt.membrane-v700.md.part0006.360000-460000-200.pkl',
+		'pkl.tilt.membrane-v700.md.part0002.100000-200000-200.pkl']
 
-	mset = unpickle(pickles+'pkl.tilt.membrane-v599-select.md.part0003.select.nosol.pkl')
+	mset = unpickle(pickles+tilt_pickles[-1])
+	
+	sysname = tilt_pickles[-2][18:-4]
 	
 	from mpl_toolkits.axes_grid1 import make_axes_locatable
 	from mpl_toolkits.axes_grid1.inset_locator import inset_axes
@@ -18,14 +25,14 @@ if 0:
 
 '''
 
-if 0:
+if 1:
 	areas = mset.store[0].get(['monolayer',0,'type','area'])
 	angles = mset.store[0].get(['monolayer',0,'type','angle'])
 	positions = array(mset.store[1].data)[:,0]
 
 	fig = plt.figure()
 
-	numgridpts = 24
+	numgridpts = 32
 	vecs = mset.vecs[0]
 
 	#---coallate data
@@ -42,13 +49,15 @@ if 1:
 
 	ax0 = plt.subplot2grid((1,2), (0,0))
 	ax0.set_title('lipid tilt angle')
-	img = ax0.imshow(mean(binned_data_angles,axis=0), extent=None, origin='LowerLeft', interpolation='nearest',aspect='equal',cmap='Greys')
+	maximum = max([max(i) for i in mean(binned_data_angles,axis=0)])+10
+	minimum = min([min(i) for i in mean(binned_data_angles,axis=0)[1:-1][1:-1]])-10
+	img = ax0.imshow(mean(binned_data_angles,axis=0), extent=None, origin='LowerLeft',
+		interpolation='nearest',aspect='equal',cmap='Greys',vmax=maximum,vmin=minimum)
 	for pt in np.mean(mset.protein,axis=0):
 		circ = plt.Circle((int(round(pt[0]/vecs[0]*numgridpts)),
 			int(round(pt[1]/vecs[0]*numgridpts))),radius=1./2*1.5/64*numgridpts,color='r',
 			alpha=1.0)
 		ax0.add_patch(circ)
-
 	cax = inset_axes(ax0,
          width="5%",
          height="100%",
@@ -57,12 +66,16 @@ if 1:
          loc= 1)
 	fig.colorbar(img,cax=cax)
 	plt.tight_layout() 
+	
+	plt.savefig(pickles+'fig-'+sysname+'-lipid-tilts.png',dpi=500,bbox_inches='tight')
+	
 	plt.show()
 	fig = plt.figure()
 
 	ax1 = plt.subplot2grid((1,2), (0,0))
 	ax1.set_title('lipid area (A2)')
-	img = ax1.imshow(mean(binned_data_areas,axis=0), extent=None, origin='LowerLeft', interpolation='nearest',aspect='equal',cmap='Greys')
+	img = ax1.imshow(mean(binned_data_areas,axis=0), extent=None, origin='LowerLeft',
+		interpolation='nearest',aspect='equal',cmap='Greys')
 	for pt in mset.protein[0]:
 		circ = plt.Circle((int(round(pt[0]/vecs[0]*numgridpts)),
 			int(round(pt[1]/vecs[0]*numgridpts))),radius=1./2*1.5/64*numgridpts,color='r',
@@ -76,6 +89,20 @@ if 1:
          bbox_to_anchor=(0.3, 0.1, 1.05, 0.95),
          loc= 1)
 	fig.colorbar(img,cax=cax)
-	plt.tight_layout() 
+	plt.tight_layout()
+	
+	plt.savefig(pickles+'fig-'+sysname+'-lipid-areas.png',dpi=500,bbox_inches='tight')
+	
 	plt.show()
+
+if 1:
+	'''
+	outline
+		open both pickles
+		for each frame
+			get lipids-proteins distance matrix
+			get surface normals
+			get 
+	'''
+	
 

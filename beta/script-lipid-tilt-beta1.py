@@ -19,7 +19,10 @@ cgmd_protein = 'name BB'
 #---Analysis plan
 analysis_plan = slice(-1,None)
 analysis_descriptors = [
-	(['membrane-v599-select'],director_cgmd,selector_cgmd,cgmd_protein,slice(-1,None))]
+	(['membrane-v599-select'],director_cgmd,selector_cgmd,cgmd_protein,slice(-1,None)),
+	(['membrane-v700'],director_cgmd,selector_cgmd,cgmd_protein,slice(-1,None)),
+	(['membrane-v701'],director_cgmd,selector_cgmd,cgmd_protein,slice(-1,None)),
+	(['membrane-v550'],director_cgmd,selector_cgmd,None,slice(-1,None))]
 
 #---FUNCTIONS
 #-------------------------------------------------------------------------------------------------------------
@@ -37,7 +40,7 @@ def analyze_tilt(testno,traj):
 	#---Average structure calculation
 	mset.identify_monolayers(director,startframeno=0)
 	if protein_select == None:
-		mset.tilter(selector,skip=skip,framecount=framecount)
+		mset.tilter(selector,director,skip=skip,framecount=framecount)
 	else:
 		mset.tilter(selector,director,skip=skip,framecount=framecount,protein_selection=protein_select)
 	#---Save the data

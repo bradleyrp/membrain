@@ -30,7 +30,7 @@ This program will open pickles with saved framewise first moment maps of the vox
 #-------------------------------------------------------------------------------------------------------------
 
 #---Master ID string
-outname = 'v701.v700.v550'
+outname = 'v701.v700.v550.ver2'
 
 #---Pickles containing kC0 plots from script-postproc-stress.py
 raw_maps_names = [
@@ -45,11 +45,11 @@ pickle_structure_names = [
 #---Pickles containing kC0 plots from script-postproc-stress.py
 raw_maps_names = [
         'pkl.stressdecomp.membrane-v701.md.part0003.60000-160000-200.pkl',
-        'pkl.stressdecomp.membrane-v700.md.part0006.360000-460000-200.pkl',
+        'pkl.stressdecomp.membrane-v700.md.part0002.100000-200000-200.pkl',
         'pkl.stressdecomp.membrane-v550.part0008.pkl']
 pickle_structure_names = [
         'pkl.structures.membrane-v701.md.part0003.60000-160000-200.pkl',
-        'pkl.structures.membrane-v700.md.part0006.360000-460000-200.pkl',
+        'pkl.structures.membrane-v700.md.part0002.100000-200000-200.pkl',
         'pkl.structures.membrane-v550-stress.md.part0008.shifted.pkl']
         
 #---Numbers of proteins in each system

@@ -1,23 +1,45 @@
 #!/usr/bin/python -i
 
 from membrainrunner import *
-execfile('plotter.py')
-import numpy
+
+import subprocess
+import os
 
 #---PARAMETERS
 #-------------------------------------------------------------------------------------------------------------
 
-location = 'light'
+location = ''
 execfile('locations.py')
-#mset = unpickle(pickles+'pkl.avgstruct.membrane-v623-stress-test.md.part0005.skip10.pkl')
-#mset = unpickle(pickles+'pkl.avgstruct.membrane-v614.md.part0002.skip10.pkl')
-#mset = unpickle(pickles+'pkl.avgstruct.membrane-v599.relevant.pkl')
-mset = unpickle(pickles+'pkl.avgstruct.membrane-v032.md.part0002.skip10.pkl')
+execfile('plotter.py')
+
+#---filenames
+struct_pickles = ['pkl.structures.membrane-v700.md.part0006.360000-460000-200.pkl',
+	'pkl.structures.membrane-v701.md.part0003.60000-160000-200.pkl',
+	'pkl.structures.membrane-v700.md.part0002.100000-200000-200.pkl']
+startpickle = struct_pickles[-1]
+sysname = startpickle[24:-4]
+
+#---settings
+do_average_plot = False
+do_video = True
+
+#---maps labels
+mapslabels = [r'$\textbf{{EXO70}\ensuremath{\times}2{\small (parallel)}}$',
+	r'$\textbf{{EXO70}\ensuremath{\times}2{\small (antiparallel)}}$']
+	
+#---plot settings
+plt.rc('font', family='sans-serif')
+mpl.rc('text.latex', preamble='\usepackage{sfmath}')
+#mpl.rcParams.update({'font.style':'sans-serif'})
+#mpl.rcParams.update({'font.size': 16})
+from mpl_toolkits.axes_grid1 import make_axes_locatable
+from mpl_toolkits.axes_grid1.inset_locator import inset_axes
 
 #---FUNCTIONS
 #-------------------------------------------------------------------------------------------------------------
 
 def curvcalc(z,lenscale):
+	'''Calculate mean and Gaussian curvature directly.'''
 	zy, zx  = numpy.gradient(z,lenscale)
 	zxy, zxx = numpy.gradient(zx,lenscale)
 	zyy, _ = numpy.gradient(zy,lenscale)
@@ -29,131 +51,181 @@ def curvcalc(z,lenscale):
 	
 #---MAIN
 #-------------------------------------------------------------------------------------------------------------
-    
-show_proteins = False
-show_average = True
-exaggeratem = 10**-1 #---reduce the heights to avoid shadows
-exaggeratek = 10**0 #---reduce the heights to avoid shadows
-    
-#---Plot mean curvature
-mset.calculate_average_surface()
-protcom = mean(mset.protein[0],axis=0)-[0,0,mean(mset.surf_position)]
-if show_proteins:
-	meshpoints(mset.protein[0]-[1*mean(mset.vecs,axis=0)[0],0,mean(mset.surf_position)-2.5],
-		scale_factor=10,color=(0,0,0),opacity=0.5)
-lenscale = mean(mset.vecs,axis=0)[0]/10./(shape(mset.surf[0])[0]+1)
-cdat = lenscale*curvcalc(mset.surf[0],lenscale)[0]
-curvs = []
-for i in range(len(mset.surf)):
-	curvs.append(curvcalc(mset.surf[i],lenscale)[0])
-curvsm = mean(curvs,axis=0)
-checkmesh(curvsm*exaggeratem,vecs=mean(mset.vecs,axis=0),tess=-2.5,wirecolor=(1,1,1),lsize=1,show='surf')
-#---Plot gaussian curvature
-if show_proteins:
-	meshpoints(mset.protein[0]-[2*mean(mset.vecs,axis=0)[0],0,mean(mset.surf_position)-2.5],
-		scale_factor=10,color=(0,0,0),opacity=0.5)
-lenscale = mean(mset.vecs,axis=0)[0]/10./(shape(mset.surf[0])[0]+1)
-curvsk = []
-for i in range(len(mset.surf)):
-	curvsk.append(curvcalc(mset.surf[i],lenscale)[1])
-curvsmk = mean(curvsk*exaggeratek,axis=0)
-checkmesh(curvsmk,vecs=mean(mset.vecs,axis=0),tess=-1.5,wirecolor=(1,1,1),lsize=1,show='surf')
-print max([max(i) for i in curvsm])/200.
-print min([min(i) for i in curvsm])/200.
-if show_average:
-	raw_input('save and close and then plot average...')
-	if show_proteins:
-		meshpoints(mset.protein[0]-[1*mean(mset.vecs,axis=0)[0],0,mean(mset.surf_position)-2.5],
-			scale_factor=10,color=(0,0,0),opacity=0.5)
-	checkmesh(mset.surf_mean,vecs=mean(mset.vecs,axis=0),tess=-1.5,wirecolor=(1,1,1),lsize=1,show='surf')
-	
 
-'''
-oldcode
+#---load
+mset = unpickle(pickles+startpickle)
 
-if 0:
-	from membrainrunner import *
-	execfile('plotter.py')
-	mset = unpickle('pkl.avgstruct.membrane-v614.md.part0002.skip10.pkl')
-	import numpy
-
-if 0:
-	from membrainrunner import *
-	execfile('plotter.py')
-	mset = unpickle('pkl.avgstruct.membrane-v700.md.part0005.skip10.half.pkl')
-	import numpy
-
-if 0:
-	from membrainrunner import *
-	execfile('plotter.py')
-	import numpy
-	pickles = '/store-delta/worker/worker-big/membrane-repository/pickle-repository/'
-#	pickles = '/home/rpb/worker-big/membrane-repository/pickle-repository/'
-#	mset = unpickle(pickles+'pkl.avgstruct.membrane-v612.md.part0003.skip10.pkl')
-#	systemprefix = 'v612'
-#	mset = unpickle(pickles+'pkl.avgstruct.membrane-v700.md.part0005.skip10.half.pkl')
-#	systemprefix = 'v700'
-#	mset = unpickle(pickles+'pkl.avgstruct.membrane-v623-stress-test.md.part0005.skip10.pkl')
-	mset = unpickle(pickles+'pkl.postproc-dimple-fit.membrane-v614.md.part0002.skip10.protein2.pkl')
+#---plot average mean and Gaussian curvature
+if do_average_plot:
+	#---calculate mean curvature
 	mset.calculate_average_surface()
-
-if 1:
-	from membrainrunner import *
-	execfile('plotter.py')
-	import numpy
-	pickles = '/home/rpb/worker-big/membrane-repository/pickle-repository/'
-	#mset = unpickle(pickles+'pkl.avgstruct.membrane-v623-stress-test.md.part0005.skip10.pkl')
-	#mset = unpickle(pickles+'pkl.avgstruct.membrane-v614.md.part0002.skip10.pkl')
-	mset = unpickle(pickles+'pkl.avgstruct.membrane-v599.relevant.pkl')
-	mset.calculate_average_surface()
-
-def curvcalc(z,lenscale):
-	zy, zx  = numpy.gradient(z,lenscale)
-	zxy, zxx = numpy.gradient(zx,lenscale)
-	zyy, _ = numpy.gradient(zy,lenscale)
-	H = (zx**2 + 1)*zyy - 2*zx*zy*zxy + (zy**2 + 1)*zxx
-	H = -H/(2*(zx**2 + zy**2 + 1)**(1.5))
-	K = ((zxx*zyy)-(zxy)**2)
-	K = -K/(2*(zx**2 + zy**2 + 1)**(1.5))
-	return [H,K]
-    
-if 0:
-	Z = mset.surf[0]
-	X = mset.rezipgrid(mset.unzipgrid(mset.surf[0],vecs=mset.vecs[0]),whichind=0)
-	Y = mset.rezipgrid(mset.unzipgrid(mset.surf[0],vecs=mset.vecs[0]),whichind=1)
-	xyztmp = transpose([X,Y,Z])
-	xyz = swapaxes(xyztmp,1,2)
-	cdat2 = curvcalc(xyz)[0]
-    
-if 1:
-	#protcom = mean(mset.protein[0],axis=0)-[0,0,mean(mset.surf_position)]
-	#meshpoints(mset.protein[0]-[0,0,mean(mset.surf_position)-2.5],scale_factor=20,color=(1,1,1))
 	lenscale = mean(mset.vecs,axis=0)[0]/10./(shape(mset.surf[0])[0]+1)
 	cdat = lenscale*curvcalc(mset.surf[0],lenscale)[0]
-	curvs = []
+	curvsm = []
 	for i in range(len(mset.surf)):
-		curvs.append(200*curvcalc(mset.surf[i],lenscale)[0])
-	curvsm = mean(curvs,axis=0)
-	#meshplot(curvsm,vecs=mean(mset.vecs,axis=0))
-	checkmesh(curvsm,vecs=mean(mset.vecs,axis=0),tess=-1.5,wirecolor=(1,1,1),lsize=1,show='surf')
-	#raw_input()
-	print max([max(i) for i in curvsm])/200.
-	print min([min(i) for i in curvsm])/200.
-	
-if 1:
-	#protcom = mean(mset.protein[0],axis=0)-[0,0,mean(mset.surf_position)]
-	#meshpoints(mset.protein[0]-[0,0,mean(mset.surf_position)-2.5],scale_factor=20,color=(1,1,1))
+		curvsm.append(curvcalc(mset.surf[i],lenscale)[0])
+	#---calculate Gaussian curvature	
 	lenscale = mean(mset.vecs,axis=0)[0]/10./(shape(mset.surf[0])[0]+1)
 	curvsk = []
 	for i in range(len(mset.surf)):
 		curvsk.append(curvcalc(mset.surf[i],lenscale)[1])
-	curvsmk = mean(curvsk,axis=0)
-	checkmesh(curvsmk,vecs=mean(mset.vecs,axis=0),tess=-2.5,wirecolor=(1,1,1),lsize=1,show='surf')
-	#meshplot(curvsmk,vecs=mean(mset.vecs,axis=0))
-
-if 0:
+	#---plots
+	extremum = max([np.max(curvsm),np.abs(np.min(curvsm))])
+	extremum = abs(np.mean(curvsm))+2*np.std(curvsm)
+	numgridpts = shape(curvsk)[1]
+	fig = plt.figure(figsize=(12,3))
+	ax0 = plt.subplot2grid((1,3), (0,0))
+	ax0.set_title('mean curvature')
+	img0 = ax0.imshow(array(np.mean(curvsm,axis=0)).T,interpolation='nearest',origin='LowerLeft',
+		vmax=extremum,vmin=-extremum,
+		cmap='bwr',extent=[0,numgridpts,0,numgridpts])
+	vecs = np.mean(mset.vecs,axis=0)
+	for pt in np.mean(mset.protein,axis=0):
+		circ = plt.Circle((int(round(pt[0]/vecs[0]*numgridpts)),
+			int(round(pt[1]/vecs[0]*numgridpts))),radius=1./2.*1./2*1.5/64*numgridpts,color='k',
+			alpha=1.0)
+		ax0.add_patch(circ)	
+	cax = inset_axes(ax0,
+         width="5%",
+         height="100%",
+         bbox_transform=ax0.transAxes,
+         bbox_to_anchor=(0.2, 0.1, 1.00, 0.95),
+         loc= 1)
+	fig.colorbar(img0,cax=cax)
+	cax.tick_params(labelsize=8) 
+	cax.set_ylabel(r'$\mathsf{H(nm^{-1})}$',fontsize=10)
+	extremum = max([np.max(curvsk),np.abs(np.min(curvsk))])
+	extremum = abs(np.mean(curvsk))+2*np.std(curvsk)
+	ax1 = plt.subplot2grid((1,3), (0,1))
+	ax1.set_title('Gaussian curvature')
+	img = ax1.imshow(array(np.mean(curvsk,axis=0)).T,interpolation='nearest',origin='LowerLeft',vmax=extremum,vmin=-extremum,cmap='bwr',extent=[0,numgridpts,0,numgridpts])
+	vecs = np.mean(mset.vecs,axis=0)
+	for pt in np.mean(mset.protein,axis=0):
+		circ = plt.Circle((int(round(pt[0]/vecs[0]*numgridpts)),
+			int(round(pt[1]/vecs[0]*numgridpts))),radius=1./2.*1./2*1.5/64*numgridpts,color='k',
+			alpha=1.0)
+		ax1.add_patch(circ)	
+	cax = inset_axes(ax1,
+         width="5%",
+         height="100%",
+         bbox_transform=ax1.transAxes,
+         bbox_to_anchor=(0.2, 0.1, 1.00, 0.95),
+         loc= 1)
+	fig.colorbar(img,cax=cax)
+	cax.tick_params(labelsize=10) 
+	cax.set_ylabel(r'$\mathsf{K(nm^{-2})}$',fontsize=10)
+	extremum = max([np.max(mset.surf_mean),np.abs(np.min(mset.surf_mean))])
+	ax2 = plt.subplot2grid((1,3), (0,2))
+	ax2.set_title('structure')
+	img2 = ax2.imshow(array(mset.surf_mean).T,interpolation='nearest',origin='LowerLeft',vmax=extremum,vmin=-extremum,cmap='bwr',extent=[0,numgridpts,0,numgridpts])
+	vecs = np.mean(mset.vecs,axis=0)
+	for pt in np.mean(mset.protein,axis=0):
+		circ = plt.Circle((int(round(pt[0]/vecs[0]*numgridpts)),
+			int(round(pt[1]/vecs[0]*numgridpts))),radius=1./2.*1./2*1.5/64*numgridpts,color='k',
+			alpha=1.0)
+		ax2.add_patch(circ)	
+	cax = inset_axes(ax2,
+         width="5%",
+         height="100%",
+         bbox_transform=ax2.transAxes,
+         bbox_to_anchor=(0.2, 0.1, 1.00, 0.95),
+         loc= 1)
+	fig.colorbar(img2,cax=cax)
+	cax.tick_params(labelsize=10) 
+	cax.set_ylabel(r'$\mathsf{z(nm)}$',fontsize=10)
+	plt.tight_layout()
+	plt.savefig(pickles+'fig-'+sysname+'-curvatures.mean.png',dpi=500,bbox_inches='tight')
+	plt.show()
+	plt.cla()
+	
+#---plot average mean and Gaussian curvature
+if do_video:
+	if not os.path.isdir(pickles+'/figs-'+sysname+'-curvature.snapshots'):
+		os.mkdir(pickles+'/figs-'+sysname+'-curvature.snapshots')
+	#---calculate mean curvature
 	mset.calculate_average_surface()
-	meshplot(mset.surf_mean,vecs=mean(mset.vecs,axis=0),opacity=1.,show='both')
-	protcom = mean(mset.protein[0],axis=0)-[0,0,mean(mset.surf_position)]-2.5
-	meshpoints(mset.protein[0]-[0,0,mean(mset.surf_position)-2.5],scale_factor=20,color=(1,1,1))
-'''
+	lenscale = mean(mset.vecs,axis=0)[0]/10./(shape(mset.surf[0])[0]+1)
+	cdat = lenscale*curvcalc(mset.surf[0],lenscale)[0]
+	curvsm = []
+	for i in range(len(mset.surf)):
+		curvsm.append(curvcalc(mset.surf[i],lenscale)[0])
+	#---calculate Gaussian curvature	
+	lenscale = mean(mset.vecs,axis=0)[0]/10./(shape(mset.surf[0])[0]+1)
+	curvsk = []
+	for i in range(len(mset.surf)):
+		curvsk.append(curvcalc(mset.surf[i],lenscale)[1])
+	#---plots
+	framecount = 0
+	for fr in range(0,len(mset.surf),1):
+		print 'rendering frame = '+str(fr)
+		extremum = max([np.max(curvsm),np.abs(np.min(curvsm))])
+		extremum = abs(np.mean(curvsm))+2*np.std(curvsm)
+		numgridpts = shape(curvsk)[1]
+		fig = plt.figure(figsize=(12,3))
+		ax0 = plt.subplot2grid((1,3), (0,0))
+		ax0.set_title('mean curvature')
+		img0 = ax0.imshow(array(curvsm[fr]).T,interpolation='nearest',origin='LowerLeft',
+			vmax=extremum,vmin=-extremum,
+			cmap='bwr',extent=[0,numgridpts,0,numgridpts])
+		vecs = np.mean(mset.vecs,axis=0)
+		for pt in mset.protein[fr]:
+			circ = plt.Circle((int(round(pt[0]/vecs[0]*numgridpts)),
+				int(round(pt[1]/vecs[0]*numgridpts))),radius=1./2.*1./2*1.5/64*numgridpts,color='k',
+				alpha=1.0)
+			ax0.add_patch(circ)	
+		cax = inset_axes(ax0,
+		     width="5%",
+		     height="100%",
+		     bbox_transform=ax0.transAxes,
+		     bbox_to_anchor=(0.2, 0.1, 1.00, 0.95),
+		     loc= 1)
+		fig.colorbar(img0,cax=cax)
+		cax.tick_params(labelsize=8) 
+		cax.set_ylabel(r'$\mathsf{H(nm^{-1})}$',fontsize=10)
+		extremum = max([np.max(curvsk),np.abs(np.min(curvsk))])
+		extremum = abs(np.mean(curvsk))+2*np.std(curvsk)
+		ax1 = plt.subplot2grid((1,3), (0,1))
+		ax1.set_title('Gaussian curvature')
+		img = ax1.imshow(array(curvsk[fr]).T,interpolation='nearest',origin='LowerLeft',vmax=extremum,vmin=-extremum,cmap='bwr',extent=[0,numgridpts,0,numgridpts])
+		vecs = np.mean(mset.vecs,axis=0)
+		for pt in mset.protein[fr]:
+			circ = plt.Circle((int(round(pt[0]/vecs[0]*numgridpts)),
+				int(round(pt[1]/vecs[0]*numgridpts))),radius=1./2.*1./2*1.5/64*numgridpts,color='k',
+				alpha=1.0)
+			ax1.add_patch(circ)	
+		cax = inset_axes(ax1,
+		     width="5%",
+		     height="100%",
+		     bbox_transform=ax1.transAxes,
+		     bbox_to_anchor=(0.2, 0.1, 1.00, 0.95),
+		     loc= 1)
+		fig.colorbar(img,cax=cax)
+		cax.tick_params(labelsize=10) 
+		cax.set_ylabel(r'$\mathsf{K(nm^{-2})}$',fontsize=10)
+		extremum = max([np.max(mset.surf_mean),np.abs(np.min(mset.surf_mean))])
+		ax2 = plt.subplot2grid((1,3), (0,2))
+		ax2.set_title('structure')
+		img2 = ax2.imshow(array(mset.surf[fr]).T,interpolation='nearest',origin='LowerLeft',vmax=extremum,vmin=-extremum,cmap='bwr',extent=[0,numgridpts,0,numgridpts])
+		vecs = np.mean(mset.vecs,axis=0)
+		for pt in mset.protein[fr]:
+			circ = plt.Circle((int(round(pt[0]/vecs[0]*numgridpts)),
+				int(round(pt[1]/vecs[0]*numgridpts))),radius=1./2.*1./2*1.5/64*numgridpts,color='k',
+				alpha=1.0)
+			ax2.add_patch(circ)	
+		cax = inset_axes(ax2,
+		     width="5%",
+		     height="100%",
+		     bbox_transform=ax2.transAxes,
+		     bbox_to_anchor=(0.2, 0.1, 1.00, 0.95),
+		     loc= 1)
+		fig.colorbar(img2,cax=cax)
+		cax.tick_params(labelsize=10) 
+		cax.set_ylabel(r'$\mathsf{z(nm)}$',fontsize=10)
+		plt.tight_layout()
+		plt.savefig(pickles+'/figs-'+sysname+'-curvature.snapshots/fig%05d.png'%framecount,dpi=500,bbox_inches='tight')
+		framecount += 1
+		plt.cla()
+		plt.close()
+	subprocess.call(['ffmpeg','-i',pickles+'/figs-'+sysname+'-curvature.snapshots/fig%05d.png','-vcodec','mpeg2video','-qscale','0','-filter:v','setpts=2.0*PTS',pickles+'/vid-'+sysname+'-curvature.mpeg'])
+	#os.popen('rm -r -f '+pickles+'/figs-'+sysname+'-tilefilter.snapshots')
+

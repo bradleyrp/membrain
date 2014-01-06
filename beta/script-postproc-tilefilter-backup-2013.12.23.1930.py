@@ -1,7 +1,6 @@
 #!/usr/bin/python -i
 
 from membrainrunner import *
-
 import numpy as N
 import pylab
 from scipy.optimize import curve_fit
@@ -21,9 +20,6 @@ height_direction : stores 1 or -1 as net-positive or net-negative tiles
 cutoff_distance : when measuring around protein neighborhoods, how many grid-lengths to include
 Notes:
 Can specify different distance metrics in scipy.spatial.distance.cdist
-
-... notes need edited 
-
 '''
 
 #---Analysis parameters
@@ -34,30 +30,36 @@ execfile('locations.py')
 execfile('plotter.py')
 
 #---Procedure
-make_figs = 1
+make_figs = 0
 do_single = 1
-do_batch = 1
+do_batch = 0
 
-#---parameters
+#---Settings
 height_direction = 1
 cutoff_distance = 5.
 cutoff_distance_sweep = [1.,2.,3.,4.,5.,6.,7.,8.,9.,10.,12.,14.,16.,18.,20.,24.,28.,30.,40.,50.]
 
-#---plot settings
 mpl.rc('text.latex', preamble='\usepackage{sfmath}')
 mpl.rcParams['axes.linewidth'] = 2.0
+
+#---Load
+analysis_targets = ['membrane-v614.md.part0002.skip10',
+	'membrane-v599.relevant',
+	'membrane-v612.md.part0003.skip10',
+	'membrane-v598.relevant.pbc',
+	'membrane-v598.relevant.pbc',
+	'membrane-v550.md.parts4to7.skip10.po4c2a']
+systemprefix_in = analysis_targets[2]
+startpickle = pickles+'pkl.avgstruct.'+systemprefix_in+'.pkl'
+systemprefix = systemprefix_in+'.cutoff-5'
+startpickle_protein = pickles+'pkl.avgstruct.'+analysis_targets[0]+'.pkl'
+#startpickle_protein = None
+protein_subset_slice = slice(None)
+
+#---Colors
 zvals={-1:0,1:1,0:2,2:3}
 which_brewer_colors = [1,5,0,4]
 colorcodes = [brewer2mpl.get_map('paired','qualitative',9).mpl_colors[i] for i in which_brewer_colors]
-
-#---settings
-struct_pickles = ['pkl.structures.membrane-v700.md.part0006.360000-460000-200.pkl',
-	'pkl.structures.membrane-v701.md.part0003.60000-160000-200.pkl']
-startpickle = struct_pickles[-1]
-sysname = startpickle[24:-4]
-
-#---chose which parts of the protein to consider as the locus for further calculation
-protein_subset_slice = slice(None)
 
 #---FUNCTIONS
 #-------------------------------------------------------------------------------------------------------------
@@ -90,9 +92,7 @@ def blockplot(blocks,zvals=None,colorcodes=None,filename=None,show=True):
 			patches.append(rect)
 			plotcolors.append(blocks[x,y])
 	if colorcodes == None:
-		p = mpl.collections.PatchCollection(patches,
-			cmap=brewer2mpl.get_map('Paired','qualitative',4,'reverse').mpl_colormap,
-			alpha=1.0,edgecolors='none')
+		p = mpl.collections.PatchCollection(patches,cmap=brewer2mpl.get_map('Paired','qualitative',4,'reverse').mpl_colormap,alpha=1.0,edgecolors='none')
 		p.set_array(array(plotcolors))
 	else:
 		p = mpl.collections.PatchCollection(patches,alpha=1.0,match_original=True)
@@ -198,13 +198,10 @@ def view_figures(area_counts):
 	legend2 = plt.legend(bbox_to_anchor=(1.05, 1), loc=2, borderaxespad=0.,prop={'size':22})
 	ax2.grid()
 	plt.tight_layout()
-	#plt.savefig(pickles+'result.fig.tilefilter.areas.'+systemprefix+'.png',dpi=300,
-	#	bbox_extra_artists=[ylabel1,ylabel2,legend1,legend2],bbox_inches='tight')
-	plt.savefig(pickles+'fig-'+sysname+'-tilefilter.areas.png',dpi=300,
+	plt.savefig(pickles+'result.fig.tilefilter.areas.'+systemprefix+'.png',dpi=300,
 		bbox_extra_artists=[ylabel1,ylabel2,legend1,legend2],bbox_inches='tight')
 	plt.close()
-	#fp = open(pickles+'result.txt.tilefilter.'+systemprefix+'.txt','w')
-	fp = open(pickles+'dat-'+sysname+'-tilefilter.areas.txt','w')
+	fp = open(pickles+'result.txt.tilefilter.'+systemprefix+'.txt','w')
 	fp.write('mean total area: '+str(product(vecs[0:2])/100.)+'nm2\n')
 	fp.write('mean positive area: '+str(mean(area_per_tile*area_counts[:,0]))+' nm2\n')
 	fp.write('mean negative area: '+str(mean(area_per_tile*area_counts[:,1]))+' nm2\n')
@@ -244,7 +241,7 @@ def view_figures_sweep(area_counts_sweep):
 	#plt.title(mytitle)
 	ax.grid()
 	plt.tight_layout()
-	plt.savefig(pickles+'fig-'+sysname+'-tilefilter.area.sweep.png',dpi=500,
+	plt.savefig(pickles+'result.fig.tilefilter.area-sweep.'+systemprefix_in+'.png',dpi=500,
 		bbox_extra_artists=[ylabel1])
 	plt.close()
 	
@@ -253,8 +250,8 @@ def batch_calculate_tilefilter_areas(make_figs=None,end=None,start=None,skip=Non
 	area_counts = []
 	#---Make a directory for figures
 	if make_figs:
-		if not os.path.isdir(pickles+'/figs-'+sysname+'-tilefilter.snapshots'):
-			os.mkdir(pickles+'/figs-'+sysname+'-tilefilter.snapshots')
+		if not os.path.isdir(pickles+systemprefix+'-tile-filter-snapshots'):
+			os.mkdir(pickles+systemprefix+'-tile-filter-snapshots')
 	#---Loop over frames, and calculate areas and print figures
 	nframes = len(mset.surf)
 	if framecount == None:
@@ -271,7 +268,7 @@ def batch_calculate_tilefilter_areas(make_figs=None,end=None,start=None,skip=Non
 			result = lateral_discretize(fr,result='all')
 			area_counts.append(result[0])
 			blockplot(result[1]+result[2],zvals=zvals,colorcodes=colorcodes,
-				filename=(pickles+'/figs-'+sysname+'-tilefilter.snapshots/fig%05d.png'%fr),show=False)
+				filename=(pickles+systemprefix+'-tile-filter-snapshots/fig%05d.png'%fr),show=False)
 		else:
 			result = lateral_discretize(fr,result='area')
 			area_counts.append(lateral_discretize(fr))
@@ -280,29 +277,30 @@ def batch_calculate_tilefilter_areas(make_figs=None,end=None,start=None,skip=Non
 #---MAIN
 #-------------------------------------------------------------------------------------------------------------
 
-#---find necessary dimensions
-mset = unpickle(pickles+startpickle)
-print 'loaded '+startpickle
+#---Find necessary dimensions
+vecs=mean(mset.vecs,axis=0)
+mset = unpickle(startpickle)
+print 'Loaded '+startpickle
 print 'frame count = '+str(len(mset.surf[0]))
-
-#---get protein points
-proteins_all = array(mset.protein)
+#---Find protein points in a different mset object.
+if startpickle_protein != None:
+	mset_protein = unpickle(startpickle_protein)
+else:
+	mset_protein = mset
+#---Find protein points
+proteins_all = array(mset_protein.protein)
 proteins = proteins_all[:,protein_subset_slice]
 vecs = mean(mset.vecs,axis=0)
 
-#---run a single calculation
+#---Run a single calculation
 if do_single:
 	cutoff = cutoff_distance*10/(vecs[0]/mset.griddims[0])
 	area_counts = batch_calculate_tilefilter_areas(make_figs=make_figs,framecount=framecount,skip=skip)
 	view_figures(area_counts)
 	if make_figs:
-		view_example_mean(filename=(pickles+'fig-'+sysname+'-tilefilter.snapshots.mean.png'))
-		subprocess.call(['ffmpeg','-i',pickles+'/figs-'+sysname+'-tilefilter.snapshots/fig%05d.png',
-			'-vcodec','mpeg1video','-qscale','0','-filter:v','setpts=2.0*PTS',pickles+'/vid-'+sysname+
-			'-tilefilter.mpeg'])
-		os.popen('rm -r -f '+pickles+'/figs-'+sysname+'-tilefilter.snapshots')
+		view_example_mean(filename=(pickles+systemprefix+'-tile-filter-snapshots/fig.mean.png'))
 
-#---sweep parameters
+#---Sweep parameters
 if do_batch:
 	area_counts_sweep = []
 	cutoff_range = [i*10/(vecs[0]/mset.griddims[0]) for i in cutoff_distance_sweep]

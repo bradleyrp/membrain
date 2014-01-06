@@ -6,26 +6,10 @@ from membrainrunner import *
 #-------------------------------------------------------------------------------------------------------------
 
 #---Analysis parameters
-location = 'dirac'
 skip = None
-framecount = 30
-
-#---Location-specific settings
-if location == 'dirac':
-	basedir = '/home/ryb/storedrive/ryb/membrane-v5xx-master-copy'
-	locations = '/home/ryb/storedrive/ryb/membrane-v5xx-master-copy/trajectory-map-membrane-v5xx'
-	erase_when_finished = True
-elif location == 'light':
-	basedir = '/home/rpb/worker-big/membrane-test-set'
-	locations = '/home/rpb/worker/membrain/trajectory-rpb-light'	
-	execfile('plotter.py')
-	erase_when_finished = False
-elif location == 'dark':
-	basedir = '/'
-	locations = '/store-delta/worker/membrain/trajectory-rpb-dark'
-	execfile('plotter.py')
-	erase_when_finished = False
-[systems,structures,trajectories] = parse_locations_file(basedir,locations)	
+framecount = None
+location = ''
+execfile('locations.py')
 
 #---Selections
 #---Note: this code also uses the following globals: sel_aamd_surfacer
@@ -35,6 +19,7 @@ director_asymmetric = ['(name P and not resname CHL1) or (name C3 and resname CH
 selector = '(name P and not resname CHL1) or (name C3 and resname CHL1)'
 
 #---Analysis plan
+analysis_plan = slice(-1,None)
 analysis_descriptors = [
 	(['membrane-v509'],['NA'],['DOPC','DOPS','PI2P'],'all',director_symmetric,-25),
 	(['membrane-v509'],['NA'],['DOPC','DOPS','PI2P'],'all',director_symmetric,-1),
@@ -42,44 +27,36 @@ analysis_descriptors = [
 	(['membrane-v515'],['NA'],['DOPC','DOPS','PIPP'],'all',director_symmetric,-1),
 	(['membrane-v510','membrane-v511'],['MG','Cal'],['DOPC','DOPS','PI2P'],'all',director_symmetric,-1),
 	(['membrane-v530','membrane-v531','membrane-v532'],['NA','MG','Cal'],['POPC','CHL1','DOPE','DOPS','PIP2'],
-		'all',director_asymmetric,-1)]
-
-#---Functions
-#-------------------------------------------------------------------------------------------------------------
-
-def analyze_area_per_lipid(testno,traj):
-	'''For a particular trajectory, calculate the Voronoi cells and areas-per-lipid.'''
-	mset = MembraneSet()
-	#---Load the trajectory
-	gro = structures[systems.index(tests[testno])]
-	basename = traj.split('/')[-1][:-4]
-	print 'Accessing '+basename+'.'
-	mset.load_trajectory(
-		sel_aamd_surfacer,
-		(basedir+'/'+gro,basedir+'/'+traj),
-		resolution='aamd')
-	mset.identify_monolayers(director,startframeno=0)
-	mset.identify_residues(residues)
-	#---Area-per-lipid calculations
-	mset.triangulator(selector,framecount=framecount,skip=skip,tesstype='voronoi')
-	#---Save the data
-	pickledump(mset,'pkl.apl-cells.'+tests[testno]+'.'+basename+'.pkl')
-	#---Clear the class object
-	return mset	
+		'all',director_asymmetric,-1),
+	(['membrane-v534'],['Cal'],['POPC','CHL1','DOPE','DOPS','P35P'],
+		'all',director_asymmetric,slice(-1,None)),
+	(['membrane-v533'],['Mg'],['POPC','CHL1','DOPE','DOPS','P35P'],
+		'all',director_asymmetric,slice(-1,None))]
 
 #---MAIN
 #-------------------------------------------------------------------------------------------------------------
 
 starttime = time.time()
 print 'Starting analysis job.'
-for ad in analysis_descriptors:
-	#---Load global variables with calculation specifications used in analysis functions above.
+for ad in analysis_descriptors[analysis_plan]:
 	(tests,ionnames,residues,selector,director,trajno) = ad
-	for t in range(len(tests)):
-		print 'Running calculation: monolayer unstructured triangulation '+tests[t]+'.'
-		for traj in [trajectories[systems.index(tests[t])][trajno]]:
-			#---Run the analysis function on the desired system
-			mset = analyze_area_per_lipid(t,traj)
+	for testno in range(len(tests)):
+		print 'Running calculation: monolayer unstructured triangulation '+tests[testno]+'.'
+		for traj in trajectories[systems.index(tests[testno])][trajno]:
+			#---Area-per-lipid analysis routing (note that this is a membrain.py built-in.
+			mset = MembraneSet()
+			#---Load the trajectory
+			gro = structures[systems.index(tests[testno])]
+			basename = traj.split('/')[-1][:-4]
+			print 'Accessing '+basename+'.'
+			mset.load_trajectory((basedir+'/'+gro,basedir+'/'+traj),resolution='aamd')
+			mset.identify_monolayers(director,startframeno=0)
+			mset.identify_residues(residues)
+			#---Area-per-lipid calculations
+			mset.triangulator(selector,framecount=framecount,skip=skip,tesstype='voronoi')
+			#---Save the data
+			pickledump(mset,'pkl.apl-cells.'+tests[testno][9:14]+'.'+basename+'.pkl',directory=pickles)
+			#---Clear the class object
 			if erase_when_finished:
 				del mset
 print 'Job complete and it took '+str(1./60*(time.time()-starttime))+' minutes.'
