@@ -77,6 +77,6 @@ if do_compute_lipid_ion_distribution_cells:
 					mset.batch_gr_lipid_ion([pair[0],pair[1]],framecount=framecount,skip=skip,start=start,
 						end=end,label=pair[2],mode='voronoi_bin',monolayer_rep='P')
 				#---Save the data
-				pickledump(mset,'pkl.gr-vornoi.'+tests[testno][9:14]+'.'+basename+'.'+
+				pickledump(mset,'pkl.lipid-ion-voronoi.'+tests[testno][9:14]+'.'+basename+'.'+
 					extraname+'.pkl',directory=pickles)
 
