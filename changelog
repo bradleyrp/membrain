@@ -28,3 +28,38 @@ Summary of current stress tensor workflow
 	In this file you have to specify the framewise out name, the location of the stress tensor files, and the analysis descriptor
 	When that's done, use stressdecomp and structures to run the reproc script
 	This needs cleaned up and the pickles need to be organized properly
+	
+2014.1.6
+Summary of recent mayavi dependency debacle.
+	An innocuous "system update" on my openSuSE 12.3 desktop system where much of this code is run prompted some kind of upgrade in python or matplotlib or numpy or scipy (not sure which).
+	This first broke my matplotlib, which refused to plot figures to the screen.
+	I didn't mind that for a while, but then I actually needed it.
+	I found that it was using the Agg backend, and not one of the ones which actually displays something like WxAgg, TkAgg, or QtAgg.
+	You can set these in the matplotlibrc which is located usually in /usr/lib64/python2.7/site-packages/matplotlib/mpl-data/
+	None of the options seemed to work.
+	I tried screwing around with the following dials
+		The default backend specified in matplotlibrc
+		Which environment was specified by import os;os.environ['ETS_TOOLKIT'] = 'qt4'
+		Which packages were installed in python, or on the system, including vtk
+	Became frustrated and tried a scorched earth de-installation of everything added by pip.
+	Uninstalled and re-installed matplotlib via pip
+	Finally tried deleting both /usr/lib and /usr/lib64 site-packages entirely.
+	Since this killed setuptools and I didn't know how to get it back, I just uninstalled python and re-installed.
+	Then I started installing mayavi via sudo easy_install "Mayavi[app]"
+	I installed scipy numpy-devel and matplotlib via yast
+	I got an error about sip tools (bindings for C++ or something) and the API compatibility with vtk. So, I rolled back python-sip as far as it would go, and tried again.
+	It worked. Now let's never speak of this again.
+	No it didn't. There is still a problem when plotting.
+	I got a missing module windows error until I installed the matplotlib version of the tk package from yast.
+	Also started getting errors related to texlive.
+	I deleted by tex.cache folder from the ~/.matplotlib folder and that changed the error message.
+	Then I got "! LaTeX Error: File `type1cm.sty' not found."
+	So I installed type1cm via yast.
+	Same thing with helvet.sty.
+	Added psnfss and it got past that error.
+	Ran texhash a lot.
+	None of this worked until I installed the texlive font collections and collections-extra.
+	Then it worked. And all was well.
+	
+	
+	

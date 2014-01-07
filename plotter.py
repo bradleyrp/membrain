@@ -31,10 +31,10 @@ clrs = brewer2mpl.get_map('Set1', 'qualitative', 5).mpl_colors
 
 #---Neutral fonts
 mpl.rc('font',**{'family':'sans-serif','sans-serif':['Helvetica']})
-mpl.rc('text', usetex=True)
+mpl.rc('text', usetex=True) ########## this kills the program
 #if you use amsmath, it gives you serif fonts and I don't know why argh
-#mpl.rc('text.latex', preamble='\usepackage{amsmath}')
-mpl.rc('text.latex', preamble='\usepackage{sfmath}')
+mpl.rc('text.latex', preamble='\usepackage{amsmath}')
+#mpl.rc('text.latex', preamble='\usepackage{sfmath}')
 
 #---PLOTTERS
 #-------------------------------------------------------------------------------------------------------------

@@ -701,12 +701,12 @@ class MembraneSet:
 		allselect_ions = self.universe.selectAtoms(selector[1])
 		validresids = list(set.intersection(set(self.monolayer_residues[0]),
 			set([i-1 for i in allselect_lipids.resids()])))
-		sel1 = sum([allselect_lipids.residues[allselect_lipids.resids().index(i+1)].selectAtoms(selector[0])
-			for i in validresids])
+		sel1 = sum([allselect_lipids.residues[list(allselect_lipids.resids()).index(i+1)].\
+			selectAtoms(selector[0]) for i in validresids])
 		validresids = list(set.intersection(set(self.monolayer_residues[1]),
 			set([i-1 for i in allselect_lipids.resids()])))
-		sel2 = sum([allselect_lipids.residues[allselect_lipids.resids().index(i+1)].selectAtoms(selector[0])
-			for i in validresids])
+		sel2 = sum([allselect_lipids.residues[list(allselect_lipids.resids()).index(i+1)].\
+			selectAtoms(selector[0]) for i in validresids])
 		self.selections.append(sel1)
 		self.selections.append(sel2)
 		self.selections.append(allselect_ions)
@@ -728,6 +728,8 @@ class MembraneSet:
 	def calculate_gr_lipid_ion_1d(self,frameno,whichmono=-1,detectside=0,
 		pbcadjust=1,mode=None,duplicate=True):
 		'''Framewise radial distribution calculator.'''
+		if (whichmono == 0 and self.selections[0] == 0) or (whichmono == 1 and self.selections[1] == 0):
+			return [[],[]]
 		if detectside != 0:
 			if whichmono == 0:
 				lipids_in = array(self.get_points(frameno,selection_index=0))
