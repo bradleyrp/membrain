@@ -23,19 +23,19 @@ analysis_descriptors = [
 	(['membrane-v533'],'all',director_asymmetric,slice(-2,-1),
 		['POPC','CHL1','DOPE','DOPS','P35P'],
 		[['resname P35P and name P','name CL','P35P P-to-CL'],
-		['resname P35P and name P','name MG','P35P P-to-MG']]),
+		['resname P35P and name P','name MG','P35P P-to-MG']],'P35P-to-ions'),
 	(['membrane-v534'],'all',director_asymmetric,slice(-2,-1),
 		['POPC','CHL1','DOPE','DOPS','P35P'],
 		[['resname P35P and name P','name CL','P35P P-to-CL'],
-		['resname P35P and name P','name Cal','P35P P-to-CA']]),
+		['resname P35P and name P','name Cal','P35P P-to-CA']],'P35P-to-ions'),
 	(['membrane-v531'],'all',director_asymmetric,slice(-2,-1),
 		['POPC','CHL1','DOPE','DOPS','P35P'],
 		[['resname PI2P and name P','name CL','PI2P P-to-CL'],
-		['resname PI2P and name P','name MG','PI2P P-to-MG']]),
+		['resname PI2P and name P','name MG','PI2P P-to-MG']],'PI2P-to-ions'),
 	(['membrane-v532'],'all',director_asymmetric,slice(-2,-1),
 		['POPC','CHL1','DOPE','DOPS','P35P'],
 		[['resname PI2P and name P','name CL','PI2P P-to-CL'],
-		['resname PI2P and name P','name Cal','PI2P P-to-CA']])]
+		['resname PI2P and name P','name Cal','PI2P P-to-CA']],'PI2P-to-ions')]
 
 #---Methods
 do_compute_lipid_ion_distribution_cells = 1
@@ -48,7 +48,7 @@ if do_compute_lipid_ion_distribution_cells:
 	starttime = time.time()
 	#---loop over analysis descriptors
 	for ad in analysis_descriptors[analysis_plan]:
-		(tests,selector,director,trajno,residues,pairs) = ad
+		(tests,selector,director,trajno,residues,pairs,extraname) = ad
 		#---loop over tests within the descriptor
 		for testno in range(len(tests)):
 			#---loop over specified trajectories
@@ -77,5 +77,6 @@ if do_compute_lipid_ion_distribution_cells:
 					mset.batch_gr_lipid_ion([pair[0],pair[1]],framecount=framecount,skip=skip,start=start,
 						end=end,label=pair[2],mode='voronoi_bin',monolayer_rep='P')
 				#---Save the data
-				pickledump(mset,'pkl.gr-vornoi.'+tests[testno][9:14]+'.'+basename+'.pkl',directory=pickles)
+				pickledump(mset,'pkl.gr-vornoi.'+tests[testno][9:14]+'.'+basename+'.'+
+					extraname+'.pkl',directory=pickles)
 

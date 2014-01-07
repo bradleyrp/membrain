@@ -6,7 +6,9 @@ location = ''
 execfile('locations.py')
 
 pickleset = ['pkl.lipid-ion-voronoi.v533.md.part0003.2000-5000-20.P35P-to-ions.pkl',
-	'pkl.lipid-ion-voronoi.v534.md.part0003.2000-5000-20.P35P-to-ions.pkl']
+	'pkl.lipid-ion-voronoi.v534.md.part0003.2000-5000-20.P35P-to-ions.pkl',
+	'pkl.lipid-ion-voronoi.v531.md.part0010.25500-27500-4.PI2P-to-ions.pkl'
+	'pkl.lipid-ion-voronoi.v532.md.part0010.25500-27500-4.PI2P-to-ions.pkl']
 names = ['PI(3,5)P2, Mg','PI(3,5)P2, Ca']
 pairselects = ['P35P P-to-MG','P35P P-to-CA']
 figname = 'v533.v534'
