@@ -18,16 +18,24 @@ director_asymmetric = ['(name P and not resname CHL1) or (name C3 and resname CH
 selector = '(name P and not resname CHL1) or (name C3 and resname CHL1)'
 
 #---Analysis plan
-analysis_plan = slice(-2,-1)
+analysis_plan = slice(-2,None)
 analysis_descriptors = [
 	(['membrane-v533'],'all',director_asymmetric,slice(-2,-1),
 		['POPC','CHL1','DOPE','DOPS','P35P'],
-		[['resname P35P and name P','name CL','DOPC P-to-CL'],
-		['resname P35P and name P','name MG','DOPC P-to-MG']]),
+		[['resname P35P and name P','name CL','P35P P-to-CL'],
+		['resname P35P and name P','name MG','P35P P-to-MG']]),
 	(['membrane-v534'],'all',director_asymmetric,slice(-2,-1),
 		['POPC','CHL1','DOPE','DOPS','P35P'],
-		[['resname P35P and name P','name CL','DOPC P-to-CL'],
-		['resname P35P and name P','name Cal','DOPC P-to-CA']])]
+		[['resname P35P and name P','name CL','P35P P-to-CL'],
+		['resname P35P and name P','name Cal','P35P P-to-CA']]),
+	(['membrane-v531'],'all',director_asymmetric,slice(-2,-1),
+		['POPC','CHL1','DOPE','DOPS','P35P'],
+		[['resname PI2P and name P','name CL','PI2P P-to-CL'],
+		['resname PI2P and name P','name MG','PI2P P-to-MG']]),
+	(['membrane-v532'],'all',director_asymmetric,slice(-2,-1),
+		['POPC','CHL1','DOPE','DOPS','P35P'],
+		[['resname PI2P and name P','name CL','PI2P P-to-CL'],
+		['resname PI2P and name P','name Cal','PI2P P-to-CA']])]
 
 #---Methods
 do_compute_lipid_ion_distribution_cells = 1
