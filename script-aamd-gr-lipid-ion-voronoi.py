@@ -28,11 +28,11 @@ analysis_descriptors = [
 		['POPC','CHL1','DOPE','DOPS','P35P'],
 		[['resname P35P and name P','name CL','P35P P-to-CL'],
 		['resname P35P and name P','name Cal','P35P P-to-CA']],'P35P-to-ions'),
-	(['membrane-v531'],'all',director_asymmetric,slice(-2,-1),
+	(['membrane-v531'],'all',director_asymmetric,slice(-1,None),
 		['POPC','CHL1','DOPE','DOPS','PI2P'],
 		[['resname PI2P and name P','name CL','PI2P P-to-CL'],
 		['resname PI2P and name P','name MG','PI2P P-to-MG']],'PI2P-to-ions'),
-	(['membrane-v532'],'all',director_asymmetric,slice(-2,-1),
+	(['membrane-v532'],'all',director_asymmetric,slice(-1,None),
 		['POPC','CHL1','DOPE','DOPS','PI2P'],
 		[['resname PI2P and name P','name CL','PI2P P-to-CL'],
 		['resname PI2P and name P','name Cal','PI2P P-to-CA']],'PI2P-to-ions')]
