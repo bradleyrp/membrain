@@ -14,6 +14,17 @@ name=membrane-v533
 struct=membrane-v533/system-input.gro
 membrane-v533/md.part0004.3590.3790.xtc
 
+#---calculating PI2P head spans
+name=membrane-v531-headspan
+struct=membrane-v531-headspan/md.part0010.25500.gro
+membrane-v531-headspan/md.part0010.25500-27500-4.xtc
+
+#---calculating PI2P head spans
+name=membrane-v532-headspan
+struct=membrane-v532-headspan/md.part0010.25500.gro
+membrane-v532-headspan/md.part0010.25500-27500-4.xtc
+
+
 ########################################################
 
 #---name, location may be outdated
