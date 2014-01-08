@@ -48,7 +48,7 @@ analysis_descriptors = [
 		'pkl.stressdecomp.membrane-v701.md.part0003.60000-160000-200.pkl',3],
 	['v700.part0002.100000-200000-200','pkl.structures.membrane-v700.md.part0002.100000-200000-200.pkl',
 		'localpressure.v700.part0002.100000-200000-200.3Dpp.dat',1,
-		'/home/rpb/compbio-alt/membrane-v700-exo70-dilute/a2-stress-1.0-framewise/results',
+		'/home/rpb/compbio-alt/membrane-v700-exo70-dilute/a3-stress-1.0-framewise-100000-200000/results',
 		'pkl.stressdecomp.membrane-v700.md.part0002.100000-200000-200.pkl',2]]
 		
 #---Type of looping or parameter sweeps to do
