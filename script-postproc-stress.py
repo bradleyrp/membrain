@@ -460,7 +460,9 @@ if batch_parameter_sweep_framewise:
 		griddims = [int(max(dat3dpp[:,i])) for i in range(3)]
 		vecs = mean(mset.vecs,axis=0)
 		blocksize = (vecs/griddims)
-		unzipsurfmean = mset.unzipgrid(mset.surf[frame],vecs=vecs)
+		#---IMPORTANT CHANGE. I ADDED TRANSPOSE BELOW DUE TO MAJOR ERRORRRRRR
+		#unzipsurfmean = mset.unzipgrid(mset.surf[frame],vecs=vecs)
+		unzipsurfmean = mset.unzipgrid(list(array(mset.surf[frame]).T),vecs=vecs)
 		themeanpos = mset.surf_position[frame]
 		rawresults = [[[] for j in range(griddims[1]+1)] for i in range(griddims[0]+1)]
 		xypts = array([[i,j] for i in linspace(0,vecs[0],griddims[0]+2) for j in linspace(0,vecs[1],

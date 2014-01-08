@@ -61,7 +61,7 @@ mapslabels = [r'$\textbf{{EXO70}\ensuremath{\times}2{\small (antiparallel)}}$',
 	r'$\textbf{{control}}$']
 
 #---plots
-plot_maps = 1
+plot_maps = 0
 plot_hist = 1
 save_plots = 1
 show_titles = 0
@@ -70,7 +70,7 @@ show_titles = 0
 plot_plus_minus = 1
 
 #---plot videos for +/- curvature domains (advanced version)
-plot_plus_minus_video = 1
+plot_plus_minus_video = 0
 video_sharpfactor = 0.35
 if plot_plus_minus_video:
 	render_video_full = 1
@@ -345,9 +345,9 @@ if plot_hist:
 	plt.rc('font', family='sans-serif')
 	ax.grid(True)
 	nbins = 20
-	hist0 = numpy.histogram(pdist0,bins=nbins)
-	hist1 = numpy.histogram(pdist1,bins=nbins)
-	hist2 = numpy.histogram(pdist2,bins=nbins)
+	hist0 = numpy.histogram(pdist0,bins=nbins,normed=True)
+	hist1 = numpy.histogram(pdist1,bins=nbins,normed=True)
+	hist2 = numpy.histogram(pdist2,bins=nbins,normed=True)
 	plt.plot(hist0[1][1:],hist0[0],color='b',alpha=1.,lw=2,label=mapslabels[0])
 	plt.plot(hist1[1][1:],hist1[0],color='c',alpha=1.,lw=2,label=mapslabels[1])
 	plt.plot(hist2[1][1:],hist2[0],color='k',alpha=1.,lw=2,label=mapslabels[2])
