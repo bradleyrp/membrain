@@ -150,7 +150,7 @@ if plot_plus_minus:
 				alpha=1.0)
 			ax0.add_patch(circ)
 	'''
-	protpots = np.mean(msets[0].protein,axis=0)
+	protpts = np.mean(msets[0].protein,axis=0)
 	hull = scipy.spatial.ConvexHull(protpts)
 	axes[sys].plot(protpts[hull.vertices,0],protpts[hull.vertices,1],'r-',lw=1)
 	axes[sys].plot(protpts[hull.vertices,0][-1],protpts[hull.vertices,1][0],'r-',lw=1)
@@ -170,7 +170,7 @@ if plot_plus_minus:
 				alpha=1.0)
 			ax1.add_patch(circ)
 	'''
-	protpots = np.mean(msets[0].protein,axis=0)
+	protpts = np.mean(msets[0].protein,axis=0)
 	hull = scipy.spatial.ConvexHull(protpts)
 	axes[sys].plot(protpts[hull.vertices,0],protpts[hull.vertices,1],'r-',lw=1)
 	axes[sys].plot(protpts[hull.vertices,0][-1],protpts[hull.vertices,1][0],'r-',lw=1)
@@ -304,7 +304,7 @@ if plot_plus_minus_video:
 					alpha=1.0)
 				ax0.add_patch(circ)
 		'''
-		protpots = msets[0].protein[fr]
+		protpts = msets[0].protein[fr]
 		hull = scipy.spatial.ConvexHull(protpts)
 		axes[sys].plot(protpts[hull.vertices,0],protpts[hull.vertices,1],'r-',lw=1)
 		axes[sys].plot(protpts[hull.vertices,0][-1],protpts[hull.vertices,1][0],'r-',lw=1)
@@ -328,7 +328,7 @@ if plot_plus_minus_video:
 					alpha=1.0)
 				ax1.add_patch(circ)
 		'''
-		protpots = msets[1].protein[fr]
+		protpts = msets[1].protein[fr]
 		hull = scipy.spatial.ConvexHull(protpts)
 		axes[sys].plot(protpts[hull.vertices,0],protpts[hull.vertices,1],'r-',lw=1)
 		axes[sys].plot(protpts[hull.vertices,0][-1],protpts[hull.vertices,1][0],'r-',lw=1)
