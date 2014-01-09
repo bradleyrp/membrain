@@ -408,6 +408,7 @@ if plot_maps:
 	gs = mpl.gridspec.GridSpec(4,1,width_ratios=[1,1,2,1],height_ratios=[1])
 	plt.rc('font', family='sans-serif')
 	extremum = max([max([max(i) for i in result_stack[j][0]]) for j in range(3)])
+	extremum = 0.06
 	ax0 = plt.subplot2grid((1,4),(0,0))
 	ax0.set_title(mapslabels[0])
 	ax0.set_xticklabels([])
@@ -426,8 +427,8 @@ if plot_maps:
 	'''
 	protpts = array([[i[0]*numgridpts/vecs[0],i[1]*numgridpts/vecs[1]] for i in np.mean(msets[0].protein,axis=0)])
 	hull = scipy.spatial.ConvexHull(protpts)
-	ax1.plot(protpts[hull.vertices,0],protpts[hull.vertices,1],'r-',lw=1)
-	ax1.plot(protpts[hull.vertices,0][-1],protpts[hull.vertices,1][0],'r-',lw=1)
+	ax0.plot(protpts[hull.vertices,0],protpts[hull.vertices,1],'r-',lw=1)
+	ax0.plot(protpts[hull.vertices,0][-1],protpts[hull.vertices,1][0],'r-',lw=1)
 	#---end edit
 	ax0.imshow(array(dat).T,interpolation='nearest',origin='LowerLeft',vmax=extremum,vmin=-extremum,
 		cmap='bwr',extent=[0,numgridpts,0,numgridpts])
