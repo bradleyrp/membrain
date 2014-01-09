@@ -4,8 +4,8 @@ from membrainrunner import *
 
 location = ''
 execfile('locations.py')
-
 execfile('plotter.py')
+
 import scipy.interpolate
 import scipy.integrate
 import subprocess
@@ -107,7 +107,7 @@ if plot_plus_minus:
 	span,nnum,numgridpts,distance_factor = [4,32,64,1]
 	result_stack = [[mean([i[0] for i in raw_maps[j]],axis=0),prot_centers[j]] for j in range(len(raw_maps))]
 	avg = [[],[],[]]
-	clrs = brewer2mpl.get_map('Paired', 'qualitative', 8).mpl_colors
+	clrs = brewer2mpl.get_map('Paired','qualitative', 8).mpl_colors
 	#control_mean = mean([raw_maps[2][i][0] for i in range(len(raw_maps[2]))])+0.00048502604166666415
 	#control_mean = mean([raw_maps[2][i][0] for i in range(len(raw_maps[2]))])
 	control_mean = 0
@@ -136,7 +136,7 @@ if plot_plus_minus:
 	#avgmeans = [std(avg[i],axis=0) for i in range(3)]
 	#avgmeans = [avg[i][0]-0.5 for i in range(3)]
 	extremum = max([max([max(abs(i)) for i in avgmeans[j]]) for j in range(3)])
-	
+
 	#---Plot average +/- map
 	ax0 = plt.subplot2grid((1,4), (0,0))
 	ax0.set_title(mapslabels[0])
@@ -152,10 +152,9 @@ if plot_plus_minus:
 	'''
 	protpts = np.mean(msets[0].protein,axis=0)
 	hull = scipy.spatial.ConvexHull(protpts)
-	axes[sys].plot(protpts[hull.vertices,0],protpts[hull.vertices,1],'r-',lw=1)
-	axes[sys].plot(protpts[hull.vertices,0][-1],protpts[hull.vertices,1][0],'r-',lw=1)
+	ax0.plot(protpts[hull.vertices,0],protpts[hull.vertices,1],'r-',lw=1)
+	ax0.plot(protpts[hull.vertices,0][-1],protpts[hull.vertices,1][0],'r-',lw=1)
 	#---end edit
-	
 	ax0.imshow(array(avgmeans[0]).T,interpolation='nearest',origin='LowerLeft',vmax=extremum,vmin=-extremum,
 		cmap='bwr',extent=[0,numgridpts,0,numgridpts])
 	ax1 = plt.subplot2grid((1,4), (0,1))
@@ -170,10 +169,10 @@ if plot_plus_minus:
 				alpha=1.0)
 			ax1.add_patch(circ)
 	'''
-	protpts = np.mean(msets[0].protein,axis=0)
+	protpts = np.mean(msets[1].protein,axis=0)
 	hull = scipy.spatial.ConvexHull(protpts)
-	axes[sys].plot(protpts[hull.vertices,0],protpts[hull.vertices,1],'r-',lw=1)
-	axes[sys].plot(protpts[hull.vertices,0][-1],protpts[hull.vertices,1][0],'r-',lw=1)
+	ax1.plot(protpts[hull.vertices,0],protpts[hull.vertices,1],'r-',lw=1)
+	ax1.plot(protpts[hull.vertices,0][-1],protpts[hull.vertices,1][0],'r-',lw=1)
 	#---end edit
 	ax1.imshow(array(avgmeans[1]).T,interpolation='nearest',origin='LowerLeft',vmax=extremum,vmin=-extremum,
 		cmap='bwr',extent=[0,numgridpts,0,numgridpts])
@@ -306,8 +305,8 @@ if plot_plus_minus_video:
 		'''
 		protpts = msets[0].protein[fr]
 		hull = scipy.spatial.ConvexHull(protpts)
-		axes[sys].plot(protpts[hull.vertices,0],protpts[hull.vertices,1],'r-',lw=1)
-		axes[sys].plot(protpts[hull.vertices,0][-1],protpts[hull.vertices,1][0],'r-',lw=1)
+		ax0.plot(protpts[hull.vertices,0],protpts[hull.vertices,1],'r-',lw=1)
+		ax0.plot(protpts[hull.vertices,0][-1],protpts[hull.vertices,1][0],'r-',lw=1)
 		#---end edit
 		ax0.imshow(array(avgmeans[0]).T,interpolation='nearest',origin='LowerLeft',
 			vmax=extremum,vmin=-extremum,
@@ -330,8 +329,8 @@ if plot_plus_minus_video:
 		'''
 		protpts = msets[1].protein[fr]
 		hull = scipy.spatial.ConvexHull(protpts)
-		axes[sys].plot(protpts[hull.vertices,0],protpts[hull.vertices,1],'r-',lw=1)
-		axes[sys].plot(protpts[hull.vertices,0][-1],protpts[hull.vertices,1][0],'r-',lw=1)
+		ax1.plot(protpts[hull.vertices,0],protpts[hull.vertices,1],'r-',lw=1)
+		ax1.plot(protpts[hull.vertices,0][-1],protpts[hull.vertices,1][0],'r-',lw=1)
 		#---end edit
 		ax1.imshow(array(avgmeans[1]).T,interpolation='nearest',origin='LowerLeft',
 			vmax=extremum,vmin=-extremum,
@@ -415,6 +414,7 @@ if plot_maps:
 	ax0.set_yticklabels([])
 	ax0.set_adjustable('box-forced')
 	dat = result_stack[0][0]
+	'''
 	protein_centers = result_stack[0][1]
 	nprots = nprots_list[0]
 	if nprots > 0:
@@ -423,6 +423,12 @@ if plot_maps:
 				int(round(pt[1]/vecs[0]*numgridpts))),radius=1.5/64*numgridpts,color='k',
 				alpha=1.0)
 			ax0.add_patch(circ)
+	'''
+	protpts = np.mean(msets[0].protein,axis=0)
+	hull = scipy.spatial.ConvexHull(protpts)
+	ax1.plot(protpts[hull.vertices,0],protpts[hull.vertices,1],'r-',lw=1)
+	ax1.plot(protpts[hull.vertices,0][-1],protpts[hull.vertices,1][0],'r-',lw=1)
+	#---end edit
 	ax0.imshow(array(dat).T,interpolation='nearest',origin='LowerLeft',vmax=extremum,vmin=-extremum,
 		cmap='bwr',extent=[0,numgridpts,0,numgridpts])
 	ax1 = plt.subplot2grid((1,4),(0,1))
@@ -431,6 +437,7 @@ if plot_maps:
 	ax1.set_yticklabels([])
 	ax1.set_adjustable('box-forced')
 	dat = result_stack[1][0]
+	'''
 	protein_centers = result_stack[1][1]
 	nprots = nprots_list[1]
 	if nprots > 0:
@@ -439,6 +446,12 @@ if plot_maps:
 				int(round(pt[1]/vecs[0]*numgridpts))),radius=1.5/64*numgridpts,color='k',
 				alpha=1.0)
 			ax1.add_patch(circ)
+	'''
+	protpts = np.mean(msets[1].protein,axis=0)
+	hull = scipy.spatial.ConvexHull(protpts)
+	ax1.plot(protpts[hull.vertices,0],protpts[hull.vertices,1],'r-',lw=1)
+	ax1.plot(protpts[hull.vertices,0][-1],protpts[hull.vertices,1][0],'r-',lw=1)
+	#---end edit
 	ax1.imshow(array(dat).T,interpolation='nearest',origin='LowerLeft',vmax=extremum,vmin=-extremum,
 		cmap='bwr',extent=[0,numgridpts,0,numgridpts])
 	ax2 = plt.subplot2grid((1,4), (0,2),colspan=1)
