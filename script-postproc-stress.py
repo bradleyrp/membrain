@@ -40,7 +40,7 @@ avgsurfround = 0	#---Whether you round the average surface to the voxel grid
 framewise_test = [4,32,64,1]
 
 #---Analysis plan
-analysis_plan = slice(-1,None)
+analysis_plan = slice(-2,-1)
 analysis_descriptors = [
 	['v701.part0003.60000-160000-200','pkl.structures.membrane-v701.md.part0003.60000-160000-200.pkl',
 		'localpressure.v701.part0003.60000-160000-200.3Dpp.dat',1,

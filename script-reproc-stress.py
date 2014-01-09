@@ -61,7 +61,7 @@ mapslabels = [r'$\textbf{{EXO70}\ensuremath{\times}2{\small (antiparallel)}}$',
 	r'$\textbf{{control}}$']
 
 #---plots
-plot_maps = 0
+plot_maps = 1
 plot_hist = 1
 save_plots = 1
 show_titles = 0
