@@ -60,7 +60,7 @@ show_titles = 0
 plot_plus_minus = 1
 
 #---plot videos for +/- curvature domains (advanced version)
-plot_plus_minus_video = 0
+plot_plus_minus_video = 1
 video_sharpfactor = 0.35
 if plot_plus_minus_video:
 	render_video_full = 1
