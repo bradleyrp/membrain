@@ -24,7 +24,8 @@ analysis_plan = slice(-1,None)
 analysis_descriptors = [
 	(['membrane-v700'],director_cgmd,selector_cgmd,cgmd_protein,slice(-1,None),[360000,460000,200]),
 	(['membrane-v701'],director_cgmd,selector_cgmd,cgmd_protein,slice(-1,None),[60000,160000,200]),
-	(['membrane-v700'],director_cgmd,selector_cgmd,cgmd_protein,slice(-1,None),[100000,200000,200])]
+	(['membrane-v700'],director_cgmd,selector_cgmd,cgmd_protein,slice(-1,None),[100000,200000,200]),
+	(['membrane-v550'],director_cgmd,selector_cgmd,None,slice(-1,None),[300000,400000,200])]
 	
 #---Functions
 #-------------------------------------------------------------------------------------------------------------

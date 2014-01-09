@@ -14,6 +14,7 @@ struct=/home/rpb/compbio/membrane-v599-exo70-antiparallel-alt/s1-trajectory-full
 name=membrane-v550
 struct=/home/rpb/compbio-alt/membrane-v550/s0-trajectory-full/md.part0007.450.gro
 /home/rpb/compbio-alt/membrane-v550/s0-trajectory-full/md.part0006.200000-300000-200.xtc
+/home/rpb/compbio-alt/membrane-v550/s0-trajectory-full/md.part0006.300000-400000-200.xtc
 
 name=membrane-v534
 struct=/home/rpb/compbio-alt/membrane-v534/s3-sim-kraken/system-input.gro
