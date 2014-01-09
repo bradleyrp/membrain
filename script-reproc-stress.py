@@ -150,7 +150,7 @@ if plot_plus_minus:
 				alpha=1.0)
 			ax0.add_patch(circ)
 	'''
-	protpts = [[i[0]*numgridpts/vecs[0],i[1]*numgridpts/vecs[1]] for i in np.mean(msets[0].protein,axis=0)]
+	protpts = array([[i[0]*numgridpts/vecs[0],i[1]*numgridpts/vecs[1]] for i in np.mean(msets[0].protein,axis=0)])
 	hull = scipy.spatial.ConvexHull(protpts)
 	ax0.plot(protpts[hull.vertices,0],protpts[hull.vertices,1],'r-',lw=1)
 	ax0.plot(protpts[hull.vertices,0][-1],protpts[hull.vertices,1][0],'r-',lw=1)
@@ -169,7 +169,7 @@ if plot_plus_minus:
 				alpha=1.0)
 			ax1.add_patch(circ)
 	'''
-	protpts = [[i[0]*numgridpts/vecs[0],i[1]*numgridpts/vecs[1]] for i in np.mean(msets[1].protein,axis=0)]
+	protpts = array([[i[0]*numgridpts/vecs[0],i[1]*numgridpts/vecs[1]] for i in np.mean(msets[1].protein,axis=0)])
 	hull = scipy.spatial.ConvexHull(protpts)
 	ax1.plot(protpts[hull.vertices,0],protpts[hull.vertices,1],'r-',lw=1)
 	ax1.plot(protpts[hull.vertices,0][-1],protpts[hull.vertices,1][0],'r-',lw=1)
@@ -303,7 +303,7 @@ if plot_plus_minus_video:
 					alpha=1.0)
 				ax0.add_patch(circ)
 		'''
-		protpts = [[i[0]*numgridpts/vecs[0],i[1]*numgridpts/vecs[1]] for i in msets[0].protein[fr]]
+		protpts = array([[i[0]*numgridpts/vecs[0],i[1]*numgridpts/vecs[1]] for i in msets[0].protein[fr]])
 		hull = scipy.spatial.ConvexHull(protpts)
 		ax0.plot(protpts[hull.vertices,0],protpts[hull.vertices,1],'r-',lw=1)
 		ax0.plot(protpts[hull.vertices,0][-1],protpts[hull.vertices,1][0],'r-',lw=1)
@@ -327,7 +327,7 @@ if plot_plus_minus_video:
 					alpha=1.0)
 				ax1.add_patch(circ)
 		'''
-		protpts = [[i[0]*numgridpts/vecs[0],i[1]*numgridpts/vecs[1]] for i in msets[1].protein[fr]]
+		protpts = array([[i[0]*numgridpts/vecs[0],i[1]*numgridpts/vecs[1]] for i in msets[1].protein[fr]])
 		hull = scipy.spatial.ConvexHull(protpts)
 		ax1.plot(protpts[hull.vertices,0],protpts[hull.vertices,1],'r-',lw=1)
 		ax1.plot(protpts[hull.vertices,0][-1],protpts[hull.vertices,1][0],'r-',lw=1)
@@ -424,7 +424,7 @@ if plot_maps:
 				alpha=1.0)
 			ax0.add_patch(circ)
 	'''
-	protpts = [[i[0]*numgridpts/vecs[0],i[1]*numgridpts/vecs[1]] for i in np.mean(msets[0].protein,axis=0)]
+	protpts = array([[i[0]*numgridpts/vecs[0],i[1]*numgridpts/vecs[1]] for i in np.mean(msets[0].protein,axis=0)])
 	hull = scipy.spatial.ConvexHull(protpts)
 	ax1.plot(protpts[hull.vertices,0],protpts[hull.vertices,1],'r-',lw=1)
 	ax1.plot(protpts[hull.vertices,0][-1],protpts[hull.vertices,1][0],'r-',lw=1)
@@ -447,7 +447,7 @@ if plot_maps:
 				alpha=1.0)
 			ax1.add_patch(circ)
 	'''
-	protpts = [[i[0]*numgridpts/vecs[0],i[1]*numgridpts/vecs[1]] for i in np.mean(msets[1].protein,axis=0)]
+	protpts = array([[i[0]*numgridpts/vecs[0],i[1]*numgridpts/vecs[1]] for i in np.mean(msets[1].protein,axis=0)])
 	hull = scipy.spatial.ConvexHull(protpts)
 	ax1.plot(protpts[hull.vertices,0],protpts[hull.vertices,1],'r-',lw=1)
 	ax1.plot(protpts[hull.vertices,0][-1],protpts[hull.vertices,1][0],'r-',lw=1)
