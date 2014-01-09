@@ -34,16 +34,6 @@ outname = 'v701.v700.v550.ver2'
 
 #---Pickles containing kC0 plots from script-postproc-stress.py
 raw_maps_names = [
-	'pkl.stressdecomp.membrane-v614.part0002.pkl',
-	'pkl.stressdecomp.membrane-v612.part0003.pkl',
-	'pkl.stressdecomp.membrane-v550.part0008.pkl']
-pickle_structure_names = [
-	'pkl.structures.membrane-v614-stress.md.part0002.pkl',
-	'pkl.structures.membrane-v612-stress.md.part0003.pkl',
-	'pkl.structures.membrane-v550-stress.md.part0008.shifted.pkl']
-
-#---Pickles containing kC0 plots from script-postproc-stress.py
-raw_maps_names = [
         'pkl.stressdecomp.membrane-v701.md.part0003.60000-160000-200.pkl',
         'pkl.stressdecomp.membrane-v700.md.part0002.100000-200000-200.pkl',
         'pkl.stressdecomp.membrane-v550.part0008.pkl']
@@ -119,7 +109,8 @@ if plot_plus_minus:
 	avg = [[],[],[]]
 	clrs = brewer2mpl.get_map('Paired', 'qualitative', 8).mpl_colors
 	#control_mean = mean([raw_maps[2][i][0] for i in range(len(raw_maps[2]))])+0.00048502604166666415
-	control_mean = mean([raw_maps[2][i][0] for i in range(len(raw_maps[2]))])
+	#control_mean = mean([raw_maps[2][i][0] for i in range(len(raw_maps[2]))])
+	control_mean = 0
 	doms_sizes_poz = [[],[],[]]
 	doms_sizes_neg = [[],[],[]]
 	for k in range(3):
@@ -149,6 +140,7 @@ if plot_plus_minus:
 	#---Plot average +/- map
 	ax0 = plt.subplot2grid((1,4), (0,0))
 	ax0.set_title(mapslabels[0])
+	'''
 	protein_centers = result_stack[0][1]
 	nprots = nprots_list[0]
 	if nprots > 0:
@@ -157,10 +149,18 @@ if plot_plus_minus:
 				int(round(pt[1]/vecs[0]*numgridpts))),radius=1.5/64*numgridpts,color='k',
 				alpha=1.0)
 			ax0.add_patch(circ)
+	'''
+	protpots = np.mean(msets[0].protein[fr],axis=0)
+	hull = scipy.spatial.ConvexHull(protpts)
+	axes[sys].plot(protpts[hull.vertices,0],protpts[hull.vertices,1],'r-',lw=1)
+	axes[sys].plot(protpts[hull.vertices,0][-1],protpts[hull.vertices,1][0],'r-',lw=1)
+	#---end edit
+	
 	ax0.imshow(array(avgmeans[0]).T,interpolation='nearest',origin='LowerLeft',vmax=extremum,vmin=-extremum,
 		cmap='bwr',extent=[0,numgridpts,0,numgridpts])
 	ax1 = plt.subplot2grid((1,4), (0,1))
 	ax1.set_title(mapslabels[1])
+	'''
 	protein_centers = result_stack[1][1]
 	nprots = nprots_list[1]
 	if nprots > 0:
@@ -169,6 +169,12 @@ if plot_plus_minus:
 				int(round(pt[1]/vecs[0]*numgridpts))),radius=1.5/64*numgridpts,color='k',
 				alpha=1.0)
 			ax1.add_patch(circ)
+	'''
+	protpots = np.mean(msets[0].protein[fr],axis=0)
+	hull = scipy.spatial.ConvexHull(protpts)
+	axes[sys].plot(protpts[hull.vertices,0],protpts[hull.vertices,1],'r-',lw=1)
+	axes[sys].plot(protpts[hull.vertices,0][-1],protpts[hull.vertices,1][0],'r-',lw=1)
+	#---end edit
 	ax1.imshow(array(avgmeans[1]).T,interpolation='nearest',origin='LowerLeft',vmax=extremum,vmin=-extremum,
 		cmap='bwr',extent=[0,numgridpts,0,numgridpts])
 	ax2 = plt.subplot2grid((1,4), (0,2))
@@ -236,7 +242,8 @@ if plot_plus_minus_video:
 	avg = [[],[],[]]
 	clrs = brewer2mpl.get_map('Paired', 'qualitative', 8).mpl_colors
 	#control_mean = mean([raw_maps[2][i][0] for i in range(len(raw_maps[2]))])+0.00048502604166666415
-	control_mean = mean([raw_maps[2][i][0] for i in range(len(raw_maps[2]))])
+	#control_mean = mean([raw_maps[2][i][0] for i in range(len(raw_maps[2]))])
+	control_mean = 0
 	doms_sizes_poz = [[],[],[]]
 	doms_sizes_neg = [[],[],[]]
 	for k in range(3):
@@ -284,6 +291,7 @@ if plot_plus_minus_video:
 		numgridpts = 64
 		ax0 = plt.subplot2grid((1,3), (0,0))
 		ax0.set_title(mapslabels[0])
+		'''
 		nprots = nprots_list[0]
 		if nprots > 0:
 			protlen = int(shape(msets[0].protein[0])[0]/nprots)
@@ -295,12 +303,19 @@ if plot_plus_minus_video:
 					int(round(pt[1]/vecs[0]*numgridpts))),radius=1.5/64*numgridpts,color='k',
 					alpha=1.0)
 				ax0.add_patch(circ)
+		'''
+		protpots = msets[0].protein[fr]
+		hull = scipy.spatial.ConvexHull(protpts)
+		axes[sys].plot(protpts[hull.vertices,0],protpts[hull.vertices,1],'r-',lw=1)
+		axes[sys].plot(protpts[hull.vertices,0][-1],protpts[hull.vertices,1][0],'r-',lw=1)
+		#---end edit
 		ax0.imshow(array(avgmeans[0]).T,interpolation='nearest',origin='LowerLeft',
 			vmax=extremum,vmin=-extremum,
 			cmap='bwr',extent=[0,numgridpts,0,numgridpts])
 		ax1 = plt.subplot2grid((1,3), (0,1))
 		ax1.set_title(mapslabels[1])
 		protein_centers = result_stack[1][1]
+		'''
 		nprots = nprots_list[1]
 		if nprots > 0:
 			protlen = int(shape(msets[1].protein[0])[0]/nprots)
@@ -312,6 +327,12 @@ if plot_plus_minus_video:
 					int(round(pt[1]/vecs[0]*numgridpts))),radius=1.5/64*numgridpts,color='k',
 					alpha=1.0)
 				ax1.add_patch(circ)
+		'''
+		protpots = msets[1].protein[fr]
+		hull = scipy.spatial.ConvexHull(protpts)
+		axes[sys].plot(protpts[hull.vertices,0],protpts[hull.vertices,1],'r-',lw=1)
+		axes[sys].plot(protpts[hull.vertices,0][-1],protpts[hull.vertices,1][0],'r-',lw=1)
+		#---end edit
 		ax1.imshow(array(avgmeans[1]).T,interpolation='nearest',origin='LowerLeft',
 			vmax=extremum,vmin=-extremum,
 			cmap='bwr',extent=[0,numgridpts,0,numgridpts])

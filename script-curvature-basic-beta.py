@@ -5,6 +5,8 @@ from membrainrunner import *
 import subprocess
 import os
 
+#---Note that this includes tranpose corrections for the mset.surf data.
+
 #---PARAMETERS
 #-------------------------------------------------------------------------------------------------------------
 
@@ -32,6 +34,7 @@ plt.rc('font', family='sans-serif')
 mpl.rc('text.latex', preamble='\usepackage{sfmath}')
 #mpl.rcParams.update({'font.style':'sans-serif'})
 #mpl.rcParams.update({'font.size': 16})
+#---these broke somehow, I think
 from mpl_toolkits.axes_grid1 import make_axes_locatable
 from mpl_toolkits.axes_grid1.inset_locator import inset_axes
 
@@ -63,12 +66,12 @@ if do_average_plot:
 	cdat = lenscale*curvcalc(mset.surf[0],lenscale)[0]
 	curvsm = []
 	for i in range(len(mset.surf)):
-		curvsm.append(curvcalc(mset.surf[i],lenscale)[0])
+		curvsm.append(curvcalc(list(array(mset.surf[i]).T),lenscale)[0])
 	#---calculate Gaussian curvature	
 	lenscale = mean(mset.vecs,axis=0)[0]/10./(shape(mset.surf[0])[0]+1)
 	curvsk = []
 	for i in range(len(mset.surf)):
-		curvsk.append(curvcalc(mset.surf[i],lenscale)[1])
+		curvsk.append(curvcalc(list(array(mset.surf[i]).T),lenscale)[1])
 	#---plots
 	extremum = max([np.max(curvsm),np.abs(np.min(curvsm))])
 	extremum = abs(np.mean(curvsm))+2*np.std(curvsm)
@@ -148,12 +151,12 @@ if do_video:
 	cdat = lenscale*curvcalc(mset.surf[0],lenscale)[0]
 	curvsm = []
 	for i in range(len(mset.surf)):
-		curvsm.append(curvcalc(mset.surf[i],lenscale)[0])
+		curvsm.append(curvcalc(list(array(mset.surf[i]).T),lenscale)[0])
 	#---calculate Gaussian curvature	
 	lenscale = mean(mset.vecs,axis=0)[0]/10./(shape(mset.surf[0])[0]+1)
 	curvsk = []
 	for i in range(len(mset.surf)):
-		curvsk.append(curvcalc(mset.surf[i],lenscale)[1])
+		curvsk.append(curvcalc(list(array(mset.surf[i]).T),lenscale)[1])
 	#---plots
 	framecount = 0
 	for fr in range(0,len(mset.surf),1):
@@ -227,5 +230,5 @@ if do_video:
 		plt.cla()
 		plt.close()
 	subprocess.call(['ffmpeg','-i',pickles+'/figs-'+sysname+'-curvature.snapshots/fig%05d.png','-vcodec','mpeg2video','-qscale','0','-filter:v','setpts=2.0*PTS',pickles+'/vid-'+sysname+'-curvature.mpeg'])
-	#os.popen('rm -r -f '+pickles+'/figs-'+sysname+'-tilefilter.snapshots')
+	os.popen('rm -r -f '+pickles+'/figs-'+sysname+'-tilefilter.snapshots')
 
