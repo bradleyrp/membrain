@@ -20,14 +20,15 @@ if 1:
 	analysis_descriptors = [
 		('pkl.dimple.v614-stress.md.part0002.rerun.pkl',),
 		('pkl.dimple.v612-stress.md.part0003.pkl',),
-		('pkl.dimple.v550.md.part0006.300000-400000-200.pkl',)]
+		('pkl.dimple.v550.md.part0006.300000-400000-200.pkl',),
+		('pkl.dimple.v550.md.part0006.300000-400000-200.testshift.pkl',)]
 
 	do_single_plot = True
 	do_stacked_plot = True
 	do_opposite_signs = False
-	analysis_plan,names = [0,1,2],('ENTHx4','ENTHx1','control')
+	analysis_plan,names = [0,1,2,3],('ENTHx4','ENTHx1','control','control2')
 	
-	which_brewer_colors = [0,1,2,3,4,5]
+	which_brewer_colors = [0,1,2,3,4,5,6,7]
 	clrs = [brewer2mpl.get_map('paired','qualitative',9).mpl_colors[i] for i in which_brewer_colors]
 	
 	'''

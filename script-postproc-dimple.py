@@ -17,16 +17,16 @@ location = ''
 execfile('locations.py')
 
 #---analysis plan
-analysis_plan = slice(-1,None)
+analysis_plan = slice(-2,None)
 analysis_descriptors = [
 	('pkl.structures.membrane-v701.md.part0003.60000-160000-200.pkl',slice(None),None,-1,False),
 	('pkl.structures.membrane-v700.md.part0002.100000-200000-200.pkl',slice(None),None,-1,False),
 	('pkl.structures.membrane-v612-stress.md.part0003.pkl',slice(None),None,1,False),
 	('pkl.structures.membrane-v614-stress.md.part0002.rerun.pkl',slice(None),None,1,False),
 	('pkl.structures.membrane-v550.md.part0006.300000-400000-200.pkl',slice(None),
-	'pkl.structures.membrane-v614-stress.md.part0002.rerun.pkl',1,False),
+	'pkl.structures.membrane-v612-stress.md.part0003.pkl',1,False),
 	('pkl.structures.membrane-v550.md.part0006.300000-400000-200.pkl',slice(None),
-	'pkl.structures.membrane-v614-stress.md.part0002.rerun.pkl',1,'testshift')]
+	'pkl.structures.membrane-v612-stress.md.part0003.pkl',1,'testshift')]
 
 #---parameters
 cutoff_distance = 15.
@@ -296,7 +296,7 @@ for ad in analysis_descriptors[analysis_plan]:
 	(startpickle,protein_subset_slice,protein_pickle,expected_direction,testshift) = ad
 	sysname = startpickle[24:-4]
 	if testshift != False:
-		sysname = startpickle[24:-4]+testshift
+		sysname = startpickle[24:-4]+'.'+testshift
 	#---load
 	mset = unpickle(pickles+startpickle)
 	print 'loaded '+startpickle
