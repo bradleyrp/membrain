@@ -114,6 +114,7 @@ def batch_dimple_fitting(end=None,start=None,skip=None,framecount=None):
 			elif height_direction == -1:
 				target = array([[i[0]*vecs[0]/(mset.griddims[0]-1),i[1]*vecs[1]/(mset.griddims[1]-1),
 					mset.surf[fr][i[0],i[1]]] for i in array(where(surf_discrete+buf==0)).T])
+		print 'done'
 		#---Identify center of target points for possible location weighting
 		#---Note: sometimes fitting something that isn't x,y specific (like H), you can use protein itself
 		target_com = [mean(target[:,0]),mean(target[:,1])]
