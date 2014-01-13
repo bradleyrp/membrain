@@ -16,6 +16,7 @@ if 1:
 	
 	which_brewer_colors = [0,1,2,3,4,5,6,7]
 	clrs = [brewer2mpl.get_map('paired','qualitative',9).mpl_colors[i] for i in which_brewer_colors]
+	clrs2 = brewer2mpl.get_map('Set1', 'qualitative', 5).mpl_colors
 	mpl.rc('text.latex', preamble='\usepackage{sfmath}')
 	mpl.rcParams['axes.linewidth'] = 2.0
 
@@ -25,19 +26,19 @@ if 1:
 		('pkl.dimple.v614-stress.md.part0002.rerun.pkl',),
 		('pkl.dimple.v612-stress.md.part0003.pkl',),
 		('pkl.dimple.v550.md.part0006.300000-400000-200.pkl',),
-		('pkl.dimple.v550.md.part0006.300000-400000-200.testshift.pkl',),
 		('pkl.dimple.v550.md.part0006.300000-400000-200.testshift10.pkl',),
-		('pkl.dimple.v550.md.part0006.300000-400000-200.testshift11.pkl',),
-		('pkl.dimple.v550.md.part0006.300000-400000-200.testshift01.pkl',)]
+		('pkl.dimple.v550.md.part0006.300000-400000-200.testshift01.pkl',),
+		('pkl.dimple.v550.md.part0006.300000-400000-200.testshift11.pkl',)]
 
 	do_single_plot = True
 	do_stacked_plot = True
 	do_opposite_signs = False
 
-	analysis_plan = [0,1,2,3,4]
-	names = ('ENTHx4','ENTHx1','control','control2')
-	appor = (0,1,2,2,2,2,2)
-	ccodes = [(clrs[0],clrs[1]),(clrs[2],clrs[3]),('k','k'),('k','k'),('k','k'),('k','k'),('k','k')]
+	analysis_plan = [0,1,2,3,4,5]
+	names = ('ENTHx4','ENTHx1','control A','control B','control C','control D')
+	appor = (0,1,2,2,2,2)
+	ccodes = [(clrs[0],clrs[1]),(clrs[2],clrs[3]),(clrs[4],clrs[5]),(clrs[6],clrs[7]),(clrs[0],clrs[1]),
+		(clrs[2],clrs[3])]
 	fillcodes = (1,1,0,0,0,0,0)
 	
 	
@@ -72,7 +73,10 @@ if do_single_plot:
 			hist0,binedge0 = numpy.histogram(validhs,bins=nbins,normed=True,range=(minval,maxval))
 			if max(hist0) > maxpeak: maxpeak = max(hist0)
 			mid0 = (binedge0[1:]+binedge0[:-1])/2
-			axes.plot(mid0,hist0,c=ccodes[p][o],alpha=1.,lw=2)
+			if o == 1:
+				axes.plot(mid0,hist0,c=ccodes[p][o],alpha=1.,lw=2,label=names[p])
+			else:
+				axes.plot(mid0,hist0,c=ccodes[p][o],alpha=1.,lw=2)
 			if fillcodes[p]:
 				axes.fill_between(mid0,hist0,[0 for i in mid0],facecolor=clrs[p*2+o],alpha=0.2,
 					interpolate=True)
@@ -100,7 +104,10 @@ if do_stacked_plot:
 			validhs = [10*maxhs[i] for i in validhis]
 			hist0,binedge0 = numpy.histogram(validhs,bins=nbins,normed=True,range=(minval,maxval))
 			mid0 = (binedge0[1:]+binedge0[:-1])/2
-			axes[appor[p]].plot(mid0,hist0,c=ccodes[p][o],alpha=1.,lw=2)
+			if o == 0:
+				axes[appor[p]].plot(mid0,hist0,c=ccodes[p][o],alpha=1.,lw=2,label=names[p])
+			else:
+				axes[appor[p]].plot(mid0,hist0,c=ccodes[p][o],alpha=1.,lw=2)
 			if fillcodes[p]:
 				axes[appor[p]].fill_between(mid0,hist0,[0 for i in mid0],facecolor=clrs[p*2+o],alpha=0.2,
 					interpolate=True)
@@ -108,6 +115,7 @@ if do_stacked_plot:
 	for p in range(len(appor)):
 		axes[appor[p]].set_ylim(0,1.1*maxpeak)
 		axes[appor[p]].axvline(x=0,ls='-',lw=1,c='k')
+		axes[appor[p]].legend()
 	plt.show()	
 		
 
