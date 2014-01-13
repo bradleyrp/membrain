@@ -6,23 +6,9 @@ import os
 from scipy.optimize import leastsq
 import matplotlib as mpl
 from pylab import *
-#mpl.rc('text.latex', preamble='\usepackage{sfmath}')
-#mpl.rcParams['axes.linewidth'] = 2.0
-
 
 #---PARAMETERS
 #-------------------------------------------------------------------------------------------------------------
-
-'''
-TILEFILTER PROGRAM ###################################
-Discretizes a membrane.
-Options:
-protein_subset_slice : slice of the stored protein points to use in the filter
-height_direction : stores 1 or -1 as net-positive or net-negative tiles
-cutoff_distance : when measuring around protein neighborhoods, how many grid-lengths to include
-Notes:
-Can specify different distance metrics in scipy.spatial.distance.cdist
-'''
 
 #---parameters
 skip = 1
@@ -30,22 +16,8 @@ framecount = None
 location = ''
 execfile('locations.py')
 
-'''
-#---load
-analysis_targets = ['membrane-v614.md.part0002.skip10',
-	'membrane-v612.md.part0003.skip10',
-	'membrane-v550.md.parts4to7.skip10.po4c2a',
-	'membrane-v032.md.part0002']
-systemprefix_in = analysis_targets[0]
-systemprefix = systemprefix_in+'.cutoff-15'
-startpickle = pickles+'pkl.avgstruct.'+systemprefix_in+'.pkl'
-protein_subset_slice = slice(None)
-startpickle_protein = pickles+'pkl.avgstruct.'+analysis_targets[0]+'.pkl'
-#startpickle_protein = None
-'''
-
 #---analysis plan
-analysis_plan = slice(-2,-1)
+analysis_plan = slice(-3,None)
 analysis_descriptors = [
 	('pkl.structures.membrane-v701.md.part0003.60000-160000-200.pkl',slice(None),None,-1),
 	('pkl.structures.membrane-v700.md.part0002.100000-200000-200.pkl',slice(None),None,-1),
@@ -54,29 +26,12 @@ analysis_descriptors = [
 	('pkl.structures.membrane-v550.md.part0006.300000-400000-200.pkl',slice(None),
 	'pkl.structures.membrane-v614-stress.md.part0002.rerun.pkl',1)]
 
-'''
-#---filenames
-struct_pickles = ['pkl.structures.membrane-v700.md.part0006.360000-460000-200.pkl',
-	'pkl.structures.membrane-v701.md.part0003.60000-160000-200.pkl',
-	'pkl.structures.membrane-v700.md.part0002.100000-200000-200.pkl',
-	'pkl.structures.membrane-v612-stress.md.part0003.pkl',
-	'pkl.structures.membrane-v614-stress.md.part0002.rerun.pkl',
-	'pkl.structures.membrane-v550.md.part0006.300000-400000-200.pkl']
-startpickle = struct_pickles[-2]
-sysname = startpickle[24:-4]
-#---unfinished
-startpickle_protein = pickles+'pkl.structures.membrane-v700.md.part0002.100000-200000-200.pkl'
-'''
-
-#---note: use protein_subset_slice to select protein parts as locus for further calculation
-protein_subset_slice = slice(None)
-
-#---Settings
+#---parameters
 cutoff_distance = 15.
 curvature_filter = [0.001,0.1]
-original_plot_style = True
 
 #---plot settings
+original_plot_style = False
 which_brewer_colors = [0,2,3]
 colorcodes = [brewer2mpl.get_map('Set2','qualitative',8).mpl_colors[i] for i in which_brewer_colors]
 
@@ -340,14 +295,19 @@ for ad in analysis_descriptors[analysis_plan]:
 	result_data_collection = []
 	for height_direction in [-1,1]:
 		#---fit and save
-		[params,maxhs,maxhxys,target_zones,which_frames] = batch_dimple_fitting(skip=skip,framecount=framecount)
+		[params,maxhs,maxhxys,target_zones,which_frames] = batch_dimple_fitting(skip=skip,
+			framecount=framecount)
 		result_data = MembraneData('dimple',label=sysname)
 		for i in range(len(params)):
 			result_data.add([params[i],maxhs[i],maxhxys[i],target_zones[i]],[which_frames[i]])
-		result_data.addnote('height_direction = '+str(height_direction))
-		result_data.addnote('cutoff = '+str(cutoff))
-		result_data.addnote('filter_low = '+str(curvature_filter[0]))
-		result_data.addnote('filter_high = '+str(curvature_filter[1]))
+		result_data.addnote(['height_direction',height_direction])
+		result_data.addnote(['cutoff',cutoff])
+		result_data.addnote(['filter_low',curvature_filter[0]])
+		result_data.addnote(['filter_high',curvature_filter[1]])
+		result_data.addnote(['protein_subset_slice',protein_subset_slice])
+		result_data.addnote(['protein_pickle',protein_pickle])
+		result_data.addnote(['expected_direction',expected_direction])
+		result_data.addnote(['sysname',sysname])
 		result_data_collection.append(result_data)
 		del result_data
 	pickle.dump(result_data_collection,open(pickles+'pkl.dimple.'+sysname+'.pkl','w'))
@@ -362,11 +322,4 @@ for ad in analysis_descriptors[analysis_plan]:
 		view_figures_curvatures_original(params=params,maxhs=maxhs,maxhxys=maxhxys)
 		view_figures_timeseries_original(params=params,maxhs=maxhs,maxhxys=maxhxys,target_zones=target_zones)
 	else:
-		params_neg = result_data_collection[0].get(['type','params'])
-		maxhs_neg = result_data_collection[0].get(['type','maxhs'])
-		maxhxys_neg = result_data_collection[0].get(['type','maxhxys'])
-		params_poz = result_data_collection[1].get(['type','params'])
-		maxhs_poz = result_data_collection[1].get(['type','maxhs'])
-		maxhxys_poz = result_data_collection[1].get(['type','maxhxys'])
-		#view_figures_curvatures(params=params,maxhs=maxhs,maxhxys=maxhxys)
-
+		print 'Skipping the plotting. Please change flags or consult the reproc script.'
