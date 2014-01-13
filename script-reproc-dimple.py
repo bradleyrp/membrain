@@ -11,6 +11,10 @@ if 1:
 	#mpl.rc('text.latex', preamble='\usepackage{sfmath}')
 	#mpl.rcParams['axes.linewidth'] = 2.0
 
+	which_brewer_colors = [0,1,2,3,4,5,6,7]
+	clrs = [brewer2mpl.get_map('paired','qualitative',9).mpl_colors[i] for i in which_brewer_colors]
+
+
 	skip = 1
 	framecount = None
 	location = ''
@@ -21,16 +25,21 @@ if 1:
 		('pkl.dimple.v614-stress.md.part0002.rerun.pkl',),
 		('pkl.dimple.v612-stress.md.part0003.pkl',),
 		('pkl.dimple.v550.md.part0006.300000-400000-200.pkl',),
+		('pkl.dimple.v550.md.part0006.300000-400000-200.testshift.pkl',)
 		('pkl.dimple.v550.md.part0006.300000-400000-200.testshift10.pkl',),
-		('pkl.dimple.v550.md.part0006.300000-400000-200.testshift11.pkl',)]
+		('pkl.dimple.v550.md.part0006.300000-400000-200.testshift11.pkl',),
+		('pkl.dimple.v550.md.part0006.300000-400000-200.testshift01.pkl',)]
 
 	do_single_plot = True
 	do_stacked_plot = True
 	do_opposite_signs = False
-	analysis_plan,names,apportion = [0,1,2,3],('ENTHx4','ENTHx1','control','control2'),(0,1,2,2,2)
+
+	analysis_plan = [0,1,2,3,4]
+	names = ('ENTHx4','ENTHx1','control','control2')
+	apportion = (0,1,2,2,2)
+	clrscodes = [(clrs[0],clrs[1]),(clrs[2],clrs[3]),('k','k')]
+	fillcodes = (1,1,0)
 	
-	which_brewer_colors = [0,1,2,3,4,5,6,7]
-	clrs = [brewer2mpl.get_map('paired','qualitative',9).mpl_colors[i] for i in which_brewer_colors]
 	
 	'''
 	possible plots
