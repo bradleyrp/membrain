@@ -80,8 +80,10 @@ def batch_dimple_fitting(end=None,start=None,skip=None,framecount=None):
 		#---note: many transposes are just for the "where" command
 		if testshift != False:
 			grids = mset.griddims
+			#---multiple possible periodic shifts
 			shift = [int(grids[0]/2.),int(grids[1]/2.)]
-			#shift = [int(grids[0]/2.),0]
+			shift = [int(grids[0]/2.),0]
+			shift = [0,int(grids[1]/2.)]
 			surf_discrete = array([[(1 if mset.surf[fr][(i+shift[0])%grids[0]][(j+shift[1])%grids[1]] > 0 
 				else -1) for j in range(mset.griddims[1]-1)] for i in range(mset.griddims[0]-1)]).T
 		else:
