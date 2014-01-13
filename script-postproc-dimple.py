@@ -19,12 +19,14 @@ execfile('locations.py')
 #---analysis plan
 analysis_plan = slice(-3,None)
 analysis_descriptors = [
-	('pkl.structures.membrane-v701.md.part0003.60000-160000-200.pkl',slice(None),None,-1),
-	('pkl.structures.membrane-v700.md.part0002.100000-200000-200.pkl',slice(None),None,-1),
-	('pkl.structures.membrane-v612-stress.md.part0003.pkl',slice(None),None,1),
-	('pkl.structures.membrane-v614-stress.md.part0002.rerun.pkl',slice(None),None,1),
+	('pkl.structures.membrane-v701.md.part0003.60000-160000-200.pkl',slice(None),None,-1,False),
+	('pkl.structures.membrane-v700.md.part0002.100000-200000-200.pkl',slice(None),None,-1,False),
+	('pkl.structures.membrane-v612-stress.md.part0003.pkl',slice(None),None,1,False),
+	('pkl.structures.membrane-v614-stress.md.part0002.rerun.pkl',slice(None),None,1,False),
 	('pkl.structures.membrane-v550.md.part0006.300000-400000-200.pkl',slice(None),
-	'pkl.structures.membrane-v614-stress.md.part0002.rerun.pkl',1)]
+	'pkl.structures.membrane-v614-stress.md.part0002.rerun.pkl',1,False),
+	('pkl.structures.membrane-v550.md.part0006.300000-400000-200.pkl',slice(None),
+	'pkl.structures.membrane-v614-stress.md.part0002.rerun.pkl',1,'testshift')]
 
 #---parameters
 cutoff_distance = 15.
@@ -76,8 +78,13 @@ def batch_dimple_fitting(end=None,start=None,skip=None,framecount=None):
 		print 'Fitting frame '+str(fr)
 		#---note: fixed midplaner transpose error here
 		#---note: many transposes are just for the "where" command
-		surf_discrete = array([[(1 if mset.surf[fr][i][j] > 0 else -1) for j in range(mset.griddims[1]-1)] 
-			for i in range(mset.griddims[0]-1)]).T
+		if testshift not False:
+			shift = int(mset.griddims[0]/2.)
+			surf_discrete = array([[(1 if mset.surf[fr][(i+shift)%shift][(j+shift)%shift] > 0 else -1) 
+				for j in range(mset.griddims[1]-1)] for i in range(mset.griddims[0]-1)]).T
+		else:
+			surf_discrete = array([[(1 if mset.surf[fr][i][j] > 0 else -1) for j in range(mset.griddims[1]-1)] 
+				for i in range(mset.griddims[0]-1)]).T
 		protpos = array(where(array(mset.rezipgrid(proteins[fr%len(proteins)]))!=0.0)).T
 		gridpos = [[i,j] for i in range(mset.griddims[0]-1) for j in range(mset.griddims[1]-1)]
 		#---find distances between protein points and all grid points.
@@ -88,13 +95,24 @@ def batch_dimple_fitting(end=None,start=None,skip=None,framecount=None):
 		#---find absolute coordinates for grid points within the protein "buffer"
 		buf = array(scipy.sparse.coo_matrix(([1 for i in range(len(bufferlist))],array(bufferlist).T),
 			dtype=int8,shape=(mset.griddims[0]-1,mset.griddims[1]-1)).todense())
-		#---select target for fitting
-		if height_direction == 1:
-			target = array([[i[0]*vecs[0]/(mset.griddims[0]-1),i[1]*vecs[1]/(mset.griddims[1]-1),
-				mset.surf[fr][i[0],i[1]]] for i in array(where(surf_discrete+buf==2)).T])
-		elif height_direction == -1:
-			target = array([[i[0]*vecs[0]/(mset.griddims[0]-1),i[1]*vecs[1]/(mset.griddims[1]-1),
-				mset.surf[fr][i[0],i[1]]] for i in array(where(surf_discrete+buf==0)).T])
+		if testshift not False:
+			#---select target for fitting
+			if height_direction == 1:
+				target = array([[i[0]*vecs[0]/(mset.griddims[0]-1),i[1]*vecs[1]/(mset.griddims[1]-1),
+					mset.surf[fr][(i[0]+shift)%shift,(i[1]+shift)%shift]] 
+					for i in array(where(surf_discrete+buf==2)).T])
+			elif height_direction == -1:
+				target = array([[i[0]*vecs[0]/(mset.griddims[0]-1),i[1]*vecs[1]/(mset.griddims[1]-1),
+					mset.surf[fr][(i[0]+shift)%shift,(i[1]+shift)%shift]] 
+					for i in array(where(surf_discrete+buf==0)).T])
+		else:
+			#---select target for fitting
+			if height_direction == 1:
+				target = array([[i[0]*vecs[0]/(mset.griddims[0]-1),i[1]*vecs[1]/(mset.griddims[1]-1),
+					mset.surf[fr][i[0],i[1]]] for i in array(where(surf_discrete+buf==2)).T])
+			elif height_direction == -1:
+				target = array([[i[0]*vecs[0]/(mset.griddims[0]-1),i[1]*vecs[1]/(mset.griddims[1]-1),
+					mset.surf[fr][i[0],i[1]]] for i in array(where(surf_discrete+buf==0)).T])
 		#---Identify center of target points for possible location weighting
 		#---Note: sometimes fitting something that isn't x,y specific (like H), you can use protein itself
 		target_com = [mean(target[:,0]),mean(target[:,1])]
@@ -275,8 +293,10 @@ def view_figures_curvatures_original(params=None,maxhs=None,maxhxys=None,
 
 #---loop over desired analyses
 for ad in analysis_descriptors[analysis_plan]:
-	(startpickle,protein_subset_slice,protein_pickle,expected_direction) = ad
+	(startpickle,protein_subset_slice,protein_pickle,expected_direction,testshift) = ad
 	sysname = startpickle[24:-4]
+	if testshift not False:
+		sysname = startpickle[24:-4]+testshift
 	#---load
 	mset = unpickle(pickles+startpickle)
 	print 'loaded '+startpickle
