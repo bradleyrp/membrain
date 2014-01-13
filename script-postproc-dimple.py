@@ -17,7 +17,7 @@ location = ''
 execfile('locations.py')
 
 #---analysis plan
-analysis_plan = slice(-2,None)
+analysis_plan = slice(-1,None)
 analysis_descriptors = [
 	('pkl.structures.membrane-v701.md.part0003.60000-160000-200.pkl',slice(None),None,-1,False),
 	('pkl.structures.membrane-v700.md.part0002.100000-200000-200.pkl',slice(None),None,-1,False),
@@ -81,7 +81,7 @@ def batch_dimple_fitting(end=None,start=None,skip=None,framecount=None):
 		if testshift != False:
 			grids = mset.griddims
 			shift = [int(grids[0]/2.),int(grids[1]/2.)]
-			shift = [int(grids[0]/2.),0]
+			#shift = [int(grids[0]/2.),0]
 			surf_discrete = array([[(1 if mset.surf[fr][(i+shift[0])%grids[0]][(j+shift[1])%grids[1]] > 0 
 				else -1) for j in range(mset.griddims[1]-1)] for i in range(mset.griddims[0]-1)]).T
 		else:
@@ -115,7 +115,6 @@ def batch_dimple_fitting(end=None,start=None,skip=None,framecount=None):
 			elif height_direction == -1:
 				target = array([[i[0]*vecs[0]/(mset.griddims[0]-1),i[1]*vecs[1]/(mset.griddims[1]-1),
 					mset.surf[fr][i[0],i[1]]] for i in array(where(surf_discrete+buf==0)).T])
-		print 'done'
 		#---Identify center of target points for possible location weighting
 		#---Note: sometimes fitting something that isn't x,y specific (like H), you can use protein itself
 		target_com = [mean(target[:,0]),mean(target[:,1])]
