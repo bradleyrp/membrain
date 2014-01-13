@@ -29,26 +29,44 @@ This program will open pickles with saved framewise first moment maps of the vox
 #---PARAMETERS
 #-------------------------------------------------------------------------------------------------------------
 
-#---Master ID string
-outname = 'v701.v700.v550.ver2'
-
+exo70pip2_study = 1
+enth_study = 0
 #---Pickles containing kC0 plots from script-postproc-stress.py
-raw_maps_names = [
-        'pkl.stressdecomp.membrane-v701.md.part0003.60000-160000-200.pkl',
-        'pkl.stressdecomp.membrane-v700.md.part0002.100000-200000-200.pkl',
-        'pkl.stressdecomp.membrane-v550.part0008.pkl']
-pickle_structure_names = [
-        'pkl.structures.membrane-v701.md.part0003.60000-160000-200.pkl',
-        'pkl.structures.membrane-v700.md.part0002.100000-200000-200.pkl',
-        'pkl.structures.membrane-v550-stress.md.part0008.shifted.pkl']
-        
-#---Numbers of proteins in each system
-nprots_list = [2,2,0]
-
-#---Maps labels
-mapslabels = [r'$\textbf{{EXO70}\ensuremath{\times}2{\small (antiparallel)}}$',
-	r'$\textbf{{EXO70}\ensuremath{\times}2{\small (parallel)}}$',
-	r'$\textbf{{control}}$']
+if exo70pip2_study:
+	#---Note: this is the set for the Exo70+PIP2 simulations
+	raw_maps_names = [
+		    'pkl.stressdecomp.membrane-v701.md.part0003.60000-160000-200.pkl',
+		    'pkl.stressdecomp.membrane-v700.md.part0002.100000-200000-200.pkl',
+		    'pkl.stressdecomp.membrane-v550.md.part0006.300000-400000-200.pkl']
+	pickle_structure_names = [
+		    'pkl.structures.membrane-v701.md.part0003.60000-160000-200.pkl',
+		    'pkl.structures.membrane-v700.md.part0002.100000-200000-200.pkl',
+		    'pkl.structures.membrane-v550.md.part0006.300000-400000-200.pkl']
+	#---Master ID string
+	outname = 'v701.v700.v550.ver3'
+	#---Numbers of proteins in each system
+	nprots_list = [2,2,0]
+	#---Maps labels
+	mapslabels = [r'$\textbf{{EXO70}\ensuremath{\times}2{\small (antiparallel)}}$',
+		r'$\textbf{{EXO70}\ensuremath{\times}2{\small (parallel)}}$',
+		r'$\textbf{{control}}$']
+elif enth_study:        
+	#---Note: this is the set for the ENTH simulations
+	raw_maps_names = [
+		'pkl.stressdecomp.membrane-v614-stress.md.part0002.rerun.pkl',
+		'pkl.stressdecomp.membrane-v612-stress.md.part0002.rerun.pkl',
+		'pkl.stressdecomp.membrane-v550.md.part0006.300000-400000-200.pkl']
+	pickle_structure_names = [
+		'pkl.structures.membrane-v614-stress.md.part0002.rerun.pkl',
+		'pkl.structures.membrane-v612-stress.md.part0003.pkl',
+		'pkl.structures.membrane-v550.md.part0006.300000-400000-200.pkl']
+	outname = 'v614.v612.v550.ver3'	
+	#---Numbers of proteins in each system
+	nprots_list = [4,1,0]
+	#---Maps labels
+	mapslabels = [r'$\textbf{{ENTH}\ensuremath{\times}4}$',
+		r'$\textbf{{ENTH}\ensuremath{\times}1}$',
+		r'$\textbf{{control}}$']
 
 #---plots
 plot_maps = 1
@@ -57,7 +75,7 @@ save_plots = 1
 show_titles = 0
 
 #---plot maps and histograms for +/- curvature domains (advanced version)
-plot_plus_minus = 1
+plot_plus_minus = 0
 
 #---plot videos for +/- curvature domains (advanced version)
 plot_plus_minus_video = 0
@@ -73,6 +91,9 @@ plot_advanced_hist_file = 'fig-'+outname+'-stress-framewise-histograms-plusminus
 plot_video_filebase = 'fig-'+outname+'-stress-framewise-maps-plusminus'
 plot_maps_file = 'fig-'+outname+'-stress-framewise-maps.png'
 plot_hist_file = 'fig-'+outname+'-stress-framewise-histograms.png'
+
+#---Sign change
+signchange = 1
 
 #---LOAD
 #-------------------------------------------------------------------------------------------------------------
@@ -91,6 +112,7 @@ if save_plots: show_plots = 0
 #---Plot maps / histograms for +/- curvature domains
 #-------------------------------------------------------------------------------------------------------------
 
+#---Note these are out of date - dropped after fixed errors in transpose, etc
 if plot_plus_minus:	
 	prot_centers = []
 	for m in range(len(msets)):
@@ -169,7 +191,8 @@ if plot_plus_minus:
 				alpha=1.0)
 			ax1.add_patch(circ)
 	'''
-	protpts = array([[i[0]*numgridpts/vecs[0],i[1]*numgridpts/vecs[1]] for i in np.mean(msets[1].protein,axis=0)])
+	protpts = array([[i[0]*numgridpts/vecs[0],i[1]*numgridpts/vecs[1]] 
+		for i in np.mean(msets[1].protein,axis=0)])
 	hull = scipy.spatial.ConvexHull(protpts)
 	ax1.plot(protpts[hull.vertices,0],protpts[hull.vertices,1],'r-',lw=1)
 	ax1.plot(protpts[hull.vertices,0][-1],protpts[hull.vertices,1][0],'r-',lw=1)
@@ -357,20 +380,25 @@ if plot_plus_minus_video:
 #-------------------------------------------------------------------------------------------------------------
 
 if plot_hist:
-	pdist0 = [i for j in mean([i[0] for i in raw_maps[0]],axis=0) for i in j]
-	pdist1 = [i for j in mean([i[0] for i in raw_maps[1]],axis=0) for i in j]
-	pdist2 = [i for j in mean([i[0] for i in raw_maps[2]],axis=0) for i in j]
+	pdist0 = signchange*array([i for j in mean([i[0] for i in raw_maps[0]],axis=0) for i in j])
+	pdist1 = signchange*array([i for j in mean([i[0] for i in raw_maps[1]],axis=0) for i in j])
+	pdist2 = signchange*array([i for j in mean([i[0] for i in raw_maps[2]],axis=0) for i in j])
+	maxval = max([max(pdist0),max(pdist1),max(pdist2)])
+	minval = min([min(pdist0),min(pdist1),min(pdist2)])
 	fig = plt.figure()
 	ax = fig.add_subplot(111)
 	plt.rc('font', family='sans-serif')
 	ax.grid(True)
-	nbins = 20
-	hist0 = numpy.histogram(pdist0,bins=nbins,normed=True)
-	hist1 = numpy.histogram(pdist1,bins=nbins,normed=True)
-	hist2 = numpy.histogram(pdist2,bins=nbins,normed=True)
-	plt.plot(hist0[1][1:],hist0[0],color='b',alpha=1.,lw=2,label=mapslabels[0])
-	plt.plot(hist1[1][1:],hist1[0],color='c',alpha=1.,lw=2,label=mapslabels[1])
-	plt.plot(hist2[1][1:],hist2[0],color='k',alpha=1.,lw=2,label=mapslabels[2])
+	nbins = 50
+	hist0,binedge0 = numpy.histogram(pdist0,bins=nbins,normed=True,range=(minval,maxval))
+	hist1,binedge1 = numpy.histogram(pdist1,bins=nbins,normed=True,range=(minval,maxval))
+	hist2,binedge2 = numpy.histogram(pdist2,bins=nbins,normed=True,range=(minval,maxval))
+	mid0 = (binedge0[1:]+binedge0[:-1])/2
+	mid1 = (binedge1[1:]+binedge1[:-1])/2
+	mid2 = (binedge2[1:]+binedge2[:-1])/2	
+	plt.plot(mid0,hist0,'bo-',alpha=1.,lw=2,label=mapslabels[0])
+	plt.plot(mid1,hist1,'co-',alpha=1.,lw=2,label=mapslabels[1])
+	plt.plot(mid2,hist2,'ko-',alpha=1.,lw=2,label=mapslabels[2])
 	plt.xlabel(r'$\mathsf{C_{0}(nm^{-1})}$',labelpad = 10,fontsize=20)
 	plt.ylabel('frequency', labelpad = 10,fontsize=20)
 	ax.set_xlim((-0.05,0.05))
@@ -425,12 +453,21 @@ if plot_maps:
 				alpha=1.0)
 			ax0.add_patch(circ)
 	'''
-	protpts = array([[i[0]*numgridpts/vecs[0],i[1]*numgridpts/vecs[1]] for i in np.mean(msets[0].protein,axis=0)])
-	hull = scipy.spatial.ConvexHull(protpts)
-	ax0.plot(protpts[hull.vertices,0],protpts[hull.vertices,1],'r-',lw=1)
-	ax0.plot(protpts[hull.vertices,0][-1],protpts[hull.vertices,1][0],'r-',lw=1)
+	nprots = nprots_list[0]
+	if nprots > 0:
+		protlen = int(shape(msets[0].protein[0])[0]/nprots)
+		for protpts in [mean(msets[0].protein,axis=0)[i*protlen:i*protlen+protlenshow] 
+			for i in range(nprots)]:
+			protpts = array([[i[0]*numgridpts/vecs[0],i[1]*numgridpts/vecs[1]] for i in protpts])
+			hull = scipy.spatial.ConvexHull(protpts)
+			ax0.plot(protpts[hull.vertices,0],protpts[hull.vertices,1],'k-',lw=0.6)
+			shifthullx = [protpts[hull.vertices[(i+1)%len(hull.vertices)]][0] 
+				for i in range(len(hull.vertices))]
+			shifthully = [protpts[hull.vertices[(i+1)%len(hull.vertices)]][1] 
+				for i in range(len(hull.vertices))]
+			ax0.plot(shifthullx,shifthully,'k-',lw=0.6)
 	#---end edit
-	ax0.imshow(array(dat).T,interpolation='nearest',origin='LowerLeft',vmax=extremum,vmin=-extremum,
+	ax0.imshow(signchange*array(dat).T,interpolation='nearest',origin='LowerLeft',vmax=extremum,vmin=-extremum,
 		cmap='bwr',extent=[0,numgridpts,0,numgridpts])
 	ax1 = plt.subplot2grid((1,4),(0,1))
 	ax1.set_title(mapslabels[1])
@@ -448,12 +485,21 @@ if plot_maps:
 				alpha=1.0)
 			ax1.add_patch(circ)
 	'''
-	protpts = array([[i[0]*numgridpts/vecs[0],i[1]*numgridpts/vecs[1]] for i in np.mean(msets[1].protein,axis=0)])
-	hull = scipy.spatial.ConvexHull(protpts)
-	ax1.plot(protpts[hull.vertices,0],protpts[hull.vertices,1],'r-',lw=1)
-	ax1.plot(protpts[hull.vertices,0][-1],protpts[hull.vertices,1][0],'r-',lw=1)
+	nprots = nprots_list[1]
+	if nprots > 0:
+		protlen = int(shape(msets[1].protein[0])[0]/nprots)
+		for protpts in [mean(msets[1].protein,axis=0)[i*protlen:i*protlen+protlenshow] 
+			for i in range(nprots)]:
+			protpts = array([[i[0]*numgridpts/vecs[0],i[1]*numgridpts/vecs[1]] for i in protpts])
+			hull = scipy.spatial.ConvexHull(protpts)
+			ax1.plot(protpts[hull.vertices,0],protpts[hull.vertices,1],'k-',lw=0.6)
+			shifthullx = [protpts[hull.vertices[(i+1)%len(hull.vertices)]][0] 
+				for i in range(len(hull.vertices))]
+			shifthully = [protpts[hull.vertices[(i+1)%len(hull.vertices)]][1] 
+				for i in range(len(hull.vertices))]
+			ax1.plot(shifthullx,shifthully,'k-',lw=0.6)
 	#---end edit
-	ax1.imshow(array(dat).T,interpolation='nearest',origin='LowerLeft',vmax=extremum,vmin=-extremum,
+	ax1.imshow(signchange*array(dat).T,interpolation='nearest',origin='LowerLeft',vmax=extremum,vmin=-extremum,
 		cmap='bwr',extent=[0,numgridpts,0,numgridpts])
 	ax2 = plt.subplot2grid((1,4), (0,2),colspan=1)
 	ax2.set_title(mapslabels[2])
@@ -461,7 +507,7 @@ if plot_maps:
 	ax2.set_yticklabels([])
 	ax2.set_adjustable('box-forced')
 	dat = result_stack[2][0]
-	img = ax2.imshow(array(dat).T,interpolation='nearest',origin='LowerLeft',vmax=extremum,vmin=-extremum,
+	img = ax2.imshow(-1*array(dat).T,interpolation='nearest',origin='LowerLeft',vmax=extremum,vmin=-extremum,
 		cmap='bwr',extent=[0,numgridpts,0,numgridpts])
 	cax = inset_axes(ax2,
 		         width="5%",

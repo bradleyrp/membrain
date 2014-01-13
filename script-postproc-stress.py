@@ -40,7 +40,7 @@ avgsurfround = 0	#---Whether you round the average surface to the voxel grid
 framewise_test = [4,32,64,1]
 
 #---Analysis plan
-analysis_plan = slice(-2,-1)
+analysis_plan = slice(-1,None)
 analysis_descriptors = [
 	['v701.part0003.60000-160000-200','pkl.structures.membrane-v701.md.part0003.60000-160000-200.pkl',
 		'localpressure.v701.part0003.60000-160000-200.3Dpp.dat',1,
@@ -49,7 +49,17 @@ analysis_descriptors = [
 	['v700.part0002.100000-200000-200','pkl.structures.membrane-v700.md.part0002.100000-200000-200.pkl',
 		'localpressure.v700.part0002.100000-200000-200.3Dpp.dat',1,
 		'/home/rpb/compbio-alt/membrane-v700-exo70-dilute/a3-stress-1.0-framewise-100000-200000/results',
-		'pkl.stressdecomp.membrane-v700.md.part0002.100000-200000-200.pkl',3]]
+		'pkl.stressdecomp.membrane-v700.md.part0002.100000-200000-200.pkl',3],
+	['v550.part0006.300000-400000-200','pkl.structures.membrane-v550.md.part0006.300000-400000-200.pkl',
+		'localpressure.v700.part0006.300000-400000-200.3Dpp.dat',0,
+		'/home/rpb/compbio/membrane-v550/u5-stress-1.0-framewise-md.part0006.300000-400000-200/results',
+		'pkl.stressdecomp.membrane-v550.md.part0006.300000-400000-200.pkl',6],
+	['v614.part0002','pkl.structures.membrane-v614-stress.md.part0002.rerun.pkl','',4,
+		'/home/rpb/compbio/membrane-v614-enthx4-12800/a7-localpressure.v614.framewise/',
+		'pkl.stressdecomp.membrane-v614-stress.md.part0002.rerun.pkl',2],
+	['v612.part0003','pkl.structures.membrane-v612-stress.md.part0003.pkl','',2,
+		'/home/rpb/compbio/membrane-v612-enthx1-12800/a3-localpressure.v612.framewise/',
+		'pkl.stressdecomp.membrane-v612-stress.md.part0002.rerun.pkl',3]]
 		
 #---Type of looping or parameter sweeps to do
 #---Note: that I am temporarily dropping support for everything but batch_parameter_sweep_framewise

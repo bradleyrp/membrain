@@ -2,13 +2,10 @@
 
 from membrainrunner import *
 
-import os
 from scipy.optimize import leastsq
 import matplotlib as mpl
 from pylab import *
-#mpl.rc('text.latex', preamble='\usepackage{sfmath}')
-#mpl.rcParams['axes.linewidth'] = 2.0
-
+import os
 
 #---PARAMETERS
 #-------------------------------------------------------------------------------------------------------------
@@ -44,17 +41,6 @@ startpickle_protein = pickles+'pkl.avgstruct.'+analysis_targets[0]+'.pkl'
 #startpickle_protein = None
 '''
 
-#---analysis plan
-analysis_plan = slice(-2,-1)
-analysis_descriptors = [
-	('pkl.structures.membrane-v701.md.part0003.60000-160000-200.pkl',slice(None),None,-1),
-	('pkl.structures.membrane-v700.md.part0002.100000-200000-200.pkl',slice(None),None,-1),
-	('pkl.structures.membrane-v612-stress.md.part0003.pkl',slice(None),None,1),
-	('pkl.structures.membrane-v614-stress.md.part0002.rerun.pkl',slice(None),None,1),
-	('pkl.structures.membrane-v550.md.part0006.300000-400000-200.pkl',slice(None),
-	'pkl.structures.membrane-v614-stress.md.part0002.rerun.pkl',1)]
-
-'''
 #---filenames
 struct_pickles = ['pkl.structures.membrane-v700.md.part0006.360000-460000-200.pkl',
 	'pkl.structures.membrane-v701.md.part0003.60000-160000-200.pkl',
@@ -64,19 +50,21 @@ struct_pickles = ['pkl.structures.membrane-v700.md.part0006.360000-460000-200.pk
 	'pkl.structures.membrane-v550.md.part0006.300000-400000-200.pkl']
 startpickle = struct_pickles[-2]
 sysname = startpickle[24:-4]
-#---unfinished
-startpickle_protein = pickles+'pkl.structures.membrane-v700.md.part0002.100000-200000-200.pkl'
-'''
 
-#---note: use protein_subset_slice to select protein parts as locus for further calculation
+startpickle_protein = pickles+'pkl.structures.membrane-v700.md.part0002.100000-200000-200.pkl'
+
+#---chose which parts of the protein to consider as the locus for further calculation
 protein_subset_slice = slice(None)
 
 #---Settings
+height_direction = 1
 cutoff_distance = 15.
 curvature_filter = [0.001,0.1]
-original_plot_style = True
 
 #---plot settings
+#mpl.rc('text.latex', preamble='\usepackage{sfmath}')
+#mpl.rcParams['axes.linewidth'] = 2.0
+zvals={-1:0,1:1,0:2,2:3}
 which_brewer_colors = [0,2,3]
 colorcodes = [brewer2mpl.get_map('Set2','qualitative',8).mpl_colors[i] for i in which_brewer_colors]
 
@@ -99,6 +87,93 @@ def gauss2d_residual(params,x,y,z):
 	#return ((g2d(params,x,y)-z)**2)/norm([x-center[0],y-center[1]])**2
 	return ((gauss2d(params,x,y)-z)**2)
 	
+def batch_dimple_fitting_old(end=None,start=None,skip=None,framecount=None):
+	'''Loop over frames, and fit height profiles.'''
+	params = []
+	maxhs = []
+	maxhxys = []
+	target_zones = []
+	nframes = len(mset.surf)
+	if framecount == None:
+		if end == None: end = nframes
+		if start == None: start = 0
+		if skip == None: skip = 1
+	else:
+		start = 0
+		end = nframes
+		skip = int(float(nframes)/framecount)
+		skip = 1 if skip < 1 else skip
+	cutoff = cutoff_distance*10/(vecs[0]/mset.griddims[0])
+	print 'Total frames = '+str(end)
+	for fr in range(start,end,skip):
+		print 'Fitting frame '+str(fr)
+		#surf_discrete = array([[(1 if mset.surf[fr][i][j] > 0 else -1) for j in range(mset.griddims[1]-1)] 
+		#	for i in range(mset.griddims[0]-1)])
+		surf_discrete = array([[(1 if mset.surf[fr][j][i] > 0 else -1) for j in range(mset.griddims[0]-1)] 
+			for i in range(mset.griddims[1]-1)])
+		#---Get protein positions on the grid
+		#protpos = array(where(array(mset.rezipgrid(proteins[fr%len(proteins)]))!=0.0)).T
+		protpos = array(where(array(mset.rezipgrid(proteins[fr%len(proteins)]))!=0.0))
+		#gridpos = [[i,j] for i in range(mset.griddims[0]-1) for j in range(mset.griddims[1]-1)]
+		gridpos = [[j,i] for i in range(mset.griddims[1]-1) for j in range(mset.griddims[0]-1)]
+		#---Find distances between protein points and all grid points.
+		#---Note: modify the norm here, if necessary
+		distmat = scipy.spatial.distance.cdist(protpos,gridpos)
+		#---Find grid points within cutoff of protein points
+		bufferlist = [gridpos[j] for j in list(set([w for v in [list(where(distmat[i]<cutoff)[0]) 
+			for i in range(len(distmat))] for w in v]))]
+		#---Find absolute coordinates for grid points within the protein "buffer"
+		buf = array(scipy.sparse.coo_matrix(([1 for i in range(len(bufferlist))],array(bufferlist).T),
+			dtype=int8,shape=(mset.griddims[0]-1,mset.griddims[1]-1)).todense())
+		#---Select target for fitting
+
+		#target = array([[i[0]*vecs[0]/(mset.griddims[0]-1),i[1]*vecs[1]/(mset.griddims[1]-1),
+		#	mset.surf[fr][i[0],i[1]]] for i in array(where(surf_discrete+buf==2)).T])
+		#################### is this correct above?
+
+		if height_direction == 1:
+			target = array([[i[0]*vecs[0]/(mset.griddims[0]-1),i[1]*vecs[1]/(mset.griddims[1]-1),
+				mset.surf[fr][i[0],i[1]]] for i in array(where(surf_discrete+buf==2)).T])
+		elif height_direction == -1:
+			target = array([[i[0]*vecs[0]/(mset.griddims[0]-1),i[1]*vecs[1]/(mset.griddims[1]-1),
+				mset.surf[fr][i[0],i[1]]] for i in array(where(surf_discrete+buf==0)).T])
+		else:
+			print 'No height direction specified?'
+
+		
+		#---Old code
+		if 0:
+			positive_zone = array([[i[0]*vecs[0]/(mset.griddims[0]-1),i[1]*vecs[1]/(mset.griddims[1]-1),
+				mset.surf[fr][i[0],i[1]]] for i in array(where(surf_discrete==1)).T])
+		if 0:
+			meshplot(mset.surf[fr],vecs=vecs,show='surf',opacity=0.6)
+			meshpoints(proteins[0]-[0,0,mean(mset.surf_position)],scale_factor=10,color=(1,0.24,0.59))
+		#---Identify center of target points for possible location weighting
+		#---Note: sometimes fitting something that isn't x,y specific (like H), you can use protein itself
+		target_com = [mean(target[:,0]),mean(target[:,1])]
+		#---Perform the fit
+		p_opt = leastsq(gauss2d_residual,array([0,1,target_com[0],target_com[0],50,50,0]),
+			args=(target[:,0],target[:,1],target[:,2]))
+		params.append(p_opt[0])
+		#---Old code for plotting, etc
+		if 0:
+			fit = [[i[0],i[1],g2d(p_opt[0],i[0],i[1])] for i in target[:,0:2]]
+			resid = [[i[0],i[1],g2d(p_opt[0],i[0],i[1])-i[2]] for i in target]
+			resids1d = 10*(fit-target)[:,2]
+			curvs = [10**4*gauss2dh(p_opt[0],i[0],i[1]) for i in target]
+		if 0:
+			meshpoints(fit,vecs=vecs,color=(1,1,1),scale_factor=resids1d)
+			curvs2 = [10*-1*gauss2dh(p_opt[0],i[0],i[1]) for i in target]
+			curvsmax.append(max(curvs2))
+		#---Store the location of maximum mean curvature and target zone
+		#---Find the maximum curvature strength, regardless of direction, and save it.
+		maxhxys.append(argmax([abs(gauss2dh(p_opt[0],i[0],i[1])) for i in target]))
+		#---PICKLES NEED RECALCULATED AFTER THIS
+		#---Reverse curvature sign here (I think I did this to match the meaning of "positive curvature")
+		maxhs.append(-1*gauss2dh(p_opt[0],target[maxhxys[-1]][0],target[maxhxys[-1]][1]))
+		target_zones.append(target)
+	return [params,maxhs,maxhxys,target_zones,range(start,end,skip)]
+	
 def batch_dimple_fitting(end=None,start=None,skip=None,framecount=None):
 	'''Loop over frames, and fit height profiles.'''
 	params = []
@@ -119,27 +194,35 @@ def batch_dimple_fitting(end=None,start=None,skip=None,framecount=None):
 	print 'Total frames = '+str(end)
 	for fr in range(start,end,skip):
 		print 'Fitting frame '+str(fr)
-		#---note: fixed midplaner transpose error here
-		#---note: many transposes are just for the "where" command
 		surf_discrete = array([[(1 if mset.surf[fr][i][j] > 0 else -1) for j in range(mset.griddims[1]-1)] 
 			for i in range(mset.griddims[0]-1)]).T
 		protpos = array(where(array(mset.rezipgrid(proteins[fr%len(proteins)]))!=0.0)).T
 		gridpos = [[i,j] for i in range(mset.griddims[0]-1) for j in range(mset.griddims[1]-1)]
-		#---find distances between protein points and all grid points.
+
+		#meshpoints(array(mset.protein[fr%len(proteins)]))
+		#meshplot(surf_discrete,vecs=mset.vecs[0])
+		#tmp = raw_input('...')
+		
+		#---the transpose is just for the "where" command.
+		
+		#---Find distances between protein points and all grid points.
 		distmat = scipy.spatial.distance.cdist(protpos,gridpos)
-		#---find grid points within cutoff of protein points
+		#---Find grid points within cutoff of protein points
 		bufferlist = [gridpos[j] for j in list(set([w for v in [list(where(distmat[i]<cutoff)[0]) 
 			for i in range(len(distmat))] for w in v]))]
-		#---find absolute coordinates for grid points within the protein "buffer"
+		#---Find absolute coordinates for grid points within the protein "buffer"
 		buf = array(scipy.sparse.coo_matrix(([1 for i in range(len(bufferlist))],array(bufferlist).T),
 			dtype=int8,shape=(mset.griddims[0]-1,mset.griddims[1]-1)).todense())
-		#---select target for fitting
+		#---Select target for fitting
 		if height_direction == 1:
 			target = array([[i[0]*vecs[0]/(mset.griddims[0]-1),i[1]*vecs[1]/(mset.griddims[1]-1),
 				mset.surf[fr][i[0],i[1]]] for i in array(where(surf_discrete+buf==2)).T])
 		elif height_direction == -1:
 			target = array([[i[0]*vecs[0]/(mset.griddims[0]-1),i[1]*vecs[1]/(mset.griddims[1]-1),
 				mset.surf[fr][i[0],i[1]]] for i in array(where(surf_discrete+buf==0)).T])
+				
+				
+			
 		#---Identify center of target points for possible location weighting
 		#---Note: sometimes fitting something that isn't x,y specific (like H), you can use protein itself
 		target_com = [mean(target[:,0]),mean(target[:,1])]
@@ -155,7 +238,7 @@ def batch_dimple_fitting(end=None,start=None,skip=None,framecount=None):
 		target_zones.append(target)
 	return [params,maxhs,maxhxys,target_zones,range(start,end,skip)]
 	
-def view_figures_timeseries_original(params=None,maxhs=None,maxhxys=None,target_zones=None):
+def view_figures_timeseries(params=None,maxhs=None,maxhxys=None,target_zones=None):
 	'''Plot the framewise measurements and residuals.'''
 	#---Calculate point-wise residuals
 	resids = [mean([abs(gauss2d(params[0],i[0],i[1])-i[2]) for i in target_zones[j]]) 
@@ -197,9 +280,9 @@ def view_figures_timeseries_original(params=None,maxhs=None,maxhxys=None,target_
 		bbox_extra_artists=[ylabel1,ylabel2,ylabel3,ylabel4],bbox_inches='tight')
 	plt.close()
 
-def view_figures_curvatures_original(params=None,maxhs=None,maxhxys=None,
+def view_figures_curvatures(params=None,maxhs=None,maxhxys=None,
 	means='linear',scales='linear',fullrange=True,extrasuffix='',sigma_calc='mode'):
-	'''Summarize the results in figure saved to a file. Original version.'''
+	'''Summarize the results in figure saved to a file.'''
 	if fullrange == True:
 		#---Nanometer correction
 		validhis = [i for i in range(len(maxhs)) if (10*abs(maxhs[i]) > 10**-5 and abs(10*maxhs[i]) < 0.1)]
@@ -318,55 +401,47 @@ def view_figures_curvatures_original(params=None,maxhs=None,maxhxys=None,
 #---MAIN
 #-------------------------------------------------------------------------------------------------------------
 
-#---loop over desired analyses
-for ad in analysis_descriptors[analysis_plan]:
-	(startpickle,protein_subset_slice,protein_pickle,expected_direction) = ad
-	sysname = startpickle[24:-4]
+#---if the fits already exist in a pickle, retrieve them
+#if os.path.isfile(pickles+'pkl.dimple.'+sysname+'.pkl'):
+#	print 'I found the pickle, so you already have the data.'
+#	result_data = unpickle(pickles+'pkl.dimple.'+sysname+'.pkl')
+#else:
+#---blocked the above because I am changing height direction
+if 1:
 	#---load
 	mset = unpickle(pickles+startpickle)
 	print 'loaded '+startpickle
 	print 'frame count = '+str(len(mset.surf[0]))
 	#---find protein points
-	if protein_pickle == None:
-		proteins_all = array(mset.protein)
-		proteins = proteins_all[:,protein_subset_slice]
-	else:
-		mset_protein = unpickle(pickles+protein_pickle)
-		proteins_all = array(mset_protein.protein)
-		proteins = proteins_all[:,protein_subset_slice]
+	proteins_all = array(mset.protein)
+	proteins = proteins_all[:,protein_subset_slice]
 	vecs = np.mean(mset.vecs,axis=0)
 	#---note: cutoff is global
 	cutoff = cutoff_distance*10/(vecs[0]/mset.griddims[0])
-	result_data_collection = []
-	for height_direction in [-1,1]:
-		#---fit and save
-		[params,maxhs,maxhxys,target_zones,which_frames] = batch_dimple_fitting(skip=skip,framecount=framecount)
-		result_data = MembraneData('dimple',label=sysname)
-		for i in range(len(params)):
-			result_data.add([params[i],maxhs[i],maxhxys[i],target_zones[i]],[which_frames[i]])
-		result_data.addnote('height_direction = '+str(height_direction))
-		result_data.addnote('cutoff = '+str(cutoff))
-		result_data.addnote('filter_low = '+str(curvature_filter[0]))
-		result_data.addnote('filter_high = '+str(curvature_filter[1]))
-		result_data_collection.append(result_data)
-		del result_data
-	pickle.dump(result_data_collection,open(pickles+'pkl.dimple.'+sysname+'.pkl','w'))
-	if original_plot_style:
-		#---get results from the data object
-		params = result_data_collection[(0 if expected_direction == -1 else 1)].get(['type','params'])
-		maxhs = result_data_collection[(0 if expected_direction == -1 else 1)].get(['type','maxhs'])
-		maxhxys = result_data_collection[(0 if expected_direction == -1 else 1)].get(['type','maxhxys'])
-		target_zones = result_data_collection[(0 if expected_direction == -1 else 1)].get(['type',
-			'target_zones'])
-		#---plot the results
-		view_figures_curvatures_original(params=params,maxhs=maxhs,maxhxys=maxhxys)
-		view_figures_timeseries_original(params=params,maxhs=maxhs,maxhxys=maxhxys,target_zones=target_zones)
-	else:
-		params_neg = result_data_collection[0].get(['type','params'])
-		maxhs_neg = result_data_collection[0].get(['type','maxhs'])
-		maxhxys_neg = result_data_collection[0].get(['type','maxhxys'])
-		params_poz = result_data_collection[1].get(['type','params'])
-		maxhs_poz = result_data_collection[1].get(['type','maxhs'])
-		maxhxys_poz = result_data_collection[1].get(['type','maxhxys'])
-		#view_figures_curvatures(params=params,maxhs=maxhs,maxhxys=maxhxys)
+	#---fit and save
+	[params,maxhs,maxhxys,target_zones,which_frames] = batch_dimple_fitting(skip=skip,framecount=framecount)
+	result_data = MembraneData('dimple',label=sysname)
+	for i in range(len(params)):
+		result_data.add([params[i],maxhs[i],maxhxys[i],target_zones[i]],[which_frames[i]])
+	result_data.addnote('cutoff = '+str(cutoff))
+	result_data.addnote('filter_low = '+str(curvature_filter[0]))
+	result_data.addnote('filter_high = '+str(curvature_filter[1]))
+	result_data.addnote('height_direction = '+str(height_direction))
+	pickledump(result_data,'pkl.dimple.'+sysname+'.pkl',directory=pickles)
+	
+#---If you need to recalculate the maximum curvature magnitudes
+if 0:
+	recalc_h = [[gauss2dh(params[j],i[0],i[1]) for i in target_zones[j]] for j in range(len(params))]
+	maxhxys = [argmax([abs(i) for i in recalc_h[j]]) for j in range(len(recalc_h))]
+	maxhs = [recalc_h[j][maxhxys[j]] for j in range(len(recalc_h))]
+	validhis = [i for i in range(len(maxhs)) if (abs(10*maxhs[i]) > curvature_filter[0] 
+		and abs(10*maxhs[i]) < curvature_filter[1])]
+
+#---Plot the results
+params = result_data.get(['type','params'])
+maxhs = result_data.get(['type','maxhs'])
+maxhxys = result_data.get(['type','maxhxys'])
+target_zones = result_data.get(['type','target_zones'])
+view_figures_curvatures(params=params,maxhs=maxhs,maxhxys=maxhxys)
+view_figures_timeseries(params=params,maxhs=maxhs,maxhxys=maxhxys,target_zones=target_zones)
 
