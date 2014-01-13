@@ -78,7 +78,7 @@ def batch_dimple_fitting(end=None,start=None,skip=None,framecount=None):
 		print 'Fitting frame '+str(fr)
 		#---note: fixed midplaner transpose error here
 		#---note: many transposes are just for the "where" command
-		if testshift not False:
+		if testshift != False:
 			shift = int(mset.griddims[0]/2.)
 			surf_discrete = array([[(1 if mset.surf[fr][(i+shift)%shift][(j+shift)%shift] > 0 else -1) 
 				for j in range(mset.griddims[1]-1)] for i in range(mset.griddims[0]-1)]).T
@@ -95,7 +95,7 @@ def batch_dimple_fitting(end=None,start=None,skip=None,framecount=None):
 		#---find absolute coordinates for grid points within the protein "buffer"
 		buf = array(scipy.sparse.coo_matrix(([1 for i in range(len(bufferlist))],array(bufferlist).T),
 			dtype=int8,shape=(mset.griddims[0]-1,mset.griddims[1]-1)).todense())
-		if testshift not False:
+		if testshift != False:
 			#---select target for fitting
 			if height_direction == 1:
 				target = array([[i[0]*vecs[0]/(mset.griddims[0]-1),i[1]*vecs[1]/(mset.griddims[1]-1),
@@ -295,7 +295,7 @@ def view_figures_curvatures_original(params=None,maxhs=None,maxhxys=None,
 for ad in analysis_descriptors[analysis_plan]:
 	(startpickle,protein_subset_slice,protein_pickle,expected_direction,testshift) = ad
 	sysname = startpickle[24:-4]
-	if testshift not False:
+	if testshift != False:
 		sysname = startpickle[24:-4]+testshift
 	#---load
 	mset = unpickle(pickles+startpickle)
