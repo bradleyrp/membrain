@@ -8,24 +8,24 @@ if 1:
 	from scipy.optimize import leastsq
 	import matplotlib as mpl
 	from pylab import *
-	#mpl.rc('text.latex', preamble='\usepackage{sfmath}')
-	#mpl.rcParams['axes.linewidth'] = 2.0
-
-	which_brewer_colors = [0,1,2,3,4,5,6,7]
-	clrs = [brewer2mpl.get_map('paired','qualitative',9).mpl_colors[i] for i in which_brewer_colors]
-
 
 	skip = 1
 	framecount = None
 	location = ''
 	execfile('locations.py')
 	
+	which_brewer_colors = [0,1,2,3,4,5,6,7]
+	clrs = [brewer2mpl.get_map('paired','qualitative',9).mpl_colors[i] for i in which_brewer_colors]
+	mpl.rc('text.latex', preamble='\usepackage{sfmath}')
+	mpl.rcParams['axes.linewidth'] = 2.0
+
+	
 	#---analysis plan
 	analysis_descriptors = [
 		('pkl.dimple.v614-stress.md.part0002.rerun.pkl',),
 		('pkl.dimple.v612-stress.md.part0003.pkl',),
 		('pkl.dimple.v550.md.part0006.300000-400000-200.pkl',),
-		('pkl.dimple.v550.md.part0006.300000-400000-200.testshift.pkl',)
+		('pkl.dimple.v550.md.part0006.300000-400000-200.testshift.pkl',),
 		('pkl.dimple.v550.md.part0006.300000-400000-200.testshift10.pkl',),
 		('pkl.dimple.v550.md.part0006.300000-400000-200.testshift11.pkl',),
 		('pkl.dimple.v550.md.part0006.300000-400000-200.testshift01.pkl',)]
@@ -36,9 +36,9 @@ if 1:
 
 	analysis_plan = [0,1,2,3,4]
 	names = ('ENTHx4','ENTHx1','control','control2')
-	apportion = (0,1,2,2,2)
-	clrscodes = [(clrs[0],clrs[1]),(clrs[2],clrs[3]),('k','k')]
-	fillcodes = (1,1,0)
+	appor = (0,1,2,2,2,2,2)
+	ccodes = [(clrs[0],clrs[1]),(clrs[2],clrs[3]),('k','k'),('k','k'),('k','k'),('k','k'),('k','k')]
+	fillcodes = (1,1,0,0,0,0,0)
 	
 	
 	'''
@@ -72,13 +72,16 @@ if do_single_plot:
 			hist0,binedge0 = numpy.histogram(validhs,bins=nbins,normed=True,range=(minval,maxval))
 			if max(hist0) > maxpeak: maxpeak = max(hist0)
 			mid0 = (binedge0[1:]+binedge0[:-1])/2
-			axes.plot(mid0,hist0,c=clrs[p*2+o],alpha=1.,lw=2)
-			axes.fill_between(mid0,hist0,[0 for i in mid0],facecolor=clrs[p*2+o],alpha=0.2,interpolate=True)
+			axes.plot(mid0,hist0,c=ccodes[p][o],alpha=1.,lw=2)
+			if fillcodes[p]:
+				axes.fill_between(mid0,hist0,[0 for i in mid0],facecolor=clrs[p*2+o],alpha=0.2,
+					interpolate=True)
+	axes.axvline(x=0,ls='-',lw=1,c='k')
 	plt.show()	
 
 
 if do_stacked_plot:
-	fig, axes = plt.subplots(nrows=len(analysis_plan),ncols=1,figsize=(6,2*len(analysis_plan)))
+	fig, axes = plt.subplots(nrows=max(appor)+1,ncols=1,figsize=(6,2*(max(appor)+1)))
 	nbins = 20
 	minval,maxval = -0.10,0.10
 	maxpeak = 0
@@ -91,16 +94,20 @@ if do_stacked_plot:
 			params = results_stack[pnum][o].get(['type','params'])
 			maxhs = results_stack[pnum][o].get(['type','maxhs'])
 			maxhxys = results_stack[pnum][o].get(['type','maxhxys'])
-			validhis = [i for i in range(len(maxhs)) if (10*abs(maxhs[i]) > 10**-5 and abs(10*maxhs[i]) < 0.1)]
+			validhis = [i for i in range(len(maxhs)) 
+				if (10*abs(maxhs[i]) > 10**-5 and abs(10*maxhs[i]) < 0.1)]
 			#---nanometer correction
 			validhs = [10*maxhs[i] for i in validhis]
 			hist0,binedge0 = numpy.histogram(validhs,bins=nbins,normed=True,range=(minval,maxval))
 			mid0 = (binedge0[1:]+binedge0[:-1])/2
-			axes[p].plot(mid0,hist0,c=clrs[p*2+o],alpha=1.,lw=2)
-			axes[p].fill_between(mid0,hist0,[0 for i in mid0],facecolor=clrs[p*2+o],alpha=0.2,interpolate=True)
+			axes[appor[p]].plot(mid0,hist0,c=ccodes[p][o],alpha=1.,lw=2)
+			if fillcodes[p]:
+				axes[appor[p]].fill_between(mid0,hist0,[0 for i in mid0],facecolor=clrs[p*2+o],alpha=0.2,
+					interpolate=True)
 			if max(hist0) > maxpeak: maxpeak = max(hist0)
-	for p in range(len(analysis_plan)):
-		axes[p].set_ylim(0,1.1*maxpeak)
+	for p in range(len(appor)):
+		axes[appor[p]].set_ylim(0,1.1*maxpeak)
+		axes[appor[p]].axvline(x=0,ls='-',lw=1,c='k')
 	plt.show()	
 		
 
