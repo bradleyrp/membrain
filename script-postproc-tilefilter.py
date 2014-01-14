@@ -259,7 +259,7 @@ def batch_calculate_tilefilter_areas(make_figs=None,end=None,start=None,skip=Non
 #-------------------------------------------------------------------------------------------------------------
 
 for ad in analysis_descriptors[analysis_plan]:
-	(startpickle,protein_subset_slice,protein_pickle,expected_direction,testshift,suffix) = ad
+	(startpickle,protein_subset_slice,protein_pickle,suffix) = ad
 	sysname = startpickle[24:-4]
 	#---note: mset is global here
 	mset = unpickle(pickles+startpickle)
