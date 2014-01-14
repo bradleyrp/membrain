@@ -12,29 +12,52 @@ import os
 #---PARAMETERS
 #-------------------------------------------------------------------------------------------------------------
 
-#---settings
+'''
+TILEFILTER PROGRAM
+Discretizes a membrane.
+Options:
+protein_subset_slice : slice of the stored protein points to use in the filter
+height_direction : stores 1 or -1 as net-positive or net-negative tiles
+cutoff_distance : when measuring around protein neighborhoods, how many grid-lengths to include
+Notes:
+Can specify different distance metrics in scipy.spatial.distance.cdist
+
+... notes need edited 
+
+'''
+
+#---Analysis parameters
 skip = 1
 framecount = None
 location = ''
 execfile('locations.py')
+execfile('plotter.py')
+
+#---Procedure
+make_figs = 1
+do_single = 1
+do_batch = 1
 
 #---parameters
 height_direction = 1
 cutoff_distance = 5.
-cutoff_distance = 15.
-make_figs = False
+cutoff_distance_sweep = [1.,2.,3.,4.,5.,6.,7.,8.,9.,10.,12.,14.,16.,18.,20.,24.,28.,30.,40.,50.]
 
-#---analysis plan
-analysis_plan = slice(-6,None)
-analysis_descriptors = [
-	('pkl.structures.membrane-v701.md.part0003.60000-160000-200.pkl',slice(None),None,''),
-	('pkl.structures.membrane-v700.md.part0002.100000-200000-200.pkl',slice(None),None,''),
-	('pkl.structures.membrane-v612-stress.md.part0003.pkl',slice(None),None,''),
-	('pkl.structures.membrane-v614-stress.md.part0002.rerun.pkl',slice(None),None,''),
-	('pkl.structures.membrane-v550.md.part0006.300000-400000-200.pkl',slice(None),
-	'pkl.structures.membrane-v614-stress.md.part0002.rerun.pkl','prot-v614'),
-	('pkl.structures.membrane-v550.md.part0006.300000-400000-200.pkl',slice(None),
-	'pkl.structures.membrane-v700.md.part0002.100000-200000-200.pkl','.prot-v700'),
+#---plot settings
+mpl.rc('text.latex', preamble='\usepackage{sfmath}')
+mpl.rcParams['axes.linewidth'] = 2.0
+zvals={-1:0,1:1,0:2,2:3}
+which_brewer_colors = [1,5,0,4]
+colorcodes = [brewer2mpl.get_map('paired','qualitative',9).mpl_colors[i] for i in which_brewer_colors]
+
+#---settings
+struct_pickles = ['pkl.structures.membrane-v700.md.part0006.360000-460000-200.pkl',
+	'pkl.structures.membrane-v701.md.part0003.60000-160000-200.pkl']
+startpickle = struct_pickles[-1]
+sysname = startpickle[24:-4]
+
+#---chose which parts of the protein to consider as the locus for further calculation
+protein_subset_slice = slice(None)
 
 #---FUNCTIONS
 #-------------------------------------------------------------------------------------------------------------
@@ -90,9 +113,8 @@ def lateral_discretize(fr,result='area'):
 	result : default return just the area calculation, grid returns the result grids, all returns both
 	'''
 	print 'Analyzing discretized areas for frame: '+str(fr)
-	#---transpose correction
 	surf_discrete = array([[(1 if mset.surf[fr][i][j] > 0 else -1) for j in range(mset.griddims[1]-1)] 
-		for i in range(mset.griddims[0]-1)]).T
+		for i in range(mset.griddims[0]-1)])
 	protpos = array(where(array(mset.rezipgrid(proteins[fr%len(proteins)]))!=0.0)).T
 	gridpos = [[i,j] for i in range(mset.griddims[0]-1) for j in range(mset.griddims[1]-1)]
 	distmat = scipy.spatial.distance.cdist(protpos,gridpos)
@@ -258,20 +280,35 @@ def batch_calculate_tilefilter_areas(make_figs=None,end=None,start=None,skip=Non
 #---MAIN
 #-------------------------------------------------------------------------------------------------------------
 
-for ad in analysis_descriptors[analysis_plan]:
-	(startpickle,protein_subset_slice,protein_pickle,expected_direction,testshift,suffix)
-	sysname = startpickle[24:-4]
-	#---note: mset is global here
-	mset = unpickle(pickles+startpickle)
-	if protein_pickle != None:
-		mset_protein = unpickle(pickles+protein_pickle)
-		proteins_all = array(mset_protein.protein)
-		proteins = proteins_all[:,protein_subset_slice]
-	else:
-	vecs = mean(mset.vecs,axis=0)
+#---find necessary dimensions
+mset = unpickle(pickles+startpickle)
+print 'loaded '+startpickle
+print 'frame count = '+str(len(mset.surf[0]))
+
+#---get protein points
+proteins_all = array(mset.protein)
+proteins = proteins_all[:,protein_subset_slice]
+vecs = mean(mset.vecs,axis=0)
+
+#---run a single calculation
+if do_single:
 	cutoff = cutoff_distance*10/(vecs[0]/mset.griddims[0])
-	print 'loaded '+startpickle
-	print 'frame count = '+str(len(mset.surf[0]))
-	area_counts = batch_calculate_tilefilter_areas()
-	pickle.dump(result_data_collection,open(pickles+'pkl.tilefilter-areas.'+sysname+'.'+suffix+'.pkl','w'))
+	area_counts = batch_calculate_tilefilter_areas(make_figs=make_figs,framecount=framecount,skip=skip)
+	view_figures(area_counts)
+	if make_figs:
+		view_example_mean(filename=(pickles+'fig-'+sysname+'-tilefilter.snapshots.mean.png'))
+		subprocess.call(['ffmpeg','-i',pickles+'/figs-'+sysname+'-tilefilter.snapshots/fig%05d.png',
+			'-vcodec','mpeg1video','-qscale','0','-filter:v','setpts=2.0*PTS',pickles+'/vid-'+sysname+
+			'-tilefilter.mpeg'])
+		os.popen('rm -r -f '+pickles+'/figs-'+sysname+'-tilefilter.snapshots')
+
+#---sweep parameters
+if do_batch:
+	area_counts_sweep = []
+	cutoff_range = [i*10/(vecs[0]/mset.griddims[0]) for i in cutoff_distance_sweep]
+	for cutoff in cutoff_range:
+		print 'Analysis for cutoff '+str(cutoff)
+		area_counts_sweep.append(batch_calculate_tilefilter_areas(make_figs=make_figs,framecount=framecount,
+			skip=skip))
+	view_figures_sweep(area_counts_sweep)
 
