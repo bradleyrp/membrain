@@ -17,17 +17,25 @@ location = ''
 execfile('locations.py')
 
 #---analysis plan
-analysis_plan = slice(0,2)
+analysis_plan = slice(-6,None)
 analysis_descriptors = [
-	('pkl.structures.membrane-v701.md.part0003.60000-160000-200.pkl',slice(None),None,-1,False),
-	('pkl.structures.membrane-v700.md.part0002.100000-200000-200.pkl',slice(None),None,-1,False),
-	('pkl.structures.membrane-v612-stress.md.part0003.pkl',slice(None),None,1,False),
-	('pkl.structures.membrane-v614-stress.md.part0002.rerun.pkl',slice(None),None,1,False),
+	('pkl.structures.membrane-v701.md.part0003.60000-160000-200.pkl',slice(None),None,-1,False,''),
+	('pkl.structures.membrane-v700.md.part0002.100000-200000-200.pkl',slice(None),None,-1,False,''),
+	('pkl.structures.membrane-v612-stress.md.part0003.pkl',slice(None),None,1,False,''),
+	('pkl.structures.membrane-v614-stress.md.part0002.rerun.pkl',slice(None),None,1,False,''),
 	('pkl.structures.membrane-v550.md.part0006.300000-400000-200.pkl',slice(None),
-	'pkl.structures.membrane-v614-stress.md.part0002.rerun.pkl',1,False),
+	'pkl.structures.membrane-v614-stress.md.part0002.rerun.pkl',1,False,'prot-v614'),
 	('pkl.structures.membrane-v550.md.part0006.300000-400000-200.pkl',slice(None),
-	'pkl.structures.membrane-v614-stress.md.part0002.rerun.pkl',1,'testshift')]
-
+	'pkl.structures.membrane-v614-stress.md.part0002.rerun.pkl',1,(0,1),'.shift01.prot-v614'),
+	('pkl.structures.membrane-v550.md.part0006.300000-400000-200.pkl',slice(None),
+	'pkl.structures.membrane-v614-stress.md.part0002.rerun.pkl',1,(1,0),'.shift10.prot-v614'),
+	('pkl.structures.membrane-v550.md.part0006.300000-400000-200.pkl',slice(None),
+	'pkl.structures.membrane-v700.md.part0002.100000-200000-200.pkl',1,False,'.prot-v700'),
+	('pkl.structures.membrane-v550.md.part0006.300000-400000-200.pkl',slice(None),
+	'pkl.structures.membrane-v700.md.part0002.100000-200000-200.pkl',1,(0,1),'.shift01.prot-v700'),
+	('pkl.structures.membrane-v550.md.part0006.300000-400000-200.pkl',slice(None),
+	'pkl.structures.membrane-v700.md.part0002.100000-200000-200.pkl',1,(1,0),'.shift10.prot-v700')]
+	
 #---parameters
 cutoff_distance = 15.
 curvature_filter = [0.001,0.1]
@@ -80,16 +88,16 @@ def batch_dimple_fitting(end=None,start=None,skip=None,framecount=None):
 		#---note: many transposes are just for the "where" command
 		if testshift != False:
 			grids = mset.griddims
-			#---multiple possible periodic shifts
-			shift = [int(grids[0]/2.),0]
-			shift = [0,int(grids[1]/2.)]
-			shift = [-int(grids[0]/2.),-int(grids[1]/2.)]
+			shift = [testshift[0]*int(grids[0]/2.),testshift[1]*int(grids[1]/2.)]
 			surf_discrete = array([[(1 if mset.surf[fr][(i+shift[0])%grids[0]][(j+shift[1])%grids[1]] > 0 
 				else -1) for j in range(mset.griddims[1]-1)] for i in range(mset.griddims[0]-1)]).T
 		else:
 			surf_discrete = array([[(1 if mset.surf[fr][i][j] > 0 else -1) for j in range(mset.griddims[1]-1)] 
 				for i in range(mset.griddims[0]-1)]).T
-		protpos = array(where(array(mset.rezipgrid(proteins[fr%len(proteins)]))!=0.0)).T
+		if testshift != False:
+			protpos = array(where(array(mset.rezipgrid(mean(proteins,axis=0)))!=0.0)).T
+		else:
+			protpos = array(where(array(mset.rezipgrid(proteins[fr%len(proteins)]))!=0.0)).T
 		gridpos = [[i,j] for i in range(mset.griddims[0]-1) for j in range(mset.griddims[1]-1)]
 		#---find distances between protein points and all grid points.
 		distmat = scipy.spatial.distance.cdist(protpos,gridpos)
@@ -109,6 +117,10 @@ def batch_dimple_fitting(end=None,start=None,skip=None,framecount=None):
 				target = array([[i[0]*vecs[0]/(mset.griddims[0]-1),i[1]*vecs[1]/(mset.griddims[1]-1),
 					mset.surf[fr][(i[0]+shift[0])%grids[0],(i[1]+shift[1])%grids[1]]] 
 					for i in array(where(surf_discrete+buf==0)).T])
+			elif height_direction == 0:
+				target = array([[i[0]*vecs[0]/(mset.griddims[0]-1),i[1]*vecs[1]/(mset.griddims[1]-1),
+					mset.surf[fr][(i[0]+shift[0])%grids[0],(i[1]+shift[1])%grids[1]]] 
+					for i in array(where(buf==1)).T])
 		else:
 			#---select target for fitting
 			if height_direction == 1:
@@ -117,6 +129,9 @@ def batch_dimple_fitting(end=None,start=None,skip=None,framecount=None):
 			elif height_direction == -1:
 				target = array([[i[0]*vecs[0]/(mset.griddims[0]-1),i[1]*vecs[1]/(mset.griddims[1]-1),
 					mset.surf[fr][i[0],i[1]]] for i in array(where(surf_discrete+buf==0)).T])
+			elif height_direction == 0:
+				target = array([[i[0]*vecs[0]/(mset.griddims[0]-1),i[1]*vecs[1]/(mset.griddims[1]-1),
+					mset.surf[fr][i[0],i[1]]] for i in array(where(buf==1)).T])
 		#---Identify center of target points for possible location weighting
 		#---Note: sometimes fitting something that isn't x,y specific (like H), you can use protein itself
 		target_com = [mean(target[:,0]),mean(target[:,1])]
@@ -297,10 +312,8 @@ def view_figures_curvatures_original(params=None,maxhs=None,maxhxys=None,
 
 #---loop over desired analyses
 for ad in analysis_descriptors[analysis_plan]:
-	(startpickle,protein_subset_slice,protein_pickle,expected_direction,testshift) = ad
+	(startpickle,protein_subset_slice,protein_pickle,expected_direction,testshift,suffix) = ad
 	sysname = startpickle[24:-4]
-	if testshift != False:
-		sysname = startpickle[24:-4]+'.'+testshift
 	#---load
 	mset = unpickle(pickles+startpickle)
 	print 'loaded '+startpickle
@@ -317,7 +330,7 @@ for ad in analysis_descriptors[analysis_plan]:
 	#---note: cutoff is global
 	cutoff = cutoff_distance*10/(vecs[0]/mset.griddims[0])
 	result_data_collection = []
-	for height_direction in [-1,1]:
+	for height_direction in [-1,1,0]:
 		#---fit and save
 		[params,maxhs,maxhxys,target_zones,which_frames] = batch_dimple_fitting(skip=skip,
 			framecount=framecount)
@@ -332,9 +345,10 @@ for ad in analysis_descriptors[analysis_plan]:
 		result_data.addnote(['protein_pickle',protein_pickle])
 		result_data.addnote(['expected_direction',expected_direction])
 		result_data.addnote(['sysname',sysname])
+		result_data.addnote(['suffix',suffix])
 		result_data_collection.append(result_data)
 		del result_data
-	pickle.dump(result_data_collection,open(pickles+'pkl.dimple.'+sysname+'.pkl','w'))
+	pickle.dump(result_data_collection,open(pickles+'pkl.dimple.'+sysname+'.'+suffix+'.pkl','w'))
 	if original_plot_style:
 		#---get results from the data object
 		params = result_data_collection[(0 if expected_direction == -1 else 1)].get(['type','params'])
@@ -347,3 +361,4 @@ for ad in analysis_descriptors[analysis_plan]:
 		view_figures_timeseries_original(params=params,maxhs=maxhs,maxhxys=maxhxys,target_zones=target_zones)
 	else:
 		print 'Skipping the plotting. Please change flags or consult the reproc script.'
+		
