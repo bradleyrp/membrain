@@ -254,7 +254,7 @@ def batch_calculate_tilefilter_areas(make_figs=None,end=None,start=None,skip=Non
 		else:
 			result = lateral_discretize(fr,result='area')
 			area_counts.append(lateral_discretize(fr))
-			result_data.add([area_counts[-1],[fr]])
+			result_data.add(area_counts[-1],[fr])
 	#---previously returned array(area_counts), but modified to use membraindata object
 	return result_data
 
