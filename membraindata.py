@@ -41,6 +41,9 @@ class MembraneData:
 		elif self.calctype == 'tilt_deprecated':
 			self.struct = {'frame':0,'type':1,'monolayer':2,'lipid':3}
 			self.struct_opts = {'type' : {'angle':0,'area':1}}
+		elif self.calctype == 'tilefilter_area_v1':
+			self.struct = {'frame':0,'type':1}
+			self.struct_opts = {'type' : {'positive':0,'negative':1}}
 		elif self.calctype == 'surfnorms':
 			self.struct = {'frame':0,'monolayer':2,'lipid':3}
 		elif self.calctype == 'tilts':

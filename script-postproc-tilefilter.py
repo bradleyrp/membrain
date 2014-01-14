@@ -244,6 +244,7 @@ def batch_calculate_tilefilter_areas(make_figs=None,end=None,start=None,skip=Non
 		end = nframes
 		skip = int(float(nframes)/framecount)
 		skip = 1 if skip < 1 else skip
+	result_data = MembraneData('tilefilter_area_v1')
 	for fr in range(start,end,skip):
 		if make_figs:
 			result = lateral_discretize(fr,result='all')
@@ -253,7 +254,9 @@ def batch_calculate_tilefilter_areas(make_figs=None,end=None,start=None,skip=Non
 		else:
 			result = lateral_discretize(fr,result='area')
 			area_counts.append(lateral_discretize(fr))
-	return array(area_counts)
+			result_data.add([area_counts[-1],[fr]])
+	#---previously returned array(area_counts), but modified to use membraindata object
+	return result_data
 
 #---MAIN
 #-------------------------------------------------------------------------------------------------------------
@@ -273,6 +276,7 @@ for ad in analysis_descriptors[analysis_plan]:
 	cutoff = cutoff_distance*10/(vecs[0]/mset.griddims[0])
 	print 'loaded '+startpickle
 	print 'frame count = '+str(len(mset.surf[0]))
-	area_counts = batch_calculate_tilefilter_areas()
-	pickle.dump(area_counts,open(pickles+'pkl.tilefilter-areas.'+sysname+suffix+'.pkl','w'))
+	result_data = batch_calculate_tilefilter_areas()
+	result_data.addnote(['area_per_tile',product(vecs[0:2])/100./((mset.griddims[0]-1)*(mset.griddims[1]-1))])
+	pickle.dump(result_data,open(pickles+'pkl.tilefilter-areas.'+sysname+suffix+'.pkl','w'))
 
