@@ -178,8 +178,8 @@ if do_stacked_plot_ver1:
 	
 #---Advanced plotting method
 if do_stacked_plot:
-	fig = plt.figure(figsize=(10,10))
-	gs = gridspec.GridSpec(max(appor)+1,3,wspace=0.0,hspace=0.0)
+	fig = plt.figure(figsize=(10,14))
+	gs = gridspec.GridSpec(max(appor)+1,4,wspace=0.0,hspace=0.0)
 	#---plot maximum mean curvatures	
 	maxpeak = 0
 	axes_maxcurv = []
@@ -278,17 +278,35 @@ if do_stacked_plot:
 		else:
 			ax.set_xticklabels([])		
 	#---plot areas
+	axes_areas = []
+	maxpeak = 0
 	for p in range(len(analysis_descriptors[analysis_plan])):
 		if appor[p] > 0 and appor[p] == appor[p-1]:
 			thisaxis = axes_maxcurv[-1]
 		else:
 			thisaxis = fig.add_subplot(gs[appor[p],3])
-		area_per_tile = product(vecs[0:2])/100./((mset.griddims[0]-1)*(mset.griddims[1]-1))
-		posarea = array([area_per_tile*area_counts[i,2] for i in range(len(area_counts))])
-		negarea = array([area_per_tile*area_counts[i,3] for i in range(len(area_counts))])
-
-
-
+		area_per_tile = results_areas_stack[p].notes[[i[0] 
+			for i in results_areas_stack[p].notes].index('area_per_tile')][1]
+		area_counts = results_areas_stack[p].data
+		posarea = array([area_per_tile*area_counts[i][2] for i in range(len(area_counts))])
+		negarea = array([area_per_tile*area_counts[i][3] for i in range(len(area_counts))])
+		thisaxis.plot(posarea,'r-',label='$z>0$',lw=2)
+		thisaxis.plot(negarea,'b-',label='$z<0$',lw=2)
+		axes_areas.append(thisaxis)
+		if max(max(posarea),max(negarea)) > maxpeak: maxpeak = max(max(posarea),max(negarea))
+	for a in range(len(axes_sigmas)):
+		ax = axes_areas[a]
+		if a == 0:
+			ax.set_title(r'$\textbf{extents of curvature}$')
+		ax.grid(True)
+		ax.set_ylim(0,1.1*maxpeak)
+		ax.set_yticklabels([])		
+		ax.get_xaxis().set_major_locator(MaxNLocator(prune='both'))
+		ax.set_xticks(arange(5,30,5))
+		if a == len(axes_sigmas)-1:
+			ax.set_xlabel('$\mathsf{\sigma_a,\sigma_b(nm^{-1})}$',fontsize=14)
+		else:
+			ax.set_xticklabels([])		
 	plt.subplots_adjust(hspace = 0)
 	plt.subplots_adjust(wspace = 0)
 	plt.show()	

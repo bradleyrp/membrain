@@ -21,7 +21,6 @@ execfile('locations.py')
 #---parameters
 height_direction = 1
 cutoff_distance = 5.
-cutoff_distance = 15.
 make_figs = False
 
 #---analysis plan
