@@ -277,5 +277,7 @@ for ad in analysis_descriptors[analysis_plan]:
 	print 'frame count = '+str(len(mset.surf[0]))
 	result_data = batch_calculate_tilefilter_areas()
 	result_data.addnote(['area_per_tile',product(vecs[0:2])/100./((mset.griddims[0]-1)*(mset.griddims[1]-1))])
+	result_data.addnote(['cutoff_distance',cutoff_distance])
+	result_data.addnote(['cutoff',cutoff])
 	pickle.dump(result_data,open(pickles+'pkl.tilefilter-areas.'+sysname+suffix+'.pkl','w'))
 

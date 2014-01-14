@@ -265,7 +265,7 @@ if do_stacked_plot:
 	for a in range(len(axes_sigmas)):
 		ax = axes_sigmas[a]
 		if a == 0:
-			ax.set_title(r'$\textbf{extents of curvature}$')
+			ax.set_title(r'$\textbf{extents}$')
 		ax.grid(True)
 		#ax.yaxis.tick_right()
 		#ax.yaxis.set_label_position("right")
@@ -282,7 +282,7 @@ if do_stacked_plot:
 	maxpeak = 0
 	for p in range(len(analysis_descriptors[analysis_plan])):
 		if appor[p] > 0 and appor[p] == appor[p-1]:
-			thisaxis = axes_maxcurv[-1]
+			thisaxis = axes_areas[-1]
 		else:
 			thisaxis = fig.add_subplot(gs[appor[p],3])
 		area_per_tile = results_areas_stack[p].notes[[i[0] 
@@ -290,23 +290,23 @@ if do_stacked_plot:
 		area_counts = results_areas_stack[p].data
 		posarea = array([area_per_tile*area_counts[i][2] for i in range(len(area_counts))])
 		negarea = array([area_per_tile*area_counts[i][3] for i in range(len(area_counts))])
-		thisaxis.plot(posarea,'r-',label='$z>0$',lw=2)
-		thisaxis.plot(negarea,'b-',label='$z<0$',lw=2)
+		thisaxis.plot(posarea,'r-',label='$z>0$',lw=1)
+		thisaxis.plot(negarea,'b-',label='$z<0$',lw=1)
 		axes_areas.append(thisaxis)
 		if max(max(posarea),max(negarea)) > maxpeak: maxpeak = max(max(posarea),max(negarea))
-	for a in range(len(axes_sigmas)):
+	for a in range(len(axes_areas)):
 		ax = axes_areas[a]
 		if a == 0:
-			ax.set_title(r'$\textbf{extents of curvature}$')
+			ax.set_title(r'$\textbf{areas (+/-)}$')
 		ax.grid(True)
 		ax.set_ylim(0,1.1*maxpeak)
 		ax.set_yticklabels([])		
-		ax.get_xaxis().set_major_locator(MaxNLocator(prune='both'))
-		ax.set_xticks(arange(5,30,5))
-		if a == len(axes_sigmas)-1:
-			ax.set_xlabel('$\mathsf{\sigma_a,\sigma_b(nm^{-1})}$',fontsize=14)
+		ax.get_xaxis().set_major_locator(MaxNLocator(prune='both',nbins=6))
+		if a == len(axes_areas)-1:
+			ax.set_xlabel('frame',fontsize=14)
 		else:
 			ax.set_xticklabels([])		
+		#ax.legend(bbox_to_anchor=(1.05, 1), loc=2, borderaxespad=0.,prop={'size':22})
 	plt.subplots_adjust(hspace = 0)
 	plt.subplots_adjust(wspace = 0)
 	plt.show()	
