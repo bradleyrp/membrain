@@ -266,8 +266,9 @@ for ad in analysis_descriptors[analysis_plan]:
 	if protein_pickle != None:
 		mset_protein = unpickle(pickles+protein_pickle)
 		proteins_all = array(mset_protein.protein)
-		proteins = proteins_all[:,protein_subset_slice]
 	else:
+		proteins_all = array(mset.protein)
+	proteins = proteins_all[:,protein_subset_slice]
 	vecs = mean(mset.vecs,axis=0)
 	cutoff = cutoff_distance*10/(vecs[0]/mset.griddims[0])
 	print 'loaded '+startpickle
