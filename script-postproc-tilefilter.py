@@ -32,7 +32,7 @@ analysis_descriptors = [
 	('pkl.structures.membrane-v612-stress.md.part0003.pkl',slice(None),None,''),
 	('pkl.structures.membrane-v614-stress.md.part0002.rerun.pkl',slice(None),None,''),
 	('pkl.structures.membrane-v550.md.part0006.300000-400000-200.pkl',slice(None),
-	'pkl.structures.membrane-v614-stress.md.part0002.rerun.pkl','prot-v614'),
+	'pkl.structures.membrane-v614-stress.md.part0002.rerun.pkl','.prot-v614'),
 	('pkl.structures.membrane-v550.md.part0006.300000-400000-200.pkl',slice(None),
 	'pkl.structures.membrane-v700.md.part0002.100000-200000-200.pkl','.prot-v700')]
 
@@ -274,5 +274,5 @@ for ad in analysis_descriptors[analysis_plan]:
 	print 'loaded '+startpickle
 	print 'frame count = '+str(len(mset.surf[0]))
 	area_counts = batch_calculate_tilefilter_areas()
-	pickle.dump(area_counts,open(pickles+'pkl.tilefilter-areas.'+sysname+'.'+suffix+'.pkl','w'))
+	pickle.dump(area_counts,open(pickles+'pkl.tilefilter-areas.'+sysname+suffix+'.pkl','w'))
 
