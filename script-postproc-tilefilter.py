@@ -274,5 +274,5 @@ for ad in analysis_descriptors[analysis_plan]:
 	print 'loaded '+startpickle
 	print 'frame count = '+str(len(mset.surf[0]))
 	area_counts = batch_calculate_tilefilter_areas()
-	pickle.dump(result_data_collection,open(pickles+'pkl.tilefilter-areas.'+sysname+'.'+suffix+'.pkl','w'))
+	pickle.dump(area_counts,open(pickles+'pkl.tilefilter-areas.'+sysname+'.'+suffix+'.pkl','w'))
 
