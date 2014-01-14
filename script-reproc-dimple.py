@@ -28,18 +28,22 @@ if 1:
 		('pkl.dimple.v550.md.part0006.300000-400000-200.pkl',),
 		('pkl.dimple.v550.md.part0006.300000-400000-200.testshift10.pkl',),
 		('pkl.dimple.v550.md.part0006.300000-400000-200.testshift01.pkl',),
-		('pkl.dimple.v550.md.part0006.300000-400000-200.testshift11.pkl',)]
+		('pkl.dimple.v550.md.part0006.300000-400000-200.testshift11.pkl',),
+		('pkl.dimple.v700.md.part0002.100000-200000-200.pkl',),
+		('pkl.dimple.v701.md.part0003.60000-160000-200.pkl',)]
 
 	do_single_plot = True
 	do_stacked_plot = True
 	do_opposite_signs = False
 
-	analysis_plan = [0,1,2,3,4,5]
-	names = ('ENTHx4','ENTHx1','control A','control B','control C','control D')
-	appor = (0,1,2,2,2,2)
-	ccodes = [(clrs[0],clrs[1]),(clrs[2],clrs[3]),(clrs[4],clrs[5]),(clrs[6],clrs[7]),(clrs[0],clrs[1]),
-		(clrs[2],clrs[3])]
-	fillcodes = (1,1,0,0,0,0,0)
+	analysis_plan = range(len(analysis_descriptors))
+	names = ('ENTHx4','ENTHx1','control A','control B','control C','control D',
+		'exo70x2 (anti)','exo70x2 (parallel)')
+	appor = (0,1,2,2,2,2,3,4)
+	ccodes = [(clrs[0],clrs[1]),(clrs[2],clrs[3]),
+		(clrs[4],clrs[5]),(clrs[6],clrs[7]),(clrs[0],clrs[1]),(clrs[2],clrs[3]),
+		(clrs[0],clrs[1]),(clrs[2],clrs[3])]
+	fillcodes = (1,1,0,0,0,0,1,1)
 	
 	
 	'''
@@ -78,7 +82,7 @@ if do_single_plot:
 			else:
 				axes.plot(mid0,hist0,c=ccodes[p][o],alpha=1.,lw=2)
 			if fillcodes[p]:
-				axes.fill_between(mid0,hist0,[0 for i in mid0],facecolor=clrs[p*2+o],alpha=0.2,
+				axes.fill_between(mid0,hist0,[0 for i in mid0],facecolor=ccodes[p][o],alpha=0.2,
 					interpolate=True)
 	axes.axvline(x=0,ls='-',lw=1,c='k')
 	plt.show()	
@@ -104,12 +108,12 @@ if do_stacked_plot:
 			validhs = [10*maxhs[i] for i in validhis]
 			hist0,binedge0 = numpy.histogram(validhs,bins=nbins,normed=True,range=(minval,maxval))
 			mid0 = (binedge0[1:]+binedge0[:-1])/2
-			if o == 0:
+			if o == 1:
 				axes[appor[p]].plot(mid0,hist0,c=ccodes[p][o],alpha=1.,lw=2,label=names[p])
 			else:
 				axes[appor[p]].plot(mid0,hist0,c=ccodes[p][o],alpha=1.,lw=2)
 			if fillcodes[p]:
-				axes[appor[p]].fill_between(mid0,hist0,[0 for i in mid0],facecolor=clrs[p*2+o],alpha=0.2,
+				axes[appor[p]].fill_between(mid0,hist0,[0 for i in mid0],facecolor=ccodes[p][o],alpha=0.2,
 					interpolate=True)
 			if max(hist0) > maxpeak: maxpeak = max(hist0)
 	for p in range(len(appor)):
