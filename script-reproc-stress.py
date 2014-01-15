@@ -120,8 +120,8 @@ if plot_hist:
 	
 #---plot spontaneous curvature (C0) histograms, averaged across all voxels and all frames (together)
 if plot_hist_subdivide:
-	#---old method has everything on one plot
-	if 1:
+	#---zoom full vs center box, with possible fold-over, all in one plot
+	if 0:
 		which_brewer_colors = [1,3,5,0,2,4]
 		clrs = [brewer2mpl.get_map('paired','qualitative',9).mpl_colors[i] for i in which_brewer_colors]
 		gridsize = shape(raw_maps[0][0][0])[0]
@@ -147,6 +147,48 @@ if plot_hist_subdivide:
 					pdist = signchange*flatten(mean(array([array(i[0])[zoom[0],zoom[1]] for i in dat]),axis=0))
 				else:
 					pdist = signchange*flatten(array([array(i[0])[zoom[0],zoom[1]] for i in dat]))
+				hist,binedge = numpy.histogram(pdist,bins=nbins,weights=[1./len(pdist) for i in pdist],
+					range=lims)
+				mid = (binedge[1:]+binedge[:-1])/2
+				posmid = [i for i in range(len(hist)) if round(mid[i],8) >= 0.]
+				negmid = [i for i in range(len(hist)) if round(mid[i],8) <= 0.]
+				#ax.plot([mid[i] for i in posmid],[hist[i] for i in posmid],'-',c=clrs[clrsi%len(clrs)],alpha=1.,lw=2,label=mapslabels[d]+zoomnames[z])
+				#ax.plot([-mid[i] for i in negmid],[hist[i] for i in negmid],'-.',c=clrs[clrsi%len(clrs)],alpha=1.,lw=2,label=mapslabels[d]+zoomnames[z])
+				ax.plot(mid,hist,'-',c=clrs[clrsi%len(clrs)],alpha=1.,lw=2,label=mapslabels[d]+zoomnames[z])				
+				clrsi += 1
+				ax.legend()
+			ax.set_xlim(plotlims)
+		plt.show()
+	#---stacked method without averaging
+	if 1:
+		plot_hist_subdivide_mean = False
+		which_brewer_colors = [1,3,5,0,2,4]
+		clrs = [brewer2mpl.get_map('paired','qualitative',9).mpl_colors[i] for i in which_brewer_colors]
+		gridsize = shape(raw_maps[0][0][0])[0]
+		zooms = [
+			[slice(int(round(0.25*gridsize)),int(round(0.75*gridsize))),
+				slice(int(round(0.25*gridsize)),int(round(0.75*gridsize)))],
+			[slice(int(round(0.*gridsize)),int(round(1.*gridsize))),
+				slice(int(round(0.*gridsize)),int(round(1.*gridsize)))]]
+		zoomnames = (', full',', center')
+		fig = plt.figure(figsize=(6,4))
+		gs = gridspec.GridSpec(3,1,wspace=0.0,hspace=0.0)
+		lims = (-0.1,0.1)
+		plotlims = (-0.06,0.06)
+		plotlims = (-.15,.15)
+		clrsi = 0
+		for d in range(len(raw_maps)):
+			ax = fig.add_subplot(gs[d])
+			ax.axvline(x=0,ls='-',lw=1,c='k')
+			ax.set_ylim((0,0.04))
+			for z in range(len(zooms)):
+				zoom = zooms[z]
+				dat = raw_maps[d]
+				if plot_hist_subdivide_mean:
+					pdist = signchange*flatten(mean(array([array(i[0])[zoom[0],zoom[1]] for i in dat]),axis=0))
+				else:
+					pdist = signchange*flatten(array([array(i[0])[zoom[0],zoom[1]] for i in dat]))
+				print mean(pdist)
 				hist,binedge = numpy.histogram(pdist,bins=nbins,weights=[1./len(pdist) for i in pdist],
 					range=lims)
 				mid = (binedge[1:]+binedge[:-1])/2
