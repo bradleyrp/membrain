@@ -35,7 +35,7 @@ analysis_descriptors = [
 	('pkl.dimple.v701.md.part0003.60000-160000-200.pkl',)]
 analysis_plan = range(len(analysis_descriptors))
 names = (r'$\textbf{{ENTH}\ensuremath{\times}4}$',r'$\textbf{{ENTH}\ensuremath{\times}1}$',
-	r'$\textbf{control(1)}$',r'$\textbf{control(2)}$',r'$\textbf{control(3)}$',
+	r'$\textbf{control(ENTH)}$',r'$\textbf{control(Exo70)}$',r'$\textbf{control(3)}$',
 	r'$\textbf{{EXO70}\ensuremath{\times}2{\small (antiparallel)}}$',r'$\textbf{{EXO70}\ensuremath{\times}2{\small (parallel)}}$')
 appor = (0,1,2,2,2,3,4)
 ccodes = [(clrs[0],clrs[1]),(clrs[2],clrs[3]),
@@ -52,10 +52,10 @@ analysis_descriptors = [
 		r'$\textbf{{ENTH}\ensuremath{\times}1}$',1,
 		'pkl.tilefilter-areas.v612-stress.md.part0003.pkl'),
 	('pkl.dimple.v550.md.part0006.300000-400000-200.prot-v614.pkl',(clrs[4],clrs[5]),
-		r'$\textbf{control(1)}$',0,
+		r'$\textbf{control}$',0,
 		'pkl.tilefilter-areas.v550.md.part0006.300000-400000-200.prot-v614.pkl'),
 	('pkl.dimple.v550.md.part0006.300000-400000-200.prot-v700.pkl',(clrs[6],clrs[7]),
-		r'$\textbf{control(2)}$',0,
+		r'$\textbf{control}$',0,
 		'pkl.tilefilter-areas.v550.md.part0006.300000-400000-200.prot-v700.pkl'),
 	('pkl.dimple.v700.md.part0002.100000-200000-200.pkl',(clrs[0],clrs[1]),
 		r'$\textbf{{EXO70}\ensuremath{\times}2{\small (parallel)}}$',1,
@@ -63,8 +63,19 @@ analysis_descriptors = [
 	('pkl.dimple.v701.md.part0003.60000-160000-200.pkl',(clrs[2],clrs[3]),
 		r'$\textbf{{EXO70}\ensuremath{\times}2{\small (antiparallel)}}$',1,
 		'pkl.tilefilter-areas.v701.md.part0003.60000-160000-200.pkl')]
-analysis_plan = slice(None,None)
-appor = (0,1,2,2,3,4)
+
+plotspecs = 'both'
+plotspecs = 'enth'
+if plotspecs == 'both':
+	analysis_plan = slice(None,None)
+	appor = (0,1,2,3,4,5)
+	figoutname = 'fig-dimple-master-summary-ENTH-EXO70.png'
+	figsize = (14,10)
+elif plotspecs == 'enth':
+	analysis_plan = slice(0,3)
+	appor = (0,1,2)
+	figoutname = 'fig-dimple-master-summary-ENTH.png'
+	figsize = (14,8)
 
 do_stacked_plot = True
 do_stacked_plot_with_sigma = True
@@ -169,7 +180,7 @@ if do_stacked_plot_ver1:
 			thisaxis.get_yaxis().set_major_locator(MaxNLocator(prune='both'))
 			thisaxis.get_xaxis().set_major_locator(MaxNLocator(prune='lower'))
 			if p == max(appor)+1:
-				thisaxis.set_xlabel('$\mathsf{\sigma_a,\sigma_b(nm^{-1})}$',fontsize=14)
+				thisaxis.set_xlabel('$\mathsf{\sigma_a,\sigma_b(nm^{2})}$',fontsize=14)
 			else:
 				thisaxis.set_xticklabels([])		
 	plt.subplots_adjust(hspace = 0)
@@ -178,8 +189,8 @@ if do_stacked_plot_ver1:
 	
 #---Advanced plotting method
 if do_stacked_plot:
-	fig = plt.figure(figsize=(10,14))
-	gs = gridspec.GridSpec(max(appor)+1,4,wspace=0.0,hspace=0.0)
+	fig = plt.figure(figsize=figsize)
+	gs = gridspec.GridSpec(max(appor)+1,5,wspace=0.0,hspace=0.0)
 	#---plot maximum mean curvatures	
 	maxpeak = 0
 	axes_maxcurv = []
@@ -221,20 +232,20 @@ if do_stacked_plot:
 		ax = axes_maxcurv[a]
 		if a == 0:
 			ax.set_title(r'$\textbf{mean curvatures}$')
-		ax.set_ylim(0,1.1*maxpeak)
+		ax.set_ylim(0,1.2*maxpeak)
 		ax.axvline(x=0,ls='-',lw=1,c='k')
-		ax.legend(loc=2,prop={'size':12})
+		ax.legend(loc=2,prop={'size':14})
 		ax.set_ylabel('frequency')
 		ax.get_yaxis().set_major_locator(MaxNLocator(nbins=6,prune='both'))
 		ax.grid(True)
 		if a == len(axes_maxcurv)-1:
 			ax.spines['bottom'].set_position(('outward', 10))
-			ax.set_xlabel('$\mathsf{H_{max}(nm^{-1})}$',fontsize=16)
+			ax.set_xlabel('$\mathsf{H_{max}\,(nm^{-1})}$',fontsize=16)
 			second_bottom = mpl.spines.Spine(ax, 'bottom', ax.spines['bottom']._path)
 			ax.spines['second_bottom'] = second_bottom
-			ax.set_xticks(arange(-0.10,0.12,0.02))
+			ax.set_xticks(arange(-0.10,0.12,0.04))
 		else:
-			ax.set_xticks(arange(-0.10,0.12,0.02))
+			ax.set_xticks(arange(-0.10,0.12,0.04))
 			ax.set_xticklabels([])
 	#---plot extents of curvature
 	axes_sigmas = []
@@ -267,14 +278,12 @@ if do_stacked_plot:
 		if a == 0:
 			ax.set_title(r'$\textbf{extents}$')
 		ax.grid(True)
-		#ax.yaxis.tick_right()
-		#ax.yaxis.set_label_position("right")
 		ax.set_ylim(0,1.1*maxpeak)
 		ax.set_yticklabels([])		
 		ax.get_xaxis().set_major_locator(MaxNLocator(prune='both'))
 		ax.set_xticks(arange(5,30,5))
 		if a == len(axes_sigmas)-1:
-			ax.set_xlabel('$\mathsf{\sigma_a,\sigma_b(nm^{-1})}$',fontsize=14)
+			ax.set_xlabel('$\mathsf{\sigma_a,\sigma_b\,(nm^{2})}$',fontsize=14)
 		else:
 			ax.set_xticklabels([])		
 	#---plot areas
@@ -283,15 +292,20 @@ if do_stacked_plot:
 	for p in range(len(analysis_descriptors[analysis_plan])):
 		if appor[p] > 0 and appor[p] == appor[p-1]:
 			thisaxis = axes_areas[-1]
+			repeat = True
 		else:
 			thisaxis = fig.add_subplot(gs[appor[p],3])
+			repeat = False
 		area_per_tile = results_areas_stack[p].notes[[i[0] 
 			for i in results_areas_stack[p].notes].index('area_per_tile')][1]
 		area_counts = results_areas_stack[p].data
 		posarea = array([area_per_tile*area_counts[i][2] for i in range(len(area_counts))])
 		negarea = array([area_per_tile*area_counts[i][3] for i in range(len(area_counts))])
-		thisaxis.plot(posarea,'r-',label='$z>0$',lw=1)
-		thisaxis.plot(negarea,'b-',label='$z<0$',lw=1)
+		thisaxis.plot(posarea,'r-',label=(None if repeat else '$z>0$' ),lw=1,alpha=0.8)
+		thisaxis.plot(negarea,'b-',label=(None if repeat else '$z<0$'),lw=1,alpha=0.8)
+		t = range(len(area_counts))
+		thisaxis.fill_between(t, negarea,posarea, facecolor='b',alpha=0.25,where=negarea>posarea)
+		thisaxis.fill_between(t, posarea,negarea, facecolor='r',alpha=0.25,where=negarea<posarea)
 		axes_areas.append(thisaxis)
 		if max(max(posarea),max(negarea)) > maxpeak: maxpeak = max(max(posarea),max(negarea))
 	for a in range(len(axes_areas)):
@@ -304,10 +318,59 @@ if do_stacked_plot:
 		ax.get_xaxis().set_major_locator(MaxNLocator(prune='both',nbins=6))
 		if a == len(axes_areas)-1:
 			ax.set_xlabel('frame',fontsize=14)
+			outlegend = ax.legend(bbox_to_anchor=(0.5,-0.6),
+				loc=8,borderaxespad=-1.,prop={'size':10},bbox_transform=ax.transAxes)
 		else:
 			ax.set_xticklabels([])		
-		#ax.legend(bbox_to_anchor=(1.05, 1), loc=2, borderaxespad=0.,prop={'size':22})
+	#---plot area histograms
+	axes_area_hists = []
+	minval_areas = 0
+	maxval_areas = maxpeak
+	maxfreq = 0
+	for p in range(len(analysis_descriptors[analysis_plan])):
+		if appor[p] > 0 and appor[p] == appor[p-1]:
+			thisaxis = axes_area_hists[-1]
+		else:
+			thisaxis = fig.add_subplot(gs[appor[p],4])
+		area_per_tile = results_areas_stack[p].notes[[i[0] 
+			for i in results_areas_stack[p].notes].index('area_per_tile')][1]
+		area_counts = results_areas_stack[p].data
+		posarea = array([area_per_tile*area_counts[i][2] for i in range(len(area_counts))])
+		negarea = array([area_per_tile*area_counts[i][3] for i in range(len(area_counts))])
+		hist0,binedge0 = numpy.histogram(posarea,bins=nbins_sigma,normed=False,
+			weights=[1./len(negarea) for i in negarea],
+			range=(minval_areas,maxval_areas))
+		mid0 = (binedge0[1:]+binedge0[:-1])/2
+		thisaxis.plot(hist0,mid0,c='r',alpha=1.,lw=1)
+		hist1,binedge1 = numpy.histogram(negarea,bins=nbins_sigma,normed=False,
+			weights=[1./len(negarea) for i in negarea],
+			range=(minval_areas,maxval_areas))
+		mid1 = (binedge1[1:]+binedge1[:-1])/2
+		thisaxis.plot(hist1,mid1,c='b',alpha=1.,lw=1)
+		thisaxis.fill_betweenx(mid0,[0 for i in mid0],hist0,facecolor='r',
+			alpha=0.2)
+		thisaxis.fill_betweenx(mid1,[0 for i in mid1],hist1,facecolor='b',
+			alpha=0.2)
+		axes_area_hists.append(thisaxis)
+		if max(max(hist0),max(hist1)) > maxfreq: maxfreq = max(max(hist0),max(hist1))
+	for a in range(len(axes_area_hists)):
+		ax = axes_area_hists[a]
+		if a == 0:
+			ax.set_title(r'$\textbf{areas (+/-)}$')
+		ax.grid(True)
+		ax.yaxis.tick_right()
+		ax.yaxis.set_label_position("right")
+		ax.set_ylabel(r'$\textbf{area (nm\ensuremath{{}^{2}})}$',fontsize=12)
+		maxfreq = 0.5
+		ax.set_xlim(0,1.0*maxfreq)
+		ax.get_yaxis().set_major_locator(MaxNLocator(prune='both',nbins=6))
+		ax.get_xaxis().set_major_locator(MaxNLocator(prune='both',nbins=6))
+		if a == len(axes_area_hists)-1:
+			ax.set_xlabel('frequency',fontsize=14)
+		else:
+			ax.set_xticklabels([])
 	plt.subplots_adjust(hspace = 0)
 	plt.subplots_adjust(wspace = 0)
+	plt.savefig(pickles+figoutname,dpi=300,bbox_extra_artists=(outlegend,), bbox_inches='tight')
 	plt.show()	
 

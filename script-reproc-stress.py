@@ -1,384 +1,92 @@
 #!/usr/bin/python -i
+if 0:
+	from membrainrunner import *
 
-from membrainrunner import *
+	location = ''
+	execfile('locations.py')
+	execfile('plotter.py')
 
-location = ''
-execfile('locations.py')
-execfile('plotter.py')
+	import scipy.interpolate
+	import scipy.integrate
+	import subprocess
 
-import scipy.interpolate
-import scipy.integrate
-import subprocess
+	from mpl_toolkits.axes_grid1 import make_axes_locatable
+	from mpl_toolkits.axes_grid1.inset_locator import inset_axes
+	from scipy import ndimage
+	import matplotlib.gridspec as gridspec
 
-from mpl_toolkits.axes_grid1 import make_axes_locatable
-from mpl_toolkits.axes_grid1.inset_locator import inset_axes
-from scipy import ndimage
+	#---PARAMETERS
+	#-------------------------------------------------------------------------------------------------------------
 
-'''
-Script for reprocessing stress, framewise
+	exo70pip2_study = 0
+	enth_study = 1
+	#---Pickles containing kC0 plots from script-postproc-stress.py
+	if exo70pip2_study:
+		#---Note: this is the set for the Exo70+PIP2 simulations
+		raw_maps_names = [
+				'pkl.stressdecomp.membrane-v701.md.part0003.60000-160000-200.pkl',
+				'pkl.stressdecomp.membrane-v700.md.part0002.100000-200000-200.pkl',
+				'pkl.stressdecomp.membrane-v550.md.part0006.300000-400000-200.pkl']
+		pickle_structure_names = [
+				'pkl.structures.membrane-v701.md.part0003.60000-160000-200.pkl',
+				'pkl.structures.membrane-v700.md.part0002.100000-200000-200.pkl',
+				'pkl.structures.membrane-v550.md.part0006.300000-400000-200.pkl']
+		#---Master ID string
+		outname = 'v701.v700.v550.ver3'
+		#---Numbers of proteins in each system
+		nprots_list = [2,2,0]
+		#---Maps labels
+		mapslabels = [r'$\textbf{{EXO70}\ensuremath{\times}2{\small (antiparallel)}}$',
+			r'$\textbf{{EXO70}\ensuremath{\times}2{\small (parallel)}}$',
+			r'$\textbf{{control}}$']
+	elif enth_study:        
+		#---Note: this is the set for the ENTH simulations
+		raw_maps_names = [
+			'pkl.stressdecomp.membrane-v614-stress.md.part0002.rerun.pkl',
+			'pkl.stressdecomp.membrane-v612-stress.md.part0002.rerun.pkl',
+			'pkl.stressdecomp.membrane-v550.md.part0006.300000-400000-200.pkl']
+		pickle_structure_names = [
+			'pkl.structures.membrane-v614-stress.md.part0002.rerun.pkl',
+			'pkl.structures.membrane-v612-stress.md.part0003.pkl',
+			'pkl.structures.membrane-v550.md.part0006.300000-400000-200.pkl']
+		outname = 'v614.v612.v550.ver3'	
+		#---Numbers of proteins in each system
+		nprots_list = [4,1,0]
+		#---Maps labels
+		mapslabels = [r'$\textbf{{ENTH}\ensuremath{\times}4}$',
+			r'$\textbf{{ENTH}\ensuremath{\times}1}$',
+			r'$\textbf{{control}}$']
 
-Created 2013.12.03 by RPB
-
-This program will open pickles with saved framewise first moment maps of the voxel-wise tension in bilayer 
-	simulations and re-process them in order to study the distribution of spontaneous curvature. The previous
-	script already incorporates bending rigidity, and it is important to remember that this study is only 
-	qualitative at this point.
-
-'''
-
-#---PARAMETERS
-#-------------------------------------------------------------------------------------------------------------
-
-exo70pip2_study = 1
-enth_study = 0
-#---Pickles containing kC0 plots from script-postproc-stress.py
-if exo70pip2_study:
-	#---Note: this is the set for the Exo70+PIP2 simulations
-	raw_maps_names = [
-		    'pkl.stressdecomp.membrane-v701.md.part0003.60000-160000-200.pkl',
-		    'pkl.stressdecomp.membrane-v700.md.part0002.100000-200000-200.pkl',
-		    'pkl.stressdecomp.membrane-v550.md.part0006.300000-400000-200.pkl']
-	pickle_structure_names = [
-		    'pkl.structures.membrane-v701.md.part0003.60000-160000-200.pkl',
-		    'pkl.structures.membrane-v700.md.part0002.100000-200000-200.pkl',
-		    'pkl.structures.membrane-v550.md.part0006.300000-400000-200.pkl']
-	#---Master ID string
-	outname = 'v701.v700.v550.ver3'
-	#---Numbers of proteins in each system
-	nprots_list = [2,2,0]
-	#---Maps labels
-	mapslabels = [r'$\textbf{{EXO70}\ensuremath{\times}2{\small (antiparallel)}}$',
-		r'$\textbf{{EXO70}\ensuremath{\times}2{\small (parallel)}}$',
-		r'$\textbf{{control}}$']
-elif enth_study:        
-	#---Note: this is the set for the ENTH simulations
-	raw_maps_names = [
-		'pkl.stressdecomp.membrane-v614-stress.md.part0002.rerun.pkl',
-		'pkl.stressdecomp.membrane-v612-stress.md.part0002.rerun.pkl',
-		'pkl.stressdecomp.membrane-v550.md.part0006.300000-400000-200.pkl']
-	pickle_structure_names = [
-		'pkl.structures.membrane-v614-stress.md.part0002.rerun.pkl',
-		'pkl.structures.membrane-v612-stress.md.part0003.pkl',
-		'pkl.structures.membrane-v550.md.part0006.300000-400000-200.pkl']
-	outname = 'v614.v612.v550.ver3'	
-	#---Numbers of proteins in each system
-	nprots_list = [4,1,0]
-	#---Maps labels
-	mapslabels = [r'$\textbf{{ENTH}\ensuremath{\times}4}$',
-		r'$\textbf{{ENTH}\ensuremath{\times}1}$',
-		r'$\textbf{{control}}$']
-
-#---plots
-plot_maps = 1
-plot_hist = 1
-save_plots = 1
-show_titles = 0
-
-#---plot maps and histograms for +/- curvature domains (advanced version)
-plot_plus_minus = 0
-
-#---plot videos for +/- curvature domains (advanced version)
-plot_plus_minus_video = 0
-video_sharpfactor = 0.35
-if plot_plus_minus_video:
-	render_video_full = 1
-	render_video_full_smooth = 1
-	render_video_full_width = 40
-
-#---file names
-plot_advanced_maps_file = 'fig-'+outname+'-stress-framewise-maps-plusminus.png'
-plot_advanced_hist_file = 'fig-'+outname+'-stress-framewise-histograms-plusminus.png'
-plot_video_filebase = 'fig-'+outname+'-stress-framewise-maps-plusminus'
-plot_maps_file = 'fig-'+outname+'-stress-framewise-maps.png'
-plot_hist_file = 'fig-'+outname+'-stress-framewise-histograms.png'
-
-#---Sign change
-signchange = 1
-
-#---LOAD
-#-------------------------------------------------------------------------------------------------------------
-
-raw_maps = []
-for name in raw_maps_names:
-	print 'Loading maps from '+name
-	raw_maps.append(pickle.load(open(pickles+name,'r')))
-msets = []
-for name in pickle_structure_names:
-	print 'Loading structures from '+name
-	msets.append(pickle.load(open(pickles+name,'r')))
+	#---plots
+	plot_maps = 0
+	plot_hist = 0
+	plot_hist_subdivide = 1
+	plot_hist_subdivide_mean = 0
 	
-if save_plots: show_plots = 0
+	#---settings
+	nbins = 31
 
-#---Plot maps / histograms for +/- curvature domains
+	#---file names
+	plot_maps_file = 'fig-'+outname+'-stress-framewise-maps.png'
+	plot_hist_file = 'fig-'+outname+'-stress-framewise-histograms.png'
+
+	#---sign change
+	signchange = 1
+
+#---MAIN
 #-------------------------------------------------------------------------------------------------------------
 
-#---Note these are out of date - dropped after fixed errors in transpose, etc
-if plot_plus_minus:	
-	prot_centers = []
-	for m in range(len(msets)):
-		mset = msets[m]
-		nprots = nprots_list[m]
-		if nprots > 0:
-			protlen = int(shape(mset.protein[0])[0]/nprots)
-			protlenshow = protlen
-			prot_centers.append(mean([mean(mset.protein,axis=0)[i*protlen:i*protlen+protlenshow]
-				for i in range(nprots)],axis=1))
-		else:
-			prot_centers.append(None)
-	vecs = mean(msets[0].vecs,axis=0)
-	span,nnum,numgridpts,distance_factor = [4,32,64,1]
-	result_stack = [[mean([i[0] for i in raw_maps[j]],axis=0),prot_centers[j]] for j in range(len(raw_maps))]
-	avg = [[],[],[]]
-	clrs = brewer2mpl.get_map('Paired','qualitative', 8).mpl_colors
-	#control_mean = mean([raw_maps[2][i][0] for i in range(len(raw_maps[2]))])+0.00048502604166666415
-	#control_mean = mean([raw_maps[2][i][0] for i in range(len(raw_maps[2]))])
-	control_mean = 0
-	doms_sizes_poz = [[],[],[]]
-	doms_sizes_neg = [[],[],[]]
-	for k in range(3):
-		print 'system = '+str(k)
-		for i in range(len(raw_maps[k])):
-			print 'frame = '+str(i)
-			heatmap = raw_maps[k][i][0];
-			tmp=ndimage.label(heatmap)
-			#---use this and it looks like control is smoother on histogram
-			#im = ndimage.gaussian_filter(heatmap, sigma=256/(4.*40))
-			#---use this and it looks opposite
-			#im = ndimage.gaussian_filter(heatmap, sigma=256/(4.*50))
-			#---another filtering attempt
-			im = ndimage.gaussian_filter(heatmap, sigma=256/(4.*20),mode='wrap')
-			maskp = im > im.mean()
-			maskp = im > control_mean
-			doms_sizes_poz[k].append(sum(im > im.mean())/4096.)
-			doms_sizes_neg[k].append(sum(im < im.mean())/4096.)
-			avg[k].append(maskp)
-	fig = plt.figure()
-	numgridpts = 64
-	avgmeans = [mean(avg[i],axis=0)-0.5 for i in range(3)]
-	#avgmeans = [std(avg[i],axis=0) for i in range(3)]
-	#avgmeans = [avg[i][0]-0.5 for i in range(3)]
-	extremum = max([max([max(abs(i)) for i in avgmeans[j]]) for j in range(3)])
+	#---load
+	raw_maps = []
+	for name in raw_maps_names:
+		print 'Loading maps from '+name
+		raw_maps.append(pickle.load(open(pickles+name,'r')))
+	msets = []
+	for name in pickle_structure_names:
+		print 'Loading structures from '+name
+		msets.append(pickle.load(open(pickles+name,'r')))
 
-	#---Plot average +/- map
-	ax0 = plt.subplot2grid((1,4), (0,0))
-	ax0.set_title(mapslabels[0])
-	'''
-	protein_centers = result_stack[0][1]
-	nprots = nprots_list[0]
-	if nprots > 0:
-		for pt in protein_centers:
-			circ = plt.Circle((int(round(pt[0]/vecs[0]*numgridpts)),
-				int(round(pt[1]/vecs[0]*numgridpts))),radius=1.5/64*numgridpts,color='k',
-				alpha=1.0)
-			ax0.add_patch(circ)
-	'''
-	protpts = array([[i[0]*numgridpts/vecs[0],i[1]*numgridpts/vecs[1]] for i in np.mean(msets[0].protein,axis=0)])
-	hull = scipy.spatial.ConvexHull(protpts)
-	ax0.plot(protpts[hull.vertices,0],protpts[hull.vertices,1],'r-',lw=1)
-	ax0.plot(protpts[hull.vertices,0][-1],protpts[hull.vertices,1][0],'r-',lw=1)
-	#---end edit
-	ax0.imshow(array(avgmeans[0]).T,interpolation='nearest',origin='LowerLeft',vmax=extremum,vmin=-extremum,
-		cmap='bwr',extent=[0,numgridpts,0,numgridpts])
-	ax1 = plt.subplot2grid((1,4), (0,1))
-	ax1.set_title(mapslabels[1])
-	'''
-	protein_centers = result_stack[1][1]
-	nprots = nprots_list[1]
-	if nprots > 0:
-		for pt in protein_centers:
-			circ = plt.Circle((int(round(pt[0]/vecs[0]*numgridpts)),
-				int(round(pt[1]/vecs[0]*numgridpts))),radius=1.5/64*numgridpts,color='k',
-				alpha=1.0)
-			ax1.add_patch(circ)
-	'''
-	protpts = array([[i[0]*numgridpts/vecs[0],i[1]*numgridpts/vecs[1]] 
-		for i in np.mean(msets[1].protein,axis=0)])
-	hull = scipy.spatial.ConvexHull(protpts)
-	ax1.plot(protpts[hull.vertices,0],protpts[hull.vertices,1],'r-',lw=1)
-	ax1.plot(protpts[hull.vertices,0][-1],protpts[hull.vertices,1][0],'r-',lw=1)
-	#---end edit
-	ax1.imshow(array(avgmeans[1]).T,interpolation='nearest',origin='LowerLeft',vmax=extremum,vmin=-extremum,
-		cmap='bwr',extent=[0,numgridpts,0,numgridpts])
-	ax2 = plt.subplot2grid((1,4), (0,2))
-	ax2.set_title(mapslabels[2])
-	img = ax2.imshow(array(avgmeans[2]).T,interpolation='nearest',origin='LowerLeft',vmax=extremum,
-		vmin=-extremum,cmap='bwr',extent=[0,numgridpts,0,numgridpts])
-	cax = inset_axes(ax2,
-         width="5%",
-         height="100%",
-         bbox_transform=ax2.transAxes,
-         bbox_to_anchor=(0.3, 0.1, 1.05, 0.95),
-         loc= 1)
-	fig.colorbar(img,cax=cax)
-	cax.tick_params(labelsize=10) 
-	cax.set_ylabel('occupancy',fontsize=10)
-	plt.tight_layout() 
-	if show_plots:
-		plt.show()
-	if save_plots:
-		plt.savefig(pickles+plot_advanced_maps_file,dpi=500,bbox_inches='tight')
-	plt.cla()
-
-	#---Plot +/- histograms
-	fig = plt.figure()
-	plt.grid(True)
-	nbins = 10
-	minsize = 0
-	plt.xlabel(r'fraction positive spontaneous curvature',labelpad = 10,fontsize=20)
-	plt.ylabel('frequency', labelpad = 10,fontsize=20)
-	hist0 = numpy.histogram(avgmeans[0],bins=nbins)
-	hist1 = numpy.histogram(avgmeans[1],bins=nbins)
-	hist2 = numpy.histogram(avgmeans[2],bins=nbins)
-	plt.plot(hist0[1][1:],hist0[0],color=clrs[1],alpha=1.,lw=2,
-		label=mapslabels[0])
-	plt.plot(hist1[1][1:],hist1[0],color=clrs[3],alpha=1.,lw=2,
-		label=mapslabels[1])
-	plt.plot(hist2[1][1:],hist2[0],color=clrs[5],alpha=1.,lw=2,
-		label=mapslabels[2])
-	plt.legend()
-	plt.tight_layout() 
-	if show_plots:
-		plt.show()
-	if save_plots:
-		plt.savefig(pickles+plot_advanced_hist_file,dpi=500,bbox_inches='tight')
-	plt.cla()
-		
-#---Plot videos for +/- curvature domains
-#-------------------------------------------------------------------------------------------------------------
-
-if plot_plus_minus_video:	
-	prot_centers = []
-	for m in range(len(msets)):
-		mset = msets[m]
-		nprots = nprots_list[m]
-		if nprots > 0:
-			protlen = int(shape(mset.protein[0])[0]/nprots)
-			protlenshow = protlen
-			prot_centers.append(mean([mean(mset.protein,axis=0)[i*protlen:i*protlen+protlenshow]
-				for i in range(nprots)],axis=1))
-		else:
-			prot_centers.append(None)
-	vecs = mean(msets[0].vecs,axis=0)
-	span,nnum,numgridpts,distance_factor = [4,32,64,1]
-	result_stack = [[mean([i[0] for i in raw_maps[j]],axis=0),prot_centers[j]] for j in range(len(raw_maps))]
-	avg = [[],[],[]]
-	clrs = brewer2mpl.get_map('Paired', 'qualitative', 8).mpl_colors
-	#control_mean = mean([raw_maps[2][i][0] for i in range(len(raw_maps[2]))])+0.00048502604166666415
-	#control_mean = mean([raw_maps[2][i][0] for i in range(len(raw_maps[2]))])
-	control_mean = 0
-	doms_sizes_poz = [[],[],[]]
-	doms_sizes_neg = [[],[],[]]
-	for k in range(3):
-		print 'system = '+str(k)
-		for i in range(len(raw_maps[k])):
-			print 'frame = '+str(i)
-			heatmap = raw_maps[k][i][0];
-			tmp=ndimage.label(heatmap)
-			#---use this and it looks like control is smoother on histogram
-			#im = ndimage.gaussian_filter(heatmap, sigma=256/(4.*40))
-			#---use this and it looks opposite
-			#im = ndimage.gaussian_filter(heatmap, sigma=256/(4.*50))
-			#---another filtering attempt
-			im = ndimage.gaussian_filter(heatmap, sigma=256/(4.*20),mode='wrap')
-			maskp = im > im.mean()
-			maskp = im > control_mean
-			doms_sizes_poz[k].append(sum(im > im.mean())/4096.)
-			doms_sizes_neg[k].append(sum(im < im.mean())/4096.)
-			avg[k].append(maskp)
-	print shape(avg[0])
-	print shape(avg[1])
-	print shape(avg[2])
-	print 'bkah'
-	avgmeans_stack = list(array([[avg[i][j]-0.5 for j in range(len(avg[i]))] for i in range(3)]).T)
-	print 'precomputing maps ...'
-	if render_video_full:
-		precomp_maps = list(array([[raw_maps[k][fr][0] for fr in range(len(avg[k]))] for k in range(3)]).T)
-		extremum = 0.5
-	else:
-		precomp_maps = avgmeans_stack[fr]
-		extremum = 0.5
-	if render_video_full_smooth:
-		precomp_maps = array([[ndimage.gaussian_filter(precomp_maps[k][fr],
-			sigma=256/(4.*render_video_full_width)) for fr in range(len(avg[k]))] for k in range(3)]).T
-		extremum = max([np.max([np.max(i) for i in precomp_maps]),np.abs(np.max([np.max(i) 
-			for i in precomp_maps]))])
-		#---take the half extremum to make it look sharper
-		extremum = video_sharpfactor*extremum
-		print 'extremum = '+str(extremum)
-	for fr in range(min([len(avg[i]) for i in range(3)])):
-		print 'rendering frame '+str(fr)
-		#avgmeans = precomp_maps[fr]
-		avgmeans = [precomp_maps[i][fr] for i in range(3)]
-		fig = plt.figure()
-		numgridpts = 64
-		ax0 = plt.subplot2grid((1,3), (0,0))
-		ax0.set_title(mapslabels[0])
-		'''
-		nprots = nprots_list[0]
-		if nprots > 0:
-			protlen = int(shape(msets[0].protein[0])[0]/nprots)
-			protlenshow = protlen
-			protein_centers = mean([msets[0].protein[fr][i*protlen:i*protlen+protlenshow] 
-				for i in range(nprots)],axis=1)
-			for pt in protein_centers:
-				circ = plt.Circle((int(round(pt[0]/vecs[0]*numgridpts)),
-					int(round(pt[1]/vecs[0]*numgridpts))),radius=1.5/64*numgridpts,color='k',
-					alpha=1.0)
-				ax0.add_patch(circ)
-		'''
-		protpts = array([[i[0]*numgridpts/vecs[0],i[1]*numgridpts/vecs[1]] for i in msets[0].protein[fr]])
-		hull = scipy.spatial.ConvexHull(protpts)
-		ax0.plot(protpts[hull.vertices,0],protpts[hull.vertices,1],'r-',lw=1)
-		ax0.plot(protpts[hull.vertices,0][-1],protpts[hull.vertices,1][0],'r-',lw=1)
-		#---end edit
-		ax0.imshow(array(avgmeans[0]).T,interpolation='nearest',origin='LowerLeft',
-			vmax=extremum,vmin=-extremum,
-			cmap='bwr',extent=[0,numgridpts,0,numgridpts])
-		ax1 = plt.subplot2grid((1,3), (0,1))
-		ax1.set_title(mapslabels[1])
-		protein_centers = result_stack[1][1]
-		'''
-		nprots = nprots_list[1]
-		if nprots > 0:
-			protlen = int(shape(msets[1].protein[0])[0]/nprots)
-			protlenshow = protlen
-			protein_centers = mean([msets[1].protein[fr][i*protlen:i*protlen+protlenshow] 
-				for i in range(nprots)],axis=1)
-			for pt in protein_centers:
-				circ = plt.Circle((int(round(pt[0]/vecs[0]*numgridpts)),
-					int(round(pt[1]/vecs[0]*numgridpts))),radius=1.5/64*numgridpts,color='k',
-					alpha=1.0)
-				ax1.add_patch(circ)
-		'''
-		protpts = array([[i[0]*numgridpts/vecs[0],i[1]*numgridpts/vecs[1]] for i in msets[1].protein[fr]])
-		hull = scipy.spatial.ConvexHull(protpts)
-		ax1.plot(protpts[hull.vertices,0],protpts[hull.vertices,1],'r-',lw=1)
-		ax1.plot(protpts[hull.vertices,0][-1],protpts[hull.vertices,1][0],'r-',lw=1)
-		#---end edit
-		ax1.imshow(array(avgmeans[1]).T,interpolation='nearest',origin='LowerLeft',
-			vmax=extremum,vmin=-extremum,
-			cmap='bwr',extent=[0,numgridpts,0,numgridpts])
-		ax2 = plt.subplot2grid((1,3), (0,2))
-		ax2.set_title(mapslabels[2])
-		img = ax2.imshow(array(avgmeans[2]).T,interpolation='nearest',origin='LowerLeft',
-			vmax=extremum,vmin=-extremum,
-			cmap='bwr',extent=[0,numgridpts,0,numgridpts])
-		plt.tight_layout() 
-		plt.savefig(pickles+plot_video_filebase+'.fr.'+str('%04d'%fr)+'.png',dpi=500,bbox_inches='tight')
-		plt.cla()
-		plt.close()
-	print 'done rendering. run this:'
-	print r"ffmpeg -i stress-framewise-plusminus-maps.fr.%04d.png -vcodec mpeg1video -qscale 0  ",
-	print r"-filter:v 'setpts=2.0*PTS' ./untitled.mpg"
-	subprocess.call(['ffmpeg','-i',pickles+'/'+plot_video_filebase+'.fr.%04d.png','-vcodec','mpeg1video',
-		'-qscale','0','-filter:v','setpts=2.0*PTS',pickles+'/'+plot_video_filebase+'.mpeg'])
-	for fr in range(min([len(avg[i]) for i in range(3)])): 
-		subprocess.call(['rm',pickles+'/'+plot_video_filebase+'.fr.'+str('%04d'%fr)+'.png'])
-
-
-#---Plot spontaneous curvature (C0) histograms, averaged across all voxels and all frames (together)
-#-------------------------------------------------------------------------------------------------------------
-
+#---plot spontaneous curvature (C0) histograms, averaged across all voxels and all frames (together)
 if plot_hist:
 	pdist0 = signchange*array([i for j in mean([i[0] for i in raw_maps[0]],axis=0) for i in j])
 	pdist1 = signchange*array([i for j in mean([i[0] for i in raw_maps[1]],axis=0) for i in j])
@@ -402,21 +110,206 @@ if plot_hist:
 	plt.xlabel(r'$\mathsf{C_{0}(nm^{-1})}$',labelpad = 10,fontsize=20)
 	plt.ylabel('frequency', labelpad = 10,fontsize=20)
 	ax.set_xlim((-0.05,0.05))
-	if show_titles:
-		plt.title('spontaneous curvature')
 	fig.tight_layout()
 	plt.legend()
 	plt.tight_layout() 
-	if save_plots:
-		plt.savefig(pickles+plot_hist_file,dpi=500,bbox_inches='tight')
-	if show_plots:
-		plt.show()
+	plt.savefig(pickles+plot_hist_file,dpi=500,bbox_inches='tight')
+	plt.show()
 	plt.cla()
 	plt.close()
+	
+#---plot spontaneous curvature (C0) histograms, averaged across all voxels and all frames (together)
+if plot_hist_subdivide:
+	#---old method has everything on one plot
+	if 1:
+		which_brewer_colors = [1,3,5,0,2,4]
+		clrs = [brewer2mpl.get_map('paired','qualitative',9).mpl_colors[i] for i in which_brewer_colors]
+		gridsize = shape(raw_maps[0][0][0])[0]
+		zooms = [
+			[slice(int(round(0.25*gridsize)),int(round(0.75*gridsize))),
+				slice(int(round(0.25*gridsize)),int(round(0.75*gridsize)))],
+			[slice(int(round(0.*gridsize)),int(round(1.*gridsize))),
+				slice(int(round(0.*gridsize)),int(round(1.*gridsize)))]]
+		zoomnames = (', full',', center')
+		fig = plt.figure(figsize=(6,4))
+		gs = gridspec.GridSpec(1,1,wspace=0.0,hspace=0.0)
+		lims = (-0.1,0.1)
+		plotlims = (-0.06,0.06)
+		plotlims = (-.15,.15)
+		clrsi = 0
+		ax = fig.add_subplot(gs[0])
+		for z in range(len(zooms)):
+			zoom = zooms[z]
+			#for d in range(len(raw_maps)):
+			for d in range(0,1):
+				dat = raw_maps[d]
+				if plot_hist_subdivide_mean:
+					pdist = signchange*flatten(mean(array([array(i[0])[zoom[0],zoom[1]] for i in dat]),axis=0))
+				else:
+					pdist = signchange*flatten(array([array(i[0])[zoom[0],zoom[1]] for i in dat]))
+				hist,binedge = numpy.histogram(pdist,bins=nbins,weights=[1./len(pdist) for i in pdist],
+					range=lims)
+				mid = (binedge[1:]+binedge[:-1])/2
+				posmid = [i for i in range(len(hist)) if round(mid[i],8) >= 0.]
+				negmid = [i for i in range(len(hist)) if round(mid[i],8) <= 0.]
+				#ax.plot([mid[i] for i in posmid],[hist[i] for i in posmid],'-',c=clrs[clrsi%len(clrs)],alpha=1.,lw=2,label=mapslabels[d]+zoomnames[z])
+				#ax.plot([-mid[i] for i in negmid],[hist[i] for i in negmid],'-.',c=clrs[clrsi%len(clrs)],alpha=1.,lw=2,label=mapslabels[d]+zoomnames[z])
+				ax.plot(mid,hist,'-',c=clrs[clrsi%len(clrs)],alpha=1.,lw=2,label=mapslabels[d]+zoomnames[z])				
+				clrsi += 1
+				ax.legend()
+			ax.set_xlim(plotlims)
+		plt.show()
+	#---new method breaks it down into (1) positive vs negative (2) positive center vs full (3) center v full
+	if 0:
+		which_brewer_colors = [0,2,4,1,3,5]
+		clrs = [brewer2mpl.get_map('paired','qualitative',9).mpl_colors[i] for i in which_brewer_colors]
+		gridsize = shape(raw_maps[0][0][0])[0]
+		zooms = [
+			[slice(int(round(0.*gridsize)),int(round(1.*gridsize))),
+				slice(int(round(0.*gridsize)),int(round(1.*gridsize)))],
+			[slice(int(round(0.25*gridsize)),int(round(0.75*gridsize))),
+				slice(int(round(0.25*gridsize)),int(round(0.75*gridsize)))]]
+		zoomnames = (', center',', full')
+		fig = plt.figure(figsize=(6,4))
+		gs = gridspec.GridSpec(3,2,wspace=0.0,hspace=0.0)
+		lims = (-0.1,0.1)
+		plotlims = (0,0.04)
+		#---full zoom, positive vs negative
+		ax = fig.add_subplot(gs[0,0:2])
+		z = 0
+		zoom = zooms[z]
+		clrsi = 0
+		for d in range(len(raw_maps)):
+			dat = raw_maps[d]
+			if plot_hist_subdivide_mean:
+				pdist = signchange*flatten(mean(array([array(i[0])[zoom[0],zoom[1]] for i in dat]),axis=0))
+			else:
+				pdist = signchange*flatten(array([array(i[0])[zoom[0],zoom[1]] for i in dat]))
+			hist,binedge = numpy.histogram(pdist,bins=nbins,weights=[1./len(pdist) for i in pdist],
+				range=lims)
+			mid = (binedge[1:]+binedge[:-1])/2
+			posmid = [i for i in range(len(hist)) if round(mid[i],8) >= 0.]
+			negmid = [i for i in range(len(hist)) if round(mid[i],8) <= 0.]
+			ax.plot([mid[i] for i in posmid],[hist[i] for i in posmid],'-',c=clrs[clrsi%len(clrs)],alpha=1.,lw=2,label=mapslabels[d]+' '+zoomnames[z])
+			clrsi += 1
+			ax.plot([-mid[i] for i in negmid],[hist[i] for i in negmid],'-',c=clrs[clrsi%len(clrs)],alpha=1.,lw=2,label=mapslabels[d]+' '+zoomnames[z])
+			clrsi += 1
+			ax.legend()
+		ax.set_xlim(plotlims)
+		#---now positive full vs center
+		clrsi = 0
+		ax = fig.add_subplot(gs[1,0:2])
+		for z in range(len(zooms)):
+			zoom = zooms[z]
+			for d in range(len(raw_maps)):
+				dat = raw_maps[d]
+				if plot_hist_subdivide_mean:
+					pdist = signchange*flatten(mean(array([array(i[0])[zoom[0],zoom[1]] for i in dat]),axis=0))
+				else:
+					pdist = signchange*flatten(array([array(i[0])[zoom[0],zoom[1]] for i in dat]))
+				hist,binedge = numpy.histogram(pdist,bins=nbins,weights=[1./len(pdist) for i in pdist],
+					range=lims)
+				mid = (binedge[1:]+binedge[:-1])/2
+				posmid = [i for i in range(len(hist)) if round(mid[i],8) >= 0.]
+				#negmid = [i for i in range(len(hist)) if round(mid[i],8) <= 0.]
+				ax.plot([mid[i] for i in posmid],[hist[i] for i in posmid],'-',c=clrs[clrsi%len(clrs)],alpha=1.,lw=2,label=mapslabels[d]+' '+zoomnames[z])
+				#ax.plot([-mid[i] for i in negmid],[hist[i] for i in negmid],'-',c=clrs[clrsi%len(clrs)],alpha=1.,lw=2,label=mapslabels[d]+' '+zoomnames[z])
+				clrsi += 1
+				ax.legend()
+			ax.set_xlim(plotlims)
+		#---now negative full vs center
+		clrsi = 0
+		ax = fig.add_subplot(gs[2,0:2])
+		for z in range(len(zooms)):
+			zoom = zooms[z]
+			for d in range(len(raw_maps)):
+				dat = raw_maps[d]
+				if plot_hist_subdivide_mean:
+					pdist = signchange*flatten(mean(array([array(i[0])[zoom[0],zoom[1]] for i in dat]),axis=0))
+				else:
+					pdist = signchange*flatten(array([array(i[0])[zoom[0],zoom[1]] for i in dat]))
+				hist,binedge = numpy.histogram(pdist,bins=nbins,weights=[1./len(pdist) for i in pdist],
+					range=lims)
+				mid = (binedge[1:]+binedge[:-1])/2
+				#posmid = [i for i in range(len(hist)) if round(mid[i],8) >= 0.]
+				negmid = [i for i in range(len(hist)) if round(mid[i],8) <= 0.]
+				#ax.plot([mid[i] for i in posmid],[hist[i] for i in posmid],'-',c=clrs[clrsi%len(clrs)],alpha=1.,lw=2,label=mapslabels[d]+' '+zoomnames[z])
+				ax.plot([-mid[i] for i in negmid],[hist[i] for i in negmid],'-',c=clrs[clrsi%len(clrs)],alpha=1.,lw=2,label=mapslabels[d]+' '+zoomnames[z])
+				clrsi += 1
+				ax.legend()
+			ax.set_xlim(plotlims)
+		plt.show()
+	#---new method does the same thing, but also breaks it out by system
+	if 0:
+		which_brewer_colors = [0,2,4,1,3,5]
+		clrs = [brewer2mpl.get_map('paired','qualitative',9).mpl_colors[i] for i in which_brewer_colors]
+		gridsize = shape(raw_maps[0][0][0])[0]
+		zooms = [
+			[slice(int(round(0.*gridsize)),int(round(1.*gridsize))),
+				slice(int(round(0.*gridsize)),int(round(1.*gridsize)))],
+			[slice(int(round(0.25*gridsize)),int(round(0.75*gridsize))),
+				slice(int(round(0.25*gridsize)),int(round(0.75*gridsize)))]]
+		zoomnames = (', center',', full')
+		fig = plt.figure(figsize=(6,4))
+		gs = gridspec.GridSpec(3,3,wspace=0.0,hspace=0.0)
+		lims = (-0.1,0.1)
+		plotlims = (0,0.04)
+		z = 0
+		zoom = zooms[0]
+		#---top row is full system positive vs negative
+		for col in range(3):
+			dat = raw_maps[col]
+			ax = fig.add_subplot(gs[0,col])
+			pdist = signchange*flatten(mean(array([array(i[0])[zoom[0],zoom[1]] for i in dat]),axis=0))
+			hist,binedge = numpy.histogram(pdist,bins=nbins,weights=[1./len(pdist) for i in pdist],
+				range=lims)
+			mid = (binedge[1:]+binedge[:-1])/2
+			posmid = [i for i in range(len(hist)) if round(mid[i],8) >= 0.]
+			negmid = [i for i in range(len(hist)) if round(mid[i],8) <= 0.]
+			ax.plot([mid[i] for i in posmid],[hist[i] for i in posmid],'-',c='r',alpha=1.,lw=2,label=mapslabels[d]+' '+zoomnames[z])
+			ax.plot([-mid[i] for i in negmid],[hist[i] for i in negmid],'-',c='b',alpha=1.,lw=2,label=mapslabels[d]+' '+zoomnames[z])
+			ax.set_xlim(plotlims)
+			ax.set_ylim((0,0.4))		
+		#---middle row is positive curvatures
+		clrsi = 0
+		for col in range(3):
+			dat = raw_maps[col]
+			ax = fig.add_subplot(gs[1,col])
+			for z in range(len(zooms)):
+				zoom = zooms[z]
+				pdist = signchange*flatten(mean(array([array(i[0])[zoom[0],zoom[1]] for i in dat]),axis=0))
+				hist,binedge = numpy.histogram(pdist,bins=nbins,weights=[1./len(pdist) for i in pdist],
+					range=lims)
+				mid = (binedge[1:]+binedge[:-1])/2
+				posmid = [i for i in range(len(hist)) if round(mid[i],8) >= 0.]
+				negmid = [i for i in range(len(hist)) if round(mid[i],8) <= 0.]
+				ax.plot([mid[i] for i in posmid],[hist[i] for i in posmid],'-',c=clrs[z+4],alpha=1.,lw=2,label=mapslabels[d]+' '+zoomnames[z])
+				#ax.plot([-mid[i] for i in negmid],[hist[i] for i in negmid],'-',c='b',alpha=1.,lw=2,label=mapslabels[d]+' '+zoomnames[z])
+			ax.set_xlim(plotlims)
+			ax.set_ylim((0,0.4))
+		#---bottom row
+		clrsi = 0
+		for col in range(3):
+			dat = raw_maps[col]
+			ax = fig.add_subplot(gs[2,col])
+			for z in range(len(zooms)):
+				zoom = zooms[z]
+				pdist = signchange*flatten(mean(array([array(i[0])[zoom[0],zoom[1]] for i in dat]),axis=0))
+				hist,binedge = numpy.histogram(pdist,bins=nbins,weights=[1./len(pdist) for i in pdist],
+					range=lims)
+				mid = (binedge[1:]+binedge[:-1])/2
+				posmid = [i for i in range(len(hist)) if round(mid[i],8) >= 0.]
+				negmid = [i for i in range(len(hist)) if round(mid[i],8) <= 0.]
+				#ax.plot([mid[i] for i in posmid],[hist[i] for i in posmid],'-',c='r',alpha=1.,lw=2,label=mapslabels[d]+' '+zoomnames[z])
+				ax.plot([-mid[i] for i in negmid],[hist[i] for i in negmid],'-',c=clrs[z+4],alpha=1.,lw=2,label=mapslabels[d]+' '+zoomnames[z])
+			ax.set_xlim(plotlims)
+			ax.set_ylim((0,0.4))		
+		plt.show()
 
-#---Plot spontaneous curvature (C0) maps, averaged over all frames
-#-------------------------------------------------------------------------------------------------------------
 
+
+
+#---plot spontaneous curvature (C0) maps, averaged over all frames
 if plot_maps:
 	prot_centers = []
 	for m in range(len(msets)):
@@ -443,16 +336,6 @@ if plot_maps:
 	ax0.set_yticklabels([])
 	ax0.set_adjustable('box-forced')
 	dat = result_stack[0][0]
-	'''
-	protein_centers = result_stack[0][1]
-	nprots = nprots_list[0]
-	if nprots > 0:
-		for pt in protein_centers:
-			circ = plt.Circle((int(round(pt[0]/vecs[0]*numgridpts)),
-				int(round(pt[1]/vecs[0]*numgridpts))),radius=1.5/64*numgridpts,color='k',
-				alpha=1.0)
-			ax0.add_patch(circ)
-	'''
 	nprots = nprots_list[0]
 	if nprots > 0:
 		protlen = int(shape(msets[0].protein[0])[0]/nprots)
@@ -466,8 +349,8 @@ if plot_maps:
 			shifthully = [protpts[hull.vertices[(i+1)%len(hull.vertices)]][1] 
 				for i in range(len(hull.vertices))]
 			ax0.plot(shifthullx,shifthully,'k-',lw=0.6)
-	#---end edit
-	ax0.imshow(signchange*array(dat).T,interpolation='nearest',origin='LowerLeft',vmax=extremum,vmin=-extremum,
+	ax0.imshow(signchange*array(dat).T,interpolation='nearest',
+		origin='LowerLeft',vmax=extremum,vmin=-extremum,
 		cmap='bwr',extent=[0,numgridpts,0,numgridpts])
 	ax1 = plt.subplot2grid((1,4),(0,1))
 	ax1.set_title(mapslabels[1])
@@ -475,16 +358,6 @@ if plot_maps:
 	ax1.set_yticklabels([])
 	ax1.set_adjustable('box-forced')
 	dat = result_stack[1][0]
-	'''
-	protein_centers = result_stack[1][1]
-	nprots = nprots_list[1]
-	if nprots > 0:
-		for pt in protein_centers:
-			circ = plt.Circle((int(round(pt[0]/vecs[0]*numgridpts)),
-				int(round(pt[1]/vecs[0]*numgridpts))),radius=1.5/64*numgridpts,color='k',
-				alpha=1.0)
-			ax1.add_patch(circ)
-	'''
 	nprots = nprots_list[1]
 	if nprots > 0:
 		protlen = int(shape(msets[1].protein[0])[0]/nprots)
@@ -498,8 +371,8 @@ if plot_maps:
 			shifthully = [protpts[hull.vertices[(i+1)%len(hull.vertices)]][1] 
 				for i in range(len(hull.vertices))]
 			ax1.plot(shifthullx,shifthully,'k-',lw=0.6)
-	#---end edit
-	ax1.imshow(signchange*array(dat).T,interpolation='nearest',origin='LowerLeft',vmax=extremum,vmin=-extremum,
+	ax1.imshow(signchange*array(dat).T,interpolation='nearest',origin='LowerLeft',
+		vmax=extremum,vmin=-extremum,
 		cmap='bwr',extent=[0,numgridpts,0,numgridpts])
 	ax2 = plt.subplot2grid((1,4), (0,2),colspan=1)
 	ax2.set_title(mapslabels[2])
@@ -510,19 +383,17 @@ if plot_maps:
 	img = ax2.imshow(-1*array(dat).T,interpolation='nearest',origin='LowerLeft',vmax=extremum,vmin=-extremum,
 		cmap='bwr',extent=[0,numgridpts,0,numgridpts])
 	cax = inset_axes(ax2,
-		         width="5%",
-		         height="100%",
-		         bbox_transform=ax2.transAxes,
-		         bbox_to_anchor=(0.3, 0.1, 1.05, 0.95),
-		         loc= 1)
+		width="5%",
+		height="100%",
+		bbox_transform=ax2.transAxes,
+		bbox_to_anchor=(0.3, 0.1, 1.05, 0.95),
+		loc= 1)
 	fig.colorbar(img,cax=cax)
 	cax.tick_params(labelsize=10) 
 	cax.set_ylabel(r'$\mathsf{C_{0}(nm^{-1})}$',fontsize=10)
 	plt.tight_layout()
-	if save_plots:
-		plt.savefig(pickles+plot_maps_file,dpi=500,bbox_inches='tight')
-	if show_plots:
-		plt.show()
+	plt.savefig(pickles+plot_maps_file,dpi=500,bbox_inches='tight')
+	plt.show()
 	plt.cla()
 	plt.close()
 
