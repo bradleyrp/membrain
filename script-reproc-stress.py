@@ -1,5 +1,5 @@
 #!/usr/bin/python -i
-if 0:
+if 1:
 	from membrainrunner import *
 
 	location = ''
@@ -118,7 +118,7 @@ if plot_hist:
 	plt.cla()
 	plt.close()
 	
-#---plot spontaneous curvature (C0) histograms, averaged across all voxels and all frames (together)
+#---plot spontaneous curvature (C0) histograms on a selection of the box
 if plot_hist_subdivide:
 	#---old method has everything on one plot
 	if 1:
