@@ -23,6 +23,27 @@ mpl.rc('text.latex', preamble='\usepackage{sfmath}')
 mpl.rcParams['axes.linewidth'] = 2.0
 mpl.rcParams.update({'font.size': 14})
 
+#---deprecated code for the original plotting method
+'''
+analysis_descriptors = [
+	('pkl.dimple.v614-stress.md.part0002.rerun.pkl',),
+	('pkl.dimple.v612-stress.md.part0003.pkl',),
+	('pkl.dimple.v550.md.part0006.300000-400000-200.pkl',),
+	('pkl.dimple.v550.md.part0006.300000-400000-200.testshift-v614.pkl',),
+	('pkl.dimple.v550.md.part0006.300000-400000-200.testshift-v700.pkl',),
+	('pkl.dimple.v700.md.part0002.100000-200000-200.pkl',),
+	('pkl.dimple.v701.md.part0003.60000-160000-200.pkl',)]
+analysis_plan = range(len(analysis_descriptors))
+names = (r'$\textbf{{ENTH}\ensuremath{\times}4}$',r'$\textbf{{ENTH}\ensuremath{\times}1}$',
+	r'$\textbf{control(ENTH)}$',r'$\textbf{control(Exo70)}$',r'$\textbf{control(3)}$',
+	r'$\textbf{{EXO70}\ensuremath{\times}2{\small (antiparallel)}}$',r'$\textbf{{EXO70}\ensuremath{\times}2{\small (parallel)}}$')
+appor = (0,1,2,2,2,3,4)
+ccodes = [(clrs[0],clrs[1]),(clrs[2],clrs[3]),
+	(clrs[4],clrs[5]),(clrs[6],clrs[7]),(clrs[0],clrs[1]),(clrs[2],clrs[3]),
+	(clrs[0],clrs[1]),(clrs[2],clrs[3])]
+fillcodes = (1,1,0,0,0,1,1)
+'''
+
 analysis_descriptors = [
 	('pkl.dimple.v614-stress.md.part0002.rerun.pkl',(clrs[0],clrs[1]),
 		r'$\textbf{{ENTH}\ensuremath{\times}4}$',1,
@@ -78,6 +99,94 @@ minval_sigma,maxval_sigma = 0,30
 #---MAIN
 #-------------------------------------------------------------------------------------------------------------
 
+#---Original plotting method
+if do_stacked_plot_ver1:
+	fig, axes = plt.subplots(nrows=max(appor)+1,ncols=(2 if do_stacked_plot_with_sigma else 1),
+		figsize=((15 if do_stacked_plot_with_sigma else 10),2*(max(appor)+1)))
+	maxpeak = 0
+	for p in range(len(analysis_descriptors[analysis_plan])):
+		thisaxis = axes[appor[p]][0] if do_stacked_plot_with_sigma else axes[appor[p]]
+		ccodes = analysis_descriptors[analysis_plan][p][1]
+		name = analysis_descriptors[analysis_plan][p][2]
+		fillcode = analysis_descriptors[analysis_plan][p][3]
+		expected_direction = results_stack[p][0].notes[([i[0] 
+			for i in results_stack[p][0].notes].index('expected_direction'))][1]
+		order = ((0,1,2) if expected_direction == 1 else (1,0,2))
+		for o in range(len(order)):
+			params = results_stack[p][order[o]].get(['type','params'])
+			maxhs = results_stack[p][order[o]].get(['type','maxhs'])
+			maxhxys = results_stack[p][order[o]].get(['type','maxhxys'])
+			validhis = [i for i in range(len(maxhs)) 
+				if (10*abs(maxhs[i]) > 10**-5 and abs(10*maxhs[i]) < 0.1)]
+			#---nanometer correction
+			validhs = [10*maxhs[i] for i in validhis]
+			hist0,binedge0 = numpy.histogram(validhs,bins=nbins,normed=True,range=(minval,maxval))
+			mid0 = (binedge0[1:]+binedge0[:-1])/2
+			if o == 1:
+				thisaxis.plot(mid0,hist0,'-',c=ccodes[o],alpha=1.,lw=2,label=name)
+			elif o == 0:
+				thisaxis.plot(mid0,hist0,'-',c=ccodes[o],alpha=1.,lw=2)
+			else:
+				thisaxis.plot(mid0,hist0,'--',c='k',alpha=1.,lw=2)
+			if fillcode and o != 2:
+				thisaxis.fill_between(mid0,hist0,[0 for i in mid0],facecolor=ccodes[o],
+					alpha=0.2,interpolate=True)
+			if max(hist0) > maxpeak: maxpeak = max(hist0)
+	for p in range(max(appor)+2):
+		if p == 1:
+			thisaxis.set_title(r'$\textbf{mean curvatures}$')
+		thisaxis = axes[appor[p]][0] if do_stacked_plot_with_sigma else axes[appor[p]]
+		thisaxis.set_ylim(0,1.1*maxpeak)
+		thisaxis.axvline(x=0,ls='-',lw=1,c='k')
+		thisaxis.legend(loc=2,fontsize=12)
+		thisaxis.set_ylabel('frames')
+		thisaxis.get_yaxis().set_major_locator(MaxNLocator(prune='both'))
+		thisaxis.grid(True)
+		thisaxis.locator_params(nbins=4)
+		if p == max(appor)+1:
+			thisaxis.set_xlabel('$\mathsf{H_{max}(nm^{-1})}$',fontsize=14)
+		else:
+			thisaxis.set_xticklabels([])
+	if do_stacked_plot_with_sigma:	
+		for p in range(len(analysis_descriptors[analysis_plan])):
+			expected_direction = results_stack[p][0].notes[([i[0] 
+				for i in results_stack[p][0].notes].index('expected_direction'))][1]
+			order = [1] if expected_direction == 1 else [0]
+			o = 0
+			thisaxis = axes[appor[p]][1]
+			params = results_stack[p][order[o]].get(['type','params'])
+			maxhs = results_stack[p][order[o]].get(['type','maxhs'])
+			ccodes = analysis_descriptors[analysis_plan][p][1]
+			validhis = [i for i in range(len(maxhs)) if (10*abs(maxhs[i]) > 10**-5 
+				and abs(10*maxhs[i]) < 0.1)]
+			sigma_x = [abs(params[i][4])/10. for i in validhis if len(shape(params[i])) > 0]
+			sigma_y = [abs(params[i][5])/10. for i in validhis if len(shape(params[i])) > 0]
+			hist0,binedge0 = numpy.histogram(sigma_x,bins=nbins_sigma,normed=True,
+				range=(minval_sigma,maxval_sigma))
+			mid0 = (binedge0[1:]+binedge0[:-1])/2
+			thisaxis.plot(mid0,hist0,c=ccodes[1],alpha=1.,lw=2)
+			hist1,binedge1 = numpy.histogram(sigma_y,bins=nbins_sigma,normed=True,
+				range=(minval_sigma,maxval_sigma))
+			mid1 = (binedge1[1:]+binedge1[:-1])/2
+			thisaxis.plot(mid1,hist1,c=ccodes[0],alpha=1.,lw=2)
+		for p in range(max(appor)+2):
+			if p == 1:
+				thisaxis.set_title(r'$\textbf{extents of curvature}$')
+			thisaxis = axes[appor[p]][1] if do_stacked_plot_with_sigma else axes[appor[p]]
+			thisaxis.grid(True)
+			thisaxis.yaxis.tick_right()
+			thisaxis.yaxis.set_label_position("right")
+			thisaxis.set_xlabel('frames')
+			thisaxis.get_yaxis().set_major_locator(MaxNLocator(prune='both'))
+			thisaxis.get_xaxis().set_major_locator(MaxNLocator(prune='lower'))
+			if p == max(appor)+1:
+				thisaxis.set_xlabel('$\mathsf{\sigma_a,\sigma_b(nm^{2})}$',fontsize=14)
+			else:
+				thisaxis.set_xticklabels([])		
+	plt.subplots_adjust(hspace = 0)
+	plt.subplots_adjust(wspace = 0)
+	plt.show()	
+	
 #---Advanced plotting method
 if do_stacked_plot:
 	fig = plt.figure(figsize=figsize)
