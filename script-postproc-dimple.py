@@ -361,7 +361,7 @@ for ad in analysis_descriptors[analysis_plan]:
 	result_data_collection = []
 	for height_direction in [-1,1,0]:
 		#---fit and save
-		[params,maxhs,maxhxys,target_zones,which_frames] = batch_dimple_fitting(skip=500,
+		[params,maxhs,maxhxys,target_zones,which_frames] = batch_dimple_fitting(skip=None,
 			framecount=framecount)
 		result_data = MembraneData('dimple',label=sysname)
 		for i in range(len(params)):
