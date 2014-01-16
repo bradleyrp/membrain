@@ -46,7 +46,7 @@ analysis_descriptors = [
 cutoff_distance = 15.
 curvature_filter = [0.001,0.1]
 special_inversion_test = False
-special_dummy_test = True
+special_dummy_test = False
 
 #---plot settings
 original_plot_style = False

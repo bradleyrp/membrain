@@ -93,7 +93,7 @@ subdir = 'dimple-filter-0.001-0.1/'
 subdir = ''
 analyses = analysis_descriptors[analysis_plan]
 analyses = [analysis_descriptors[i] for i in [0,1,3]]
-analyses = [analysis_descriptors[i] for i in [-1]]
+analyses = [analysis_descriptors[i] for i in [11]]
 
 results_stack = []
 for pnum in range(len(analyses)):
