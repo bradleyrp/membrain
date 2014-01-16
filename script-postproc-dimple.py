@@ -44,7 +44,7 @@ analysis_descriptors = [
 	
 #---parameters
 cutoff_distance = 15.
-curvature_filter = [0.01,0.1]
+curvature_filter = [0.001,0.1]
 special_inversion_test = False
 special_dummy_test = True
 
