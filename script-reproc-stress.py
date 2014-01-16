@@ -1,5 +1,5 @@
 #!/usr/bin/python -i
-if 1:
+if 0:
 	from membrainrunner import *
 
 	location = ''
@@ -160,7 +160,7 @@ if plot_hist_subdivide:
 			ax.set_xlim(plotlims)
 		plt.show()
 	#---stacked method without averaging
-	if 1:
+	if 0:
 		plot_hist_subdivide_mean = False
 		which_brewer_colors = [1,3,5,0,2,4]
 		clrs = [brewer2mpl.get_map('paired','qualitative',9).mpl_colors[i] for i in which_brewer_colors]
@@ -173,12 +173,15 @@ if plot_hist_subdivide:
 		zoomnames = (', full',', center')
 		fig = plt.figure(figsize=(6,4))
 		gs = gridspec.GridSpec(3,1,wspace=0.0,hspace=0.0)
-		lims = (-0.1,0.1)
+		lims = (-1,1)
 		plotlims = (-0.06,0.06)
-		plotlims = (-.15,.15)
+		plotlims = (-1,1)
 		clrsi = 0
+		maxval = 0
+		axes = []
 		for d in range(len(raw_maps)):
 			ax = fig.add_subplot(gs[d])
+			axes.append(ax)
 			ax.axvline(x=0,ls='-',lw=1,c='k')
 			ax.set_ylim((0,0.04))
 			for z in range(len(zooms)):
@@ -199,7 +202,109 @@ if plot_hist_subdivide:
 				ax.plot(mid,hist,'-',c=clrs[clrsi%len(clrs)],alpha=1.,lw=2,label=mapslabels[d]+zoomnames[z])				
 				clrsi += 1
 				ax.legend()
+				if max(hist) > maxval: maxval = max(hist)
 			ax.set_xlim(plotlims)
+		for ax in axes:
+			ax.set_ylim((0,maxval*1.1))
+		plt.show()
+	#---stacked method without averaging next to unstacked method with averaging
+	if 1:
+		plot_hist_subdivide_mean = False
+		which_brewer_colors = [0,1,2,3,4,5,6,7]
+		clrs = [brewer2mpl.get_map('paired','qualitative',9).mpl_colors[i] for i in which_brewer_colors]
+		gridsize = shape(raw_maps[0][0][0])[0]
+		zooms = [
+			[slice(int(round(0.25*gridsize)),int(round(0.75*gridsize))),
+				slice(int(round(0.25*gridsize)),int(round(0.75*gridsize)))],
+			[slice(int(round(0.*gridsize)),int(round(1.*gridsize))),
+				slice(int(round(0.*gridsize)),int(round(1.*gridsize)))]]
+		zoomnames = (', full',', center')
+		fig = plt.figure(figsize=(16,10))
+		gs = gridspec.GridSpec(3,2,wspace=0.0,hspace=0.0)
+		lims = (-1,1)
+		plotlims = (-0.5,0.5)
+		clrsi = 0
+		maxval = 0
+		axes1 = []
+		for d in range(len(raw_maps)):
+			ax = fig.add_subplot(gs[d,0])
+			axes1.append(ax)
+			ax.axvline(x=0,ls='-',lw=1,c='k')
+			ax.set_ylim((0,0.04))
+			for z in range(len(zooms)):
+				zoom = zooms[z]
+				dat = raw_maps[d]
+				if plot_hist_subdivide_mean:
+					pdist = signchange*flatten(mean(array([array(i[0])[zoom[0],zoom[1]] for i in dat]),axis=0))
+				else:
+					pdist = signchange*flatten(array([array(i[0])[zoom[0],zoom[1]] for i in dat]))
+				print mean(pdist)
+				hist,binedge = numpy.histogram(pdist,bins=nbins,weights=[1./len(pdist) for i in pdist],
+					range=lims)
+				mid = (binedge[1:]+binedge[:-1])/2
+				posmid = [i for i in range(len(hist)) if round(mid[i],8) >= 0.]
+				negmid = [i for i in range(len(hist)) if round(mid[i],8) <= 0.]
+				#ax.plot([mid[i] for i in posmid],[hist[i] for i in posmid],'-',c=clrs[clrsi%len(clrs)],alpha=1.,lw=2,label=mapslabels[d]+zoomnames[z])
+				#ax.plot([-mid[i] for i in negmid],[hist[i] for i in negmid],'-.',c=clrs[clrsi%len(clrs)],alpha=1.,lw=2,label=mapslabels[d]+zoomnames[z])
+				ax.plot(mid,hist,'o-',c=clrs[clrsi%len(clrs)],alpha=1.,lw=2,label=mapslabels[d]+zoomnames[z])				
+				clrsi += 1
+				ax.legend(prop={'size':14})
+				if max(hist) > maxval: maxval = max(hist)
+			ax.set_xlim(plotlims)
+		axes1[0].set_title('all $\mathsf{C_{0}\,(nm^{-1})}$')
+		for ax in axes1:
+			ax.set_ylim((0,maxval*1.1))
+			ax.set_ylabel('frequency',fontsize=18)
+			ax.grid(True)
+		axes1[-1].set_xlabel('$\mathsf{C_{0}\,(nm^{-1})}$',fontsize=18)
+		plot_hist_subdivide_mean = True
+		gridsize = shape(raw_maps[0][0][0])[0]
+		zooms = [
+			[slice(int(round(0.25*gridsize)),int(round(0.75*gridsize))),
+				slice(int(round(0.25*gridsize)),int(round(0.75*gridsize)))],
+			[slice(int(round(0.*gridsize)),int(round(1.*gridsize))),
+				slice(int(round(0.*gridsize)),int(round(1.*gridsize)))]]
+		zoomnames = (', full',', center')
+		lims = (-0.1,0.1)
+		plotlims = (-0.06,0.06)
+		plotlims = (-0.07,0.07)
+		clrsi = 0
+		maxval = 0
+		axes2 = []
+		for d in range(len(raw_maps)):
+			ax = fig.add_subplot(gs[d,1])
+			axes2.append(ax)
+			ax.axvline(x=0,ls='-',lw=1,c='k')
+			ax.set_ylim((0,0.04))
+			for z in range(len(zooms)):
+				zoom = zooms[z]
+				dat = raw_maps[d]
+				if plot_hist_subdivide_mean:
+					pdist = signchange*flatten(mean(array([array(i[0])[zoom[0],zoom[1]] for i in dat]),axis=0))
+				else:
+					pdist = signchange*flatten(array([array(i[0])[zoom[0],zoom[1]] for i in dat]))
+				print mean(pdist)
+				hist,binedge = numpy.histogram(pdist,bins=nbins,weights=[1./len(pdist) for i in pdist],
+					range=lims)
+				mid = (binedge[1:]+binedge[:-1])/2
+				posmid = [i for i in range(len(hist)) if round(mid[i],8) >= 0.]
+				negmid = [i for i in range(len(hist)) if round(mid[i],8) <= 0.]
+				#ax.plot([mid[i] for i in posmid],[hist[i] for i in posmid],'-',c=clrs[clrsi%len(clrs)],alpha=1.,lw=2,label=mapslabels[d]+zoomnames[z])
+				#ax.plot([-mid[i] for i in negmid],[hist[i] for i in negmid],'-.',c=clrs[clrsi%len(clrs)],alpha=1.,lw=2,label=mapslabels[d]+zoomnames[z])
+				ax.plot(mid,hist,'o-',c=clrs[clrsi%len(clrs)],alpha=1.,lw=2,label=mapslabels[d]+zoomnames[z])				
+				clrsi += 1
+				ax.legend(prop={'size':14})
+				if max(hist) > maxval: maxval = max(hist)
+			ax.set_xlim(plotlims)
+		axes2[0].set_title(r'time-averaged $\mathsf{C_{0}\,(nm^{-1})}$')
+		for ax in axes2:
+			ax.set_ylim((0,maxval*1.1))
+			ax.yaxis.tick_right()
+			ax.set_ylabel('frequency',fontsize=18)
+			ax.yaxis.set_label_position("right")
+			ax.grid(True)
+		axes2[-1].set_xlabel('$\mathsf{C_{0}\,(nm^{-1})}$',fontsize=18)
+		plt.savefig(pickles+'fig-stress-master-summary-centerbox-ENTH.png',dpi=500,bbox_inches='tight')
 		plt.show()
 	#---new method breaks it down into (1) positive vs negative (2) positive center vs full (3) center v full
 	if 0:
@@ -215,7 +320,6 @@ if plot_hist_subdivide:
 		fig = plt.figure(figsize=(6,4))
 		gs = gridspec.GridSpec(3,2,wspace=0.0,hspace=0.0)
 		lims = (-0.1,0.1)
-		plotlims = (0,0.04)
 		#---full zoom, positive vs negative
 		ax = fig.add_subplot(gs[0,0:2])
 		z = 0
@@ -237,7 +341,6 @@ if plot_hist_subdivide:
 			ax.plot([-mid[i] for i in negmid],[hist[i] for i in negmid],'-',c=clrs[clrsi%len(clrs)],alpha=1.,lw=2,label=mapslabels[d]+' '+zoomnames[z])
 			clrsi += 1
 			ax.legend()
-		ax.set_xlim(plotlims)
 		#---now positive full vs center
 		clrsi = 0
 		ax = fig.add_subplot(gs[1,0:2])

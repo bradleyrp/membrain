@@ -30,9 +30,32 @@ analysis_descriptors = [
 	('pkl.dimple.v612-stress.md.part0003.pkl',(clrs[2],clrs[3]),
 		r'$\textbf{{ENTH}\ensuremath{\times}1}$',1,
 		'pkl.tilefilter-areas.v612-stress.md.part0003.pkl'),
+	('pkl.dimple.v612-stress.md.part0003.prot-v614.pkl',(clrs[2],clrs[3]),
+		r'$\textbf{{ENTH}\ensuremath{\times}1(4x area)}$',1,
+		'pkl.tilefilter-areas.v612-stress.md.part0003.prot-v614.pkl'),
 	('pkl.dimple.v550.md.part0006.300000-400000-200.prot-v614.pkl',(clrs[4],clrs[5]),
 		r'$\textbf{control}$',0,
 		'pkl.tilefilter-areas.v550.md.part0006.300000-400000-200.prot-v614.pkl'),
+
+	('pkl.dimple.v550.md.part0006.300000-400000-200.prot-v614.invert.pkl',(clrs[6],clrs[7]),
+		r'$\textbf{control, invert}$',0,
+		'pkl.tilefilter-areas.v550.md.part0006.300000-400000-200.prot-v614.pkl'),
+
+
+	('pkl.dimple.v550.md.part0006.300000-400000-200.shift01.prot-v614.pkl',(clrs[4],clrs[5]),
+		r'$\textbf{control shift}$',0,
+		'pkl.tilefilter-areas.v550.md.part0006.300000-400000-200.prot-v614.pkl'),
+	('pkl.dimple.v550.md.part0006.300000-400000-200.shift10.prot-v614.pkl',(clrs[4],clrs[5]),
+		r'$\textbf{control shift}$',0,
+		'pkl.tilefilter-areas.v550.md.part0006.300000-400000-200.prot-v614.pkl'),
+	('pkl.dimple.v550.md.part0006.300000-400000-200.shift01.prot-v700.pkl',(clrs[4],clrs[5]),
+		r'$\textbf{control shift}$',0,
+		'pkl.tilefilter-areas.v550.md.part0006.300000-400000-200.prot-v614.pkl'),
+	('pkl.dimple.v550.md.part0006.300000-400000-200.shift10.prot-v700.pkl',(clrs[4],clrs[5]),
+		r'$\textbf{control shift}$',0,
+		'pkl.tilefilter-areas.v550.md.part0006.300000-400000-200.prot-v614.pkl'),
+
+
 	('pkl.dimple.v550.md.part0006.300000-400000-200.prot-v700.pkl',(clrs[6],clrs[7]),
 		r'$\textbf{control}$',0,
 		'pkl.tilefilter-areas.v550.md.part0006.300000-400000-200.prot-v700.pkl'),
@@ -43,13 +66,13 @@ analysis_descriptors = [
 		r'$\textbf{{EXO70}\ensuremath{\times}2{\small (antiparallel)}}$',1,
 		'pkl.tilefilter-areas.v701.md.part0003.60000-160000-200.pkl')]
 
-plotspecs = 'both'
 plotspecs = 'enth'
+plotspecs = 'both'
 if plotspecs == 'both':
 	analysis_plan = slice(None,None)
-	appor = (0,1,2,3,4,5)
+	appor = (0,1,2,3,4,5,5,5,5,6,7,8)
 	figoutname = 'fig-dimple-master-summary-ENTH-EXO70.png'
-	figsize = (14,10)
+	figsize = (14,16)
 elif plotspecs == 'enth':
 	analysis_plan = slice(0,3)
 	appor = (0,1,2)
@@ -125,7 +148,7 @@ if do_stacked_plot:
 			ax.set_title(r'$\textbf{mean curvatures}$')
 		ax.set_ylim(0,1.2*maxpeak)
 		ax.axvline(x=0,ls='-',lw=1,c='k')
-		ax.legend(loc=2,prop={'size':14})
+		ax.legend(loc=2,prop={'size':10})
 		ax.set_ylabel('frequency')
 		ax.get_yaxis().set_major_locator(MaxNLocator(nbins=6,prune='both'))
 		ax.grid(True)
@@ -205,6 +228,7 @@ if do_stacked_plot:
 			ax.set_title(r'$\textbf{areas (+/-)}$')
 		ax.grid(True)
 		ax.set_ylim(0,1.1*maxpeak)
+		ax.set_ylim(0,1.1*maxpeak)
 		ax.set_yticklabels([])		
 		ax.get_xaxis().set_major_locator(MaxNLocator(prune='both',nbins=6))
 		if a == len(axes_areas)-1:
@@ -267,11 +291,14 @@ if do_stacked_plot:
 	for p in range(len(analysis_descriptors[analysis_plan])):
 		ccodes = analysis_descriptors[analysis_plan][p][1]
 		name = analysis_descriptors[analysis_plan][p][2]
+		print name
 		fillcode = analysis_descriptors[analysis_plan][p][3]
 		expected_direction = results_stack[p][0].notes[([i[0] 
 			for i in results_stack[p][0].notes].index('expected_direction'))][1]
 		order = ((0,1,2) if expected_direction == 1 else (1,0,2))
 		for o in range(len(order)):
+			print 'expected_direction = '+str(expected_direction)
+			print 'o = '+str(o)
 			params = results_stack[p][order[o]].get(['type','params'])
 			maxhs = results_stack[p][order[o]].get(['type','maxhs'])
 			maxhxys = results_stack[p][order[o]].get(['type','maxhxys'])
@@ -281,7 +308,6 @@ if do_stacked_plot:
 			validhs = [10*maxhs[i] for i in validhis]
 			sigma_x = [abs(params[i][4])/10. for i in validhis if len(shape(params[i])) > 0]
 			sigma_y = [abs(params[i][5])/10. for i in validhis if len(shape(params[i])) > 0]
-			print name
 			print mean(validhs)
 			print mean(sigma_x)
 			print mean(sigma_y)

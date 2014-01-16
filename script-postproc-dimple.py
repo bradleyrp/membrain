@@ -17,28 +17,33 @@ location = ''
 execfile('locations.py')
 
 #---analysis plan
-analysis_plan = slice(-6,None)
+analysis_plan = slice(-1,None)
 analysis_descriptors = [
 	('pkl.structures.membrane-v701.md.part0003.60000-160000-200.pkl',slice(None),None,-1,False,''),
 	('pkl.structures.membrane-v700.md.part0002.100000-200000-200.pkl',slice(None),None,-1,False,''),
 	('pkl.structures.membrane-v612-stress.md.part0003.pkl',slice(None),None,1,False,''),
 	('pkl.structures.membrane-v614-stress.md.part0002.rerun.pkl',slice(None),None,1,False,''),
 	('pkl.structures.membrane-v550.md.part0006.300000-400000-200.pkl',slice(None),
-	'pkl.structures.membrane-v614-stress.md.part0002.rerun.pkl',1,False,'prot-v614'),
+		'pkl.structures.membrane-v614-stress.md.part0002.rerun.pkl',1,False,'.prot-v614'),
 	('pkl.structures.membrane-v550.md.part0006.300000-400000-200.pkl',slice(None),
-	'pkl.structures.membrane-v614-stress.md.part0002.rerun.pkl',1,(0,1),'.shift01.prot-v614'),
+		'pkl.structures.membrane-v614-stress.md.part0002.rerun.pkl',1,(0,1),'.shift01.prot-v614'),
 	('pkl.structures.membrane-v550.md.part0006.300000-400000-200.pkl',slice(None),
-	'pkl.structures.membrane-v614-stress.md.part0002.rerun.pkl',1,(1,0),'.shift10.prot-v614'),
+		'pkl.structures.membrane-v614-stress.md.part0002.rerun.pkl',1,(1,0),'.shift10.prot-v614'),
 	('pkl.structures.membrane-v550.md.part0006.300000-400000-200.pkl',slice(None),
-	'pkl.structures.membrane-v700.md.part0002.100000-200000-200.pkl',1,False,'.prot-v700'),
+		'pkl.structures.membrane-v700.md.part0002.100000-200000-200.pkl',1,False,'.prot-v700'),
 	('pkl.structures.membrane-v550.md.part0006.300000-400000-200.pkl',slice(None),
-	'pkl.structures.membrane-v700.md.part0002.100000-200000-200.pkl',1,(0,1),'.shift01.prot-v700'),
+		'pkl.structures.membrane-v700.md.part0002.100000-200000-200.pkl',1,(0,1),'.shift01.prot-v700'),
 	('pkl.structures.membrane-v550.md.part0006.300000-400000-200.pkl',slice(None),
-	'pkl.structures.membrane-v700.md.part0002.100000-200000-200.pkl',1,(1,0),'.shift10.prot-v700')]
+		'pkl.structures.membrane-v700.md.part0002.100000-200000-200.pkl',1,(1,0),'.shift10.prot-v700'),
+	('pkl.structures.membrane-v612-stress.md.part0003.pkl',slice(None),
+		'pkl.structures.membrane-v614-stress.md.part0002.rerun.pkl',1,False,'.prot-v614'),
+	('pkl.structures.membrane-v550.md.part0006.300000-400000-200.pkl',slice(None),
+		'pkl.structures.membrane-v614-stress.md.part0002.rerun.pkl',1,False,'.prot-v614.invert'),]
 	
 #---parameters
 cutoff_distance = 15.
 curvature_filter = [0.001,0.1]
+special_inversion_test = True
 
 #---plot settings
 original_plot_style = False
@@ -91,6 +96,9 @@ def batch_dimple_fitting(end=None,start=None,skip=None,framecount=None):
 			shift = [testshift[0]*int(grids[0]/2.),testshift[1]*int(grids[1]/2.)]
 			surf_discrete = array([[(1 if mset.surf[fr][(i+shift[0])%grids[0]][(j+shift[1])%grids[1]] > 0 
 				else -1) for j in range(mset.griddims[1]-1)] for i in range(mset.griddims[0]-1)]).T
+		elif special_inversion_test == True:
+			surf_discrete = array([[(1 if -mset.surf[fr][i][j] > 0 else -1) for j in range(mset.griddims[1]-1)] 
+				for i in range(mset.griddims[0]-1)]).T
 		else:
 			surf_discrete = array([[(1 if mset.surf[fr][i][j] > 0 else -1) for j in range(mset.griddims[1]-1)] 
 				for i in range(mset.griddims[0]-1)]).T
@@ -121,6 +129,17 @@ def batch_dimple_fitting(end=None,start=None,skip=None,framecount=None):
 				target = array([[i[0]*vecs[0]/(mset.griddims[0]-1),i[1]*vecs[1]/(mset.griddims[1]-1),
 					mset.surf[fr][(i[0]+shift[0])%grids[0],(i[1]+shift[1])%grids[1]]] 
 					for i in array(where(buf==1)).T])
+		elif special_inversion_test == True:
+			#---select target for fitting
+			if height_direction == 1:
+				target = array([[i[0]*vecs[0]/(mset.griddims[0]-1),i[1]*vecs[1]/(mset.griddims[1]-1),
+					-mset.surf[fr][i[0],i[1]]] for i in array(where(surf_discrete+buf==2)).T])
+			elif height_direction == -1:
+				target = array([[i[0]*vecs[0]/(mset.griddims[0]-1),i[1]*vecs[1]/(mset.griddims[1]-1),
+					-mset.surf[fr][i[0],i[1]]] for i in array(where(surf_discrete+buf==0)).T])
+			elif height_direction == 0:
+				target = array([[i[0]*vecs[0]/(mset.griddims[0]-1),i[1]*vecs[1]/(mset.griddims[1]-1),
+					-mset.surf[fr][i[0],i[1]]] for i in array(where(buf==1)).T])
 		else:
 			#---select target for fitting
 			if height_direction == 1:
@@ -348,7 +367,7 @@ for ad in analysis_descriptors[analysis_plan]:
 		result_data.addnote(['suffix',suffix])
 		result_data_collection.append(result_data)
 		del result_data
-	pickle.dump(result_data_collection,open(pickles+'pkl.dimple.'+sysname+'.'+suffix+'.pkl','w'))
+	pickle.dump(result_data_collection,open(pickles+'pkl.dimple.'+sysname+suffix+'.pkl','w'))
 	if original_plot_style:
 		#---get results from the data object
 		params = result_data_collection[(0 if expected_direction == -1 else 1)].get(['type','params'])

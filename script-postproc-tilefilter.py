@@ -24,16 +24,18 @@ cutoff_distance = 5.
 make_figs = False
 
 #---analysis plan
-analysis_plan = slice(None,None)
+analysis_plan = slice(-1,None)
 analysis_descriptors = [
 	('pkl.structures.membrane-v701.md.part0003.60000-160000-200.pkl',slice(None),None,''),
 	('pkl.structures.membrane-v700.md.part0002.100000-200000-200.pkl',slice(None),None,''),
 	('pkl.structures.membrane-v612-stress.md.part0003.pkl',slice(None),None,''),
 	('pkl.structures.membrane-v614-stress.md.part0002.rerun.pkl',slice(None),None,''),
 	('pkl.structures.membrane-v550.md.part0006.300000-400000-200.pkl',slice(None),
-	'pkl.structures.membrane-v614-stress.md.part0002.rerun.pkl','.prot-v614'),
+		'pkl.structures.membrane-v614-stress.md.part0002.rerun.pkl','.prot-v614'),
 	('pkl.structures.membrane-v550.md.part0006.300000-400000-200.pkl',slice(None),
-	'pkl.structures.membrane-v700.md.part0002.100000-200000-200.pkl','.prot-v700')]
+		'pkl.structures.membrane-v700.md.part0002.100000-200000-200.pkl','.prot-v700'),
+	('pkl.structures.membrane-v612-stress.md.part0003.pkl',slice(None),
+		'pkl.structures.membrane-v614-stress.md.part0002.rerun.pkl','.prot-v614'),]
 
 #---FUNCTIONS
 #-------------------------------------------------------------------------------------------------------------
