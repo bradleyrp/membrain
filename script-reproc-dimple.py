@@ -73,7 +73,7 @@ plotspecs = 'enth'
 plotspecs = 'both'
 if plotspecs == 'both':
 	analysis_plan = slice(None,None)
-	appor = (0,1,2,3,4,5,5,5,5,6,7,8)
+	appor = (0,1,2,3,4,5,5,5,5,6,7,8,9)
 	figoutname = 'fig-dimple-master-summary-ENTH-EXO70.png'
 	figsize = (14,16)
 elif plotspecs == 'enth':
@@ -82,18 +82,19 @@ elif plotspecs == 'enth':
 	figoutname = 'fig-dimple-master-summary-ENTH.png'
 	figsize = (14,8)
 
-do_stacked_plot = False
+do_stacked_plot = True
 do_stacked_plot_with_sigma = True
 do_stacked_plot_ver1 = False
 do_opposite_signs = False
 do_single_plot = False
-do_hmax_vs_sigmas = True
+do_hmax_vs_sigmas = False
 
 subdir = 'dimple-filter-0.001-0.1/'
 subdir = ''
 analyses = analysis_descriptors[analysis_plan]
-analyses = [analysis_descriptors[i] for i in [0,1,3]]
-analyses = [analysis_descriptors[i] for i in [11]]
+#analyses = [analysis_descriptors[i] for i in [0,1,3]]
+#analyses = [analysis_descriptors[i] for i in [11]]
+#analyses = [analysis_descriptors[i] for i in range(len(analysis_descriptors))]
 
 results_stack = []
 for pnum in range(len(analyses)):

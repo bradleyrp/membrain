@@ -17,7 +17,7 @@ location = ''
 execfile('locations.py')
 
 #---analysis plan
-analysis_plan = slice(None,None)
+analysis_plan = slice(-2,-1)
 analysis_descriptors = [
 	('pkl.structures.membrane-v701.md.part0003.60000-160000-200.pkl',slice(None),None,-1,False,''),
 	('pkl.structures.membrane-v700.md.part0002.100000-200000-200.pkl',slice(None),None,-1,False,''),
@@ -45,7 +45,7 @@ analysis_descriptors = [
 #---parameters
 cutoff_distance = 15.
 curvature_filter = [0.001,0.1]
-special_inversion_test = False
+special_inversion_test = True
 special_dummy_test = False
 
 #---plot settings
