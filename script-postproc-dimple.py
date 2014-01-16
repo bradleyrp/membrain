@@ -38,12 +38,15 @@ analysis_descriptors = [
 	('pkl.structures.membrane-v612-stress.md.part0003.pkl',slice(None),
 		'pkl.structures.membrane-v614-stress.md.part0002.rerun.pkl',1,False,'.prot-v614'),
 	('pkl.structures.membrane-v550.md.part0006.300000-400000-200.pkl',slice(None),
-		'pkl.structures.membrane-v614-stress.md.part0002.rerun.pkl',1,False,'.prot-v614.invert'),]
+		'pkl.structures.membrane-v614-stress.md.part0002.rerun.pkl',1,False,'.prot-v614.invert'),
+	('pkl.structures.membrane-v550.md.part0006.300000-400000-200.pkl',slice(None),
+		'pkl.structures.membrane-v614-stress.md.part0002.rerun.pkl',1,False,'.dummytest'),]
 	
 #---parameters
 cutoff_distance = 15.
-curvature_filter = [0.001,0.1]
-special_inversion_test = True
+curvature_filter = [0.01,0.1]
+special_inversion_test = False
+special_dummy_test = True
 
 #---plot settings
 original_plot_style = False
@@ -87,6 +90,11 @@ def batch_dimple_fitting(end=None,start=None,skip=None,framecount=None):
 		skip = 1 if skip < 1 else skip
 	cutoff = cutoff_distance*10/(vecs[0]/mset.griddims[0])
 	print 'Total frames = '+str(end)
+	if special_dummy_test:
+		dummysurf = array([[i*vecs[0]/(mset.griddims[0]-1),j*vecs[1]/(mset.griddims[1]-1),
+			gauss2d([0.,100.,vecs[0]/2.,vecs[1]/2.,10,100,0],i*vecs[0]/(mset.griddims[0]-1),
+			j*vecs[1]/(mset.griddims[1]-1))] for j in range(mset.griddims[1]-1) 
+			for i in range(mset.griddims[0]-1)])
 	for fr in range(start,end,skip):
 		print 'Fitting frame '+str(fr)
 		#---note: fixed midplaner transpose error here
@@ -99,6 +107,9 @@ def batch_dimple_fitting(end=None,start=None,skip=None,framecount=None):
 		elif special_inversion_test == True:
 			surf_discrete = array([[(1 if -mset.surf[fr][i][j] > 0 else -1) for j in range(mset.griddims[1]-1)] 
 				for i in range(mset.griddims[0]-1)]).T
+		elif special_dummy_test == True:
+			surf_discrete = array([[1 for j in range(mset.griddims[1]-1)] 
+				for i in range(mset.griddims[0]-1)]).T			
 		else:
 			surf_discrete = array([[(1 if mset.surf[fr][i][j] > 0 else -1) for j in range(mset.griddims[1]-1)] 
 				for i in range(mset.griddims[0]-1)]).T
@@ -129,6 +140,8 @@ def batch_dimple_fitting(end=None,start=None,skip=None,framecount=None):
 				target = array([[i[0]*vecs[0]/(mset.griddims[0]-1),i[1]*vecs[1]/(mset.griddims[1]-1),
 					mset.surf[fr][(i[0]+shift[0])%grids[0],(i[1]+shift[1])%grids[1]]] 
 					for i in array(where(buf==1)).T])
+		elif special_dummy_test == True:
+				target = dummysurf
 		elif special_inversion_test == True:
 			#---select target for fitting
 			if height_direction == 1:
@@ -351,7 +364,7 @@ for ad in analysis_descriptors[analysis_plan]:
 	result_data_collection = []
 	for height_direction in [-1,1,0]:
 		#---fit and save
-		[params,maxhs,maxhxys,target_zones,which_frames] = batch_dimple_fitting(skip=skip,
+		[params,maxhs,maxhxys,target_zones,which_frames] = batch_dimple_fitting(skip=500,
 			framecount=framecount)
 		result_data = MembraneData('dimple',label=sysname)
 		for i in range(len(params)):

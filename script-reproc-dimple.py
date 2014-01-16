@@ -64,8 +64,11 @@ analysis_descriptors = [
 		'pkl.tilefilter-areas.v700.md.part0002.100000-200000-200.pkl'),
 	('pkl.dimple.v701.md.part0003.60000-160000-200.pkl',(clrs[2],clrs[3]),
 		r'$\textbf{{EXO70}\ensuremath{\times}2{\small (antiparallel)}}$',1,
-		'pkl.tilefilter-areas.v701.md.part0003.60000-160000-200.pkl')]
-
+		'pkl.tilefilter-areas.v701.md.part0003.60000-160000-200.pkl'),
+	('pkl.dimple.v550.md.part0006.300000-400000-200.dummytest.pkl',(clrs[6],clrs[7]),
+		r'$\textbf{control, invert}$',0,
+		'pkl.tilefilter-areas.v550.md.part0006.300000-400000-200.prot-v614.pkl')]
+		
 plotspecs = 'enth'
 plotspecs = 'both'
 if plotspecs == 'both':
@@ -79,19 +82,25 @@ elif plotspecs == 'enth':
 	figoutname = 'fig-dimple-master-summary-ENTH.png'
 	figsize = (14,8)
 
-do_stacked_plot = True
+do_stacked_plot = False
 do_stacked_plot_with_sigma = True
 do_stacked_plot_ver1 = False
 do_opposite_signs = False
 do_single_plot = False
+do_hmax_vs_sigmas = True
+
+subdir = 'dimple-filter-0.001-0.1/'
+subdir = ''
+analyses = analysis_descriptors[analysis_plan]
+analyses = [analysis_descriptors[i] for i in [0,1,3]]
+analyses = [analysis_descriptors[i] for i in [-1]]
 
 results_stack = []
-for pnum in range(len(analysis_descriptors[analysis_plan])):
-	results_stack.append(pickle.load(open(pickles+analysis_descriptors[analysis_plan][pnum][0],'r')))
+for pnum in range(len(analyses)):
+	results_stack.append(pickle.load(open(pickles+subdir+analyses[pnum][0],'r')))
 results_areas_stack = []
-for pnum in range(len(analysis_descriptors[analysis_plan])):
-	results_areas_stack.append(pickle.load(open(pickles+analysis_descriptors[analysis_plan][pnum][4],'r')))
-
+for pnum in range(len(analyses)):
+	results_areas_stack.append(pickle.load(open(pickles+subdir+analyses[pnum][4],'r')))
 	
 nbins = 20
 nbins_sigma = 20
@@ -108,14 +117,14 @@ if do_stacked_plot:
 	#---plot maximum mean curvatures	
 	maxpeak = 0
 	axes_maxcurv = []
-	for p in range(len(analysis_descriptors[analysis_plan])):
+	for p in range(len(analyses)):
 		if appor[p] > 0 and appor[p] == appor[p-1]:
 			thisaxis = axes_maxcurv[-1]
 		else:
 			thisaxis = fig.add_subplot(gs[appor[p],0:2])
-		ccodes = analysis_descriptors[analysis_plan][p][1]
-		name = analysis_descriptors[analysis_plan][p][2]
-		fillcode = analysis_descriptors[analysis_plan][p][3]
+		ccodes = analyses[p][1]
+		name = analyses[p][2]
+		fillcode = analyses[p][3]
 		expected_direction = results_stack[p][0].notes[([i[0] 
 			for i in results_stack[p][0].notes].index('expected_direction'))][1]
 		order = ((0,1,2) if expected_direction == 1 else (1,0,2))
@@ -164,7 +173,7 @@ if do_stacked_plot:
 	#---plot extents of curvature
 	axes_sigmas = []
 	maxpeak = 0
-	for p in range(len(analysis_descriptors[analysis_plan])):
+	for p in range(len(analyses)):
 		expected_direction = results_stack[p][0].notes[([i[0] 
 			for i in results_stack[p][0].notes].index('expected_direction'))][1]
 		order = [1] if expected_direction == 1 else [0]
@@ -172,7 +181,7 @@ if do_stacked_plot:
 		thisaxis = plt.subplot(gs[appor[p],2])
 		params = results_stack[p][order[o]].get(['type','params'])
 		maxhs = results_stack[p][order[o]].get(['type','maxhs'])
-		ccodes = analysis_descriptors[analysis_plan][p][1]
+		ccodes = analyses[p][1]
 		validhis = [i for i in range(len(maxhs)) if (10*abs(maxhs[i]) > 10**-5 
 			and abs(10*maxhs[i]) < 0.1)]
 		sigma_x = [abs(params[i][4])/10. for i in validhis if len(shape(params[i])) > 0]
@@ -203,7 +212,7 @@ if do_stacked_plot:
 	#---plot areas
 	axes_areas = []
 	maxpeak = 0
-	for p in range(len(analysis_descriptors[analysis_plan])):
+	for p in range(len(analyses)):
 		if appor[p] > 0 and appor[p] == appor[p-1]:
 			thisaxis = axes_areas[-1]
 			repeat = True
@@ -242,7 +251,7 @@ if do_stacked_plot:
 	minval_areas = 0
 	maxval_areas = maxpeak
 	maxfreq = 0
-	for p in range(len(analysis_descriptors[analysis_plan])):
+	for p in range(len(analyses)):
 		if appor[p] > 0 and appor[p] == appor[p-1]:
 			thisaxis = axes_area_hists[-1]
 		else:
@@ -288,11 +297,11 @@ if do_stacked_plot:
 	plt.subplots_adjust(wspace = 0)
 	plt.savefig(pickles+figoutname,dpi=300,bbox_extra_artists=(outlegend,), bbox_inches='tight')
 	#---print report
-	for p in range(len(analysis_descriptors[analysis_plan])):
-		ccodes = analysis_descriptors[analysis_plan][p][1]
-		name = analysis_descriptors[analysis_plan][p][2]
+	for p in range(len(analyses)):
+		ccodes = analyses[p][1]
+		name = analyses[p][2]
 		print name
-		fillcode = analysis_descriptors[analysis_plan][p][3]
+		fillcode = analyses[p][3]
 		expected_direction = results_stack[p][0].notes[([i[0] 
 			for i in results_stack[p][0].notes].index('expected_direction'))][1]
 		order = ((0,1,2) if expected_direction == 1 else (1,0,2))
@@ -312,4 +321,55 @@ if do_stacked_plot:
 			print mean(sigma_x)
 			print mean(sigma_y)
 	plt.show()	
+
+#---Advanced plotting method
+if do_hmax_vs_sigmas:
+	ticknums = 5
+	rounderx = 2
+	roundery = 0
+	fig = plt.figure(figsize=(12,4))
+	gs = gridspec.GridSpec(1,3)
+	#---print report
+	for p in range(len(analyses)):
+		ax = plt.subplot(gs[p])
+		ccodes = analyses[p][1]
+		name = analyses[p][2]
+		print name
+		fillcode = analyses[p][3]
+		expected_direction = results_stack[p][0].notes[([i[0] 
+			for i in results_stack[p][0].notes].index('expected_direction'))][1]
+		order = ((0,1,2) if expected_direction == 1 else (1,0,2))
+		o = 1
+		print 'expected_direction = '+str(expected_direction)
+		print 'o = '+str(o)
+		params = results_stack[p][order[o]].get(['type','params'])
+		maxhs = results_stack[p][order[o]].get(['type','maxhs'])
+		maxhxys = results_stack[p][order[o]].get(['type','maxhxys'])
+		validhis = [i for i in range(len(maxhs)) 
+			if (10*abs(maxhs[i]) > 10**-5 and abs(10*maxhs[i]) < 0.1)]
+		#---nanometer correction
+		validhs = [10*maxhs[i] for i in validhis]
+		sigma_x = [abs(params[i][4])/10. for i in validhis if len(shape(params[i])) > 0]
+		sigma_y = [abs(params[i][5])/10. for i in validhis if len(shape(params[i])) > 0]
+		meansig = [1./2*(abs(params[i][4])/10.+abs(params[i][5])/10.) 
+			for i in validhis if len(shape(params[i])) > 0]
+		H, xedges, yedges = histogram2d(validhs,meansig,bins=21,range=((-0.1,0.1),(0,100)),weights=[1./150 for i in validhs])
+		midx = (xedges[1:]+xedges[:-1])/2
+		midy = (yedges[1:]+yedges[:-1])/2
+		extent = [xedges[1], xedges[-1], yedges[1], yedges[-1]]
+		cmap = mpl.cm.jet
+		cmap.set_bad(cmap(0),1.)
+		ax.imshow(array(H).T, extent=None, interpolation='nearest',aspect='equal',origin='lower',
+			norm=None,cmap=cmap)
+		ax.set_title(name,fontsize=16)
+		ax.set_xlabel('$\mathsf{H_{max}\,(nm^{-1})}$',fontsize=16)
+		ax.set_ylabel('$\mathsf{\sigma_a,\sigma_b\,(nm)}$',fontsize=16)
+		xts = [round(i,rounderx) for i in midx][::int(float(len(midx))/ticknums)]
+		ax.axes.set_xticks([[round(i,rounderx) for i in midx].index(round(j,rounderx)) for j in xts])
+		ax.axes.set_xticklabels(xts)
+		yts = [int(round(i,roundery)) for i in midy][::int(float(len(midx))/ticknums)]
+		ax.axes.set_yticks([[round(i,roundery) for i in midy].index(round(j,roundery)) for j in yts])
+		ax.axes.set_yticklabels(yts)
+	plt.savefig(pickles+'fig-dimple-hmax-vs-sigmas-filter-0.01-0.1.png',dpi=500,bbox_inches='tight')
+	plt.show()
 
