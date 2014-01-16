@@ -17,7 +17,7 @@ location = ''
 execfile('locations.py')
 
 #---analysis plan
-analysis_plan = slice(-1,None)
+analysis_plan = slice(None,None)
 analysis_descriptors = [
 	('pkl.structures.membrane-v701.md.part0003.60000-160000-200.pkl',slice(None),None,-1,False,''),
 	('pkl.structures.membrane-v700.md.part0002.100000-200000-200.pkl',slice(None),None,-1,False,''),
@@ -62,6 +62,7 @@ execfile('script-curvature-calculus.py')
 def gauss2d(params,x,y):
 	'''Two-dimensional Gaussian height function with fluid axis of rotation.'''
 	z0,c0,x0,y0,sx,sy,th = params
+	z0 = 0
 	#return a+b*exp(-(((x-c1)*cos(t1)+(y-c2)*sin(t1))/w1)**2-((-(x-c1)*sin(t1)+(y-c2)*cos(t1))/w2)**2)
 	return z0+c0*exp(-((x-x0)*cos(th)+(y-y0)*sin(th))**2/2./sx**2)*exp(-(-(x-x0)*sin(th)+
 		(y-y0)*cos(th))**2/2./sy**2)
@@ -91,10 +92,7 @@ def batch_dimple_fitting(end=None,start=None,skip=None,framecount=None):
 	cutoff = cutoff_distance*10/(vecs[0]/mset.griddims[0])
 	print 'Total frames = '+str(end)
 	if special_dummy_test:
-		dummysurf = array([[i*vecs[0]/(mset.griddims[0]-1),j*vecs[1]/(mset.griddims[1]-1),
-			gauss2d([0.,100.,vecs[0]/2.,vecs[1]/2.,10,100,0],i*vecs[0]/(mset.griddims[0]-1),
-			j*vecs[1]/(mset.griddims[1]-1))] for j in range(mset.griddims[1]-1) 
-			for i in range(mset.griddims[0]-1)])
+		dummysurf = array([[i*vecs[0]/(mset.griddims[0]-1),j*vecs[1]/(mset.griddims[1]-1),gauss2d([20,10.,vecs[0]/2.,vecs[1]/2.,10,20,0],i*vecs[0]/(mset.griddims[0]-1),j*vecs[1]/(mset.griddims[1]-1))] for j in range(mset.griddims[1]-1) for i in range(mset.griddims[0]-1)])
 	for fr in range(start,end,skip):
 		print 'Fitting frame '+str(fr)
 		#---note: fixed midplaner transpose error here
@@ -168,8 +166,7 @@ def batch_dimple_fitting(end=None,start=None,skip=None,framecount=None):
 		#---Note: sometimes fitting something that isn't x,y specific (like H), you can use protein itself
 		target_com = [mean(target[:,0]),mean(target[:,1])]
 		#---Perform the fit
-		p_opt = leastsq(gauss2d_residual,array([0,1,target_com[0],target_com[0],50,50,0]),
-			args=(target[:,0],target[:,1],target[:,2]))
+		p_opt = leastsq(gauss2d_residual,array([0,1,target_com[0],target_com[0],50,50,0]),args=(target[:,0],target[:,1],target[:,2]))
 		params.append(p_opt[0])
 		#---Store the location of maximum mean curvature and target zone
 		#---Find the maximum curvature strength, regardless of direction, and save it.
