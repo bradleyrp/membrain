@@ -83,16 +83,21 @@ elif plotspecs == 'enth':
 	figsize = (14,8)
 
 do_stacked_plot = False
+do_hmax_vs_sigmas = False
+do_errorlook = False
+do_errorlook_sigma = False
+do_sigma_vs_hmax = True
+
 do_stacked_plot_with_sigma = True
 do_stacked_plot_ver1 = False
 do_opposite_signs = False
 do_single_plot = False
-do_hmax_vs_sigmas = True
 
 subdir = 'dimple-filter-0.001-0.1/'
 subdir = ''
 analyses = analysis_descriptors[analysis_plan]
 analyses = [analysis_descriptors[i] for i in [0,1,3,4,6,7,8,9]]
+analyses = [analysis_descriptors[i] for i in [0,1,2,3,4,6,7,10,11]]
 #analyses = [analysis_descriptors[i] for i in [11]]
 #analyses = [analysis_descriptors[i] for i in range(len(analysis_descriptors))]
 
@@ -107,6 +112,16 @@ nbins = 20
 nbins_sigma = 20
 minval,maxval = -0.10,0.10
 minval_sigma,maxval_sigma = 0,25
+
+execfile('script-curvature-calculus.py')
+
+def gauss2d(params,x,y):
+	'''Two-dimensional Gaussian height function with fluid axis of rotation.'''
+	z0,c0,x0,y0,sx,sy,th = params
+	z0 = 0
+	#return a+b*exp(-(((x-c1)*cos(t1)+(y-c2)*sin(t1))/w1)**2-((-(x-c1)*sin(t1)+(y-c2)*cos(t1))/w2)**2)
+	return z0+c0*exp(-((x-x0)*cos(th)+(y-y0)*sin(th))**2/2./sx**2)*exp(-(-(x-x0)*sin(th)+
+		(y-y0)*cos(th))**2/2./sy**2)
 
 #---MAIN
 #-------------------------------------------------------------------------------------------------------------
@@ -380,3 +395,217 @@ if do_hmax_vs_sigmas:
 	plt.savefig(pickles+'fig-dimple-hmax-vs-sigmas-filter-0.01-0.1.png',dpi=500,bbox_inches='tight')
 	plt.show()
 
+#---Advanced plotting method
+if do_errorlook:
+	ticknums = 5
+	rounderx = 2
+	roundery = 0
+	fig = plt.figure(figsize=(18,6))
+	gs = gridspec.GridSpec(3,len(analyses),wspace=0.0,hspace=0.0)
+	#---print report
+	for p in range(len(analyses)):
+		ccodes = analyses[p][1]
+		name = analyses[p][2]
+		print name
+		fillcode = analyses[p][3]
+		expected_direction = results_stack[p][0].notes[([i[0] for i in results_stack[p][0].notes].index('expected_direction'))][1]
+		order = ((0,1,2) if expected_direction == 1 else (1,0,2))
+		order = (0,1,2)
+		for o in order:
+			ax = plt.subplot(gs[o,p])
+			print 'expected_direction = '+str(expected_direction)
+			print 'o = '+str(o)
+			params = results_stack[p][order[o]].get(['type','params'])
+			maxhs = results_stack[p][order[o]].get(['type','maxhs'])
+			maxhxys = results_stack[p][order[o]].get(['type','maxhxys'])
+			target_zones = results_stack[p][order[o]].get(['type','target_zones'])
+			validhis = [i for i in range(len(maxhs)) if (10*abs(maxhs[i]) > 10**-5 and abs(10*maxhs[i]) < 0.1)]
+			#---nanometer correction
+			validhs = [10*maxhs[i] for i in validhis]
+			#validhs = [10*maxhs[i] for i in range(len(maxhs))]
+			resids = [sqrt(mean([abs(gauss2d(params[0],i[0],i[1])-i[2])**2 for i in target_zones[j]])) for j in validhis]
+			#resids = [sqrt(mean([abs(gauss2d(params[0],i[0],i[1])-i[2])**2 for i in target_zones[j]])) for j in range(len(target_zones))]
+
+			ax = plt.subplot(gs[o,p])
+			H, xedges, yedges = histogram2d(validhs,resids,bins=21,range=((-0.1,0.1),(0,20)),weights=[1./len(validhs) for i in validhs])
+			midx = (xedges[1:]+xedges[:-1])/2
+			midy = (yedges[1:]+yedges[:-1])/2
+			extent = [xedges[1], xedges[-1], yedges[1], yedges[-1]]
+			cmap = mpl.cm.jet
+			cmap.set_bad(cmap(0),1.)
+			ax.imshow(array(H).T, extent=None, interpolation='nearest',aspect='equal',origin='lower',
+				norm=None,cmap=cmap)
+			ax.axvline(x=10,ls='-',lw=1,c='w')
+			if o == 0:
+				ax.set_title(name,fontsize=10)
+			if o == 2:
+				#xts = [round(i,rounderx) for i in midx][::int(float(len(midx))/ticknums)]
+				xts = arange(-.1,.104,0.05)
+				#ax.axes.set_xticks([[round(i,rounderx) for i in midx].index(round(j,rounderx)) for j in xts])
+				ax.axes.set_xticks([0,5,10,15,20])
+				ax.axes.set_xticklabels(xts,fontsize=9)
+				ax.get_xaxis().set_major_locator(MaxNLocator(nbins=6,prune='both'))
+				ax.set_xlabel('$\mathsf{H_{max}\,(nm^{-1})}$',fontsize=7)
+				if p != 0:
+					ax.axes.set_yticklabels([])
+			if p == 0:
+				ax.set_ylabel('RMSD $\AA$',fontsize=9)
+				yts = [int(round(i,roundery)) for i in midy][::int(float(len(midx))/ticknums)]
+				ax.axes.set_yticks([[round(i,roundery) for i in midy].index(round(j,roundery)) for j in yts])
+				ax.axes.set_yticklabels(yts,fontsize=7)
+				if o != 2:
+					ax.axes.set_xticklabels([])
+			if o != 2 and p != 0:
+				ax.axes.set_yticklabels([])
+				ax.axes.set_xticklabels([])
+	plt.savefig(pickles+'fig-dimple-sigma-vs-rmsd.png',dpi=500,bbox_inches='tight')
+	plt.show()
+	
+#---Advanced plotting method
+if do_errorlook_sigma:
+	ticknums = 5
+	rounderx = 2
+	roundery = 0
+	fig = plt.figure(figsize=(18,6))
+	gs = gridspec.GridSpec(3,len(analyses),wspace=0.0,hspace=0.0)
+	#---print report
+	for p in range(len(analyses)):
+		ccodes = analyses[p][1]
+		name = analyses[p][2]
+		print name
+		fillcode = analyses[p][3]
+		expected_direction = results_stack[p][0].notes[([i[0] for i in results_stack[p][0].notes].index('expected_direction'))][1]
+		order = ((0,1,2) if expected_direction == 1 else (1,0,2))
+		order = (0,1,2)
+		for o in order:
+			ax = plt.subplot(gs[o,p])
+			print 'expected_direction = '+str(expected_direction)
+			print 'o = '+str(o)
+			params = results_stack[p][order[o]].get(['type','params'])
+			maxhs = results_stack[p][order[o]].get(['type','maxhs'])
+			maxhxys = results_stack[p][order[o]].get(['type','maxhxys'])
+			target_zones = results_stack[p][order[o]].get(['type','target_zones'])
+			validhis = [i for i in range(len(maxhs)) if (10*abs(maxhs[i]) > 10**-5 and abs(10*maxhs[i]) < 0.1)]
+			#---nanometer correction
+			validhs = [10*maxhs[i] for i in validhis]
+			#validhs = [10*maxhs[i] for i in range(len(maxhs))]
+			resids = [sqrt(mean([abs(gauss2d(params[0],i[0],i[1])-i[2])**2 for i in target_zones[j]])) for j in validhis]
+			#resids = [sqrt(mean([abs(gauss2d(params[0],i[0],i[1])-i[2])**2 for i in target_zones[j]])) for j in range(len(target_zones))]
+
+			sigma_x = [abs(params[i][4])/10. for i in validhis if len(shape(params[i])) > 0]
+			sigma_y = [abs(params[i][5])/10. for i in validhis if len(shape(params[i])) > 0]
+			meansig = [1./2*(abs(params[i][4])/10.+abs(params[i][5])/10.) 
+				for i in validhis if len(shape(params[i])) > 0]
+
+			ax = plt.subplot(gs[o,p])
+			H, xedges, yedges = histogram2d(meansig,resids,bins=21,range=((0,80),(0,20)),weights=[1./len(validhs) for i in validhs])
+			midx = (xedges[1:]+xedges[:-1])/2
+			midy = (yedges[1:]+yedges[:-1])/2
+			extent = [xedges[1], xedges[-1], yedges[1], yedges[-1]]
+			cmap = mpl.cm.jet
+			cmap.set_bad(cmap(0),1.)
+			ax.imshow(array(H).T, extent=None, interpolation='nearest',aspect='equal',origin='lower',
+				norm=None,cmap=cmap)
+			#ax.axvline(x=10,ls='-',lw=1,c='w')
+			if o == 0:
+				ax.set_title(name,fontsize=10)
+			if o == 2:
+				#xts = [round(i,rounderx) for i in midx][::int(float(len(midx))/ticknums)]
+				xts = arange(-.1,.104,0.05)
+				xts = arange(0,81,20)
+				#ax.axes.set_xticks([[round(i,rounderx) for i in midx].index(round(j,rounderx)) for j in xts])
+				ax.axes.set_xticks([0,5,10,15,20])
+				ax.axes.set_xticklabels(arange(0,81,20),fontsize=9)
+				ax.get_xaxis().set_major_locator(MaxNLocator(nbins=6,prune='both'))
+				ax.set_xlabel('$\mathsf{\sigma (nm)}$',fontsize=9)				
+				if p != 0:
+					ax.axes.set_yticklabels([])
+			if p == 0:
+				ax.set_ylabel('RMSD $\AA$',fontsize=9)
+				yts = [int(round(i,roundery)) for i in midy][::int(float(len(midx))/ticknums)]
+				ax.axes.set_yticks([[round(i,roundery) for i in midy].index(round(j,roundery)) for j in yts])
+				ax.axes.set_yticklabels(yts,fontsize=7)
+				if o != 2:
+					ax.axes.set_xticklabels([])
+			if o != 2 and p != 0:
+				ax.axes.set_yticklabels([])
+				ax.axes.set_xticklabels([])
+	plt.savefig(pickles+'fig-dimple-sigma-vs-rmsd.png',dpi=500,bbox_inches='tight')
+	plt.show()
+	
+#---Advanced plotting method
+if do_sigma_vs_hmax:
+	ticknums = 5
+	rounderx = 2
+	roundery = 0
+	fig = plt.figure(figsize=(18,6))
+	gs = gridspec.GridSpec(3,len(analyses),wspace=0.0,hspace=0.0)
+	#---print report
+	for p in range(len(analyses)):
+		ccodes = analyses[p][1]
+		name = analyses[p][2]
+		print name
+		fillcode = analyses[p][3]
+		expected_direction = results_stack[p][0].notes[([i[0] for i in results_stack[p][0].notes].index('expected_direction'))][1]
+		order = ((0,1,2) if expected_direction == 1 else (1,0,2))
+		order = (0,1,2)
+		for o in order:
+			ax = plt.subplot(gs[o,p])
+			print 'expected_direction = '+str(expected_direction)
+			print 'o = '+str(o)
+			params = results_stack[p][order[o]].get(['type','params'])
+			maxhs = results_stack[p][order[o]].get(['type','maxhs'])
+			maxhxys = results_stack[p][order[o]].get(['type','maxhxys'])
+			target_zones = results_stack[p][order[o]].get(['type','target_zones'])
+			validhis = [i for i in range(len(maxhs)) if (10*abs(maxhs[i]) > 10**-5 and abs(10*maxhs[i]) < 0.1)]
+			#---nanometer correction
+			validhs = [10*maxhs[i] for i in validhis]
+			#validhs = [10*maxhs[i] for i in range(len(maxhs))]
+			resids = [sqrt(mean([abs(gauss2d(params[0],i[0],i[1])-i[2])**2 for i in target_zones[j]])) for j in validhis]
+			#resids = [sqrt(mean([abs(gauss2d(params[0],i[0],i[1])-i[2])**2 for i in target_zones[j]])) for j in range(len(target_zones))]
+
+			sigma_x = [abs(params[i][4])/10. for i in validhis if len(shape(params[i])) > 0]
+			sigma_y = [abs(params[i][5])/10. for i in validhis if len(shape(params[i])) > 0]
+			meansig = [1./2*(abs(params[i][4])/10.+abs(params[i][5])/10.) 
+				for i in validhis if len(shape(params[i])) > 0]
+
+			ax = plt.subplot(gs[o,p])
+			H, xedges, yedges = histogram2d(validhs,meansig,bins=21,range=((-0.1,0.1),(0,80)),weights=[1./len(validhs) for i in validhs])
+			midx = (xedges[1:]+xedges[:-1])/2
+			midy = (yedges[1:]+yedges[:-1])/2
+			extent = [xedges[1], xedges[-1], yedges[1], yedges[-1]]
+			cmap = mpl.cm.jet
+			cmap.set_bad(cmap(0),1.)
+			ax.imshow(array(H).T, extent=None, interpolation='nearest',aspect='equal',origin='lower',
+				norm=None,cmap=cmap)
+			ax.axvline(x=10,ls='-',lw=1,c='w')
+			if o == 0:
+				ax.set_title(name,fontsize=10)
+			if o == 2:
+				#xts = [round(i,rounderx) for i in midx][::int(float(len(midx))/ticknums)]
+				xts = arange(-.1,.104,0.05)
+				#ax.axes.set_xticks([[round(i,rounderx) for i in midx].index(round(j,rounderx)) for j in xts])
+				ax.axes.set_xticks([0,5,10,15,20])
+				ax.axes.set_xticklabels(xts,fontsize=9)
+				ax.get_xaxis().set_major_locator(MaxNLocator(nbins=6,prune='both'))
+				ax.set_xlabel('$\mathsf{H_{max}\,(nm^{-1})}$',fontsize=7)
+				if p != 0:
+					ax.axes.set_yticklabels([])
+			if p == 0:
+				yts = [int(round(i,roundery)) for i in midy][::int(float(len(midx))/ticknums)]
+				ax.axes.set_yticks([[round(i,roundery) for i in midy].index(round(j,roundery)) for j in yts])
+				ax.axes.set_yticklabels(yts,fontsize=7)
+				yts = arange(-.1,.104,0.05)
+				yts = arange(0,81,20)
+				#ax.axes.set_xticks([[round(i,rounderx) for i in midx].index(round(j,rounderx)) for j in xts])
+				ax.axes.set_yticks([0,5,10,15,20])
+				ax.axes.set_yticklabels(arange(0,81,20),fontsize=9)
+				ax.get_yaxis().set_major_locator(MaxNLocator(nbins=6,prune='both'))
+				ax.set_ylabel('$\mathsf{\sigma (nm)}$',fontsize=9)			
+				if o != 2:
+					ax.axes.set_xticklabels([])
+			if o != 2 and p != 0:
+				ax.axes.set_yticklabels([])
+				ax.axes.set_xticklabels([])
+	plt.savefig(pickles+'fig-dimple-sigma-vs-hmax.png',dpi=500,bbox_inches='tight')
+	plt.show()
