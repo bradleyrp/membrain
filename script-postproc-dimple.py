@@ -79,6 +79,7 @@ def batch_dimple_fitting(end=None,start=None,skip=None,framecount=None):
 	maxhs = []
 	maxhxys = []
 	target_zones = []
+	residsum = []
 	nframes = len(mset.surf)
 	if framecount == None:
 		if end == None: end = nframes
@@ -171,10 +172,11 @@ def batch_dimple_fitting(end=None,start=None,skip=None,framecount=None):
 		#---Store the location of maximum mean curvature and target zone
 		#---Find the maximum curvature strength, regardless of direction, and save it.
 		maxhxys.append(argmax([abs(gauss2dh(p_opt[0],i[0],i[1])) for i in target]))
+		residsum.append(sum([abs(gauss2d(p_opt[0],i[0],i[1])) for i in target]))
 		#---Reverse curvature sign here (I think I did this to match the meaning of "positive curvature")
 		maxhs.append(-1*gauss2dh(p_opt[0],target[maxhxys[-1]][0],target[maxhxys[-1]][1]))
 		target_zones.append(target)
-	return [params,maxhs,maxhxys,target_zones,range(start,end,skip)]
+	return [params,maxhs,maxhxys,target_zones,residsum,range(start,end,skip)]
 	
 def view_figures_timeseries_original(params=None,maxhs=None,maxhxys=None,target_zones=None):
 	'''Plot the framewise measurements and residuals.'''
