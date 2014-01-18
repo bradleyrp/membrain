@@ -60,10 +60,10 @@ analysis_descriptors = [
 		r'$\textbf{control}$',0,
 		'pkl.tilefilter-areas.v550.md.part0006.300000-400000-200.prot-v700.pkl'),
 	('pkl.dimple.v700.md.part0002.100000-200000-200.pkl',(clrs[0],clrs[1]),
-		r'$\textbf{{EXO70}\ensuremath{\times}2{\small (parallel)}}$',1,
+		r'$\textbf{{EXO70}\ensuremath{\times}2{\small (para)}}$',1,
 		'pkl.tilefilter-areas.v700.md.part0002.100000-200000-200.pkl'),
 	('pkl.dimple.v701.md.part0003.60000-160000-200.pkl',(clrs[2],clrs[3]),
-		r'$\textbf{{EXO70}\ensuremath{\times}2{\small (antiparallel)}}$',1,
+		r'$\textbf{{EXO70}\ensuremath{\times}2{\small (anti)}}$',1,
 		'pkl.tilefilter-areas.v701.md.part0003.60000-160000-200.pkl'),
 	('pkl.dimple.v550.md.part0006.300000-400000-200.dummytest.pkl',(clrs[6],clrs[7]),
 		r'$\textbf{control, invert}$',0,
@@ -82,24 +82,30 @@ elif plotspecs == 'enth':
 	figoutname = 'fig-dimple-master-summary-ENTH.png'
 	figsize = (14,8)
 
-do_stacked_plot = False
+do_stacked_plot = True
 do_hmax_vs_sigmas = False
 do_errorlook = False
 do_errorlook_sigma = False
-do_sigma_vs_hmax = True
+do_sigma_vs_hmax = False
+do_resid_1d = False
 
 do_stacked_plot_with_sigma = True
 do_stacked_plot_ver1 = False
+do_resid_filter = True
+resid_filter = 8.
 do_opposite_signs = False
 do_single_plot = False
+show_means = True
 
 subdir = 'dimple-filter-0.001-0.1/'
 subdir = ''
 analyses = analysis_descriptors[analysis_plan]
 analyses = [analysis_descriptors[i] for i in [0,1,3,4,6,7,8,9]]
 analyses = [analysis_descriptors[i] for i in [0,1,2,3,4,6,7,10,11]]
-#analyses = [analysis_descriptors[i] for i in [11]]
-#analyses = [analysis_descriptors[i] for i in range(len(analysis_descriptors))]
+analyses = [analysis_descriptors[i] for i in [11]]
+analyses = [analysis_descriptors[i] for i in range(len(analysis_descriptors))]
+analyses = [analysis_descriptors[i] for i in [0,1,2,3,4]]
+analyses = analysis_descriptors[analysis_plan]
 
 results_stack = []
 for pnum in range(len(analyses)):
@@ -147,12 +153,21 @@ if do_stacked_plot:
 		expected_direction = results_stack[p][0].notes[([i[0] 
 			for i in results_stack[p][0].notes].index('expected_direction'))][1]
 		order = ((0,1,2) if expected_direction == 1 else (1,0,2))
+		meanslist = [0,0,0]
 		for o in range(len(order)):
 			params = results_stack[p][order[o]].get(['type','params'])
 			maxhs = results_stack[p][order[o]].get(['type','maxhs'])
 			maxhxys = results_stack[p][order[o]].get(['type','maxhxys'])
-			validhis = [i for i in range(len(maxhs)) 
-				if (10*abs(maxhs[i]) > 10**-5 and abs(10*maxhs[i]) < 0.1)]
+
+			if do_resid_filter:
+				target_zones = results_stack[p][order[o]].get(['type','target_zones'])
+				resids = [sqrt(mean([abs(gauss2d(params[0],i[0],i[1])-i[2])**2 for i in target_zones[j]])) for j in range(len(maxhs))]
+				validhis = [i for i in range(len(maxhs)) 
+					if (10*abs(maxhs[i]) > 10**-5 and abs(10*maxhs[i]) < 0.1) and
+					resids[i] < resid_filter]
+			else:			
+				validhis = [i for i in range(len(maxhs)) 
+					if (10*abs(maxhs[i]) > 10**-5 and abs(10*maxhs[i]) < 0.1)]
 			#---nanometer correction
 			validhs = [10*maxhs[i] for i in validhis]
 			hist0,binedge0 = numpy.histogram(validhs,bins=nbins,normed=False,
@@ -168,6 +183,10 @@ if do_stacked_plot:
 				thisaxis.fill_between(mid0,hist0,[0 for i in mid0],facecolor=ccodes[o],
 					alpha=0.2,interpolate=True)
 			if max(hist0) > maxpeak: maxpeak = max(hist0)
+			meanslist[order[o]] = mean(validhs)*len(validhs)/len(maxhs)
+		if appor[p] != 5:
+			textline = r'$\left\langle H_{max}\right\rangle =\textrm{('+str('%3.3f'%meanslist[0])+','+str('%3.3f'%meanslist[1])+','+str('%3.3f'%meanslist[2])+') \ensuremath{{nm}^{-1}}}$'
+		thisaxis.text(1,0.9,textline,transform=thisaxis.transAxes,fontsize=12,horizontalalignment='right',verticalalignment='top')
 		if not (appor[p] > 0 and appor[p] == appor[p-1]):
 			axes_maxcurv.append(thisaxis)
 	for a in range(len(axes_maxcurv)):
@@ -316,7 +335,7 @@ if do_stacked_plot:
 			ax.set_xticklabels([])
 	plt.subplots_adjust(hspace = 0)
 	plt.subplots_adjust(wspace = 0)
-	plt.savefig(pickles+figoutname,dpi=300,bbox_extra_artists=(outlegend,), bbox_inches='tight')
+	plt.savefig(pickles+figoutname+'.filtered.png',dpi=300,bbox_extra_artists=(outlegend,), bbox_inches='tight')
 	#---print report
 	for p in range(len(analyses)):
 		ccodes = analyses[p][1]
@@ -608,4 +627,62 @@ if do_sigma_vs_hmax:
 				ax.axes.set_yticklabels([])
 				ax.axes.set_xticklabels([])
 	plt.savefig(pickles+'fig-dimple-sigma-vs-hmax.png',dpi=500,bbox_inches='tight')
+	plt.show()
+	
+if do_resid_1d:
+	ticknums = 5
+	rounderx = 2
+	roundery = 0
+	minval = 0
+	maxval = 15
+	peakval = 0
+	fig = plt.figure(figsize=(8,8))
+	gs = gridspec.GridSpec(len(analyses),4,wspace=0.0,hspace=0.0)
+	clrs2reord = [1,0,2]
+	axes = []
+	#---print report
+	for p in range(len(analyses)):
+		ccodes = analyses[p][1]
+		name = analyses[p][2]
+		print name
+		fillcode = analyses[p][3]
+		expected_direction = results_stack[p][0].notes[([i[0] for i in results_stack[p][0].notes].index('expected_direction'))][1]
+		order = ((0,1,2) if expected_direction == 1 else (1,0,2))
+		order = (0,1,2)
+		extraname = [' (-)','(+)','\n(unfiltered)']
+		ax = plt.subplot(gs[p,0:4])
+		for o in order:
+			print 'expected_direction = '+str(expected_direction)
+			print 'o = '+str(o)
+			params = results_stack[p][order[o]].get(['type','params'])
+			maxhs = results_stack[p][order[o]].get(['type','maxhs'])
+			maxhxys = results_stack[p][order[o]].get(['type','maxhxys'])
+			target_zones = results_stack[p][order[o]].get(['type','target_zones'])
+			validhis = [i for i in range(len(maxhs)) if (10*abs(maxhs[i]) > 10**-5 and abs(10*maxhs[i]) < 0.1)]
+			#---nanometer correction
+			validhs = [10*maxhs[i] for i in validhis]
+			#validhs = [10*maxhs[i] for i in range(len(maxhs))]
+			resids = [sqrt(mean([abs(gauss2d(params[0],i[0],i[1])-i[2])**2 for i in target_zones[j]])) for j in validhis]
+			#resids = [sqrt(mean([abs(gauss2d(params[0],i[0],i[1])-i[2])**2 for i in target_zones[j]])) for j in range(len(target_zones))]
+			sigma_x = [abs(params[i][4])/10. for i in validhis if len(shape(params[i])) > 0]
+			sigma_y = [abs(params[i][5])/10. for i in validhis if len(shape(params[i])) > 0]
+			meansig = [1./2*(abs(params[i][4])/10.+abs(params[i][5])/10.) 
+				for i in validhis if len(shape(params[i])) > 0]
+			#---plots
+			hist0,binedge0 = numpy.histogram(resids,bins=nbins,normed=False,
+				weights=[1./len(validhs) for i in validhs],range=(minval,maxval))
+			mid0 = (binedge0[1:]+binedge0[:-1])/2
+			ax.plot(mid0,hist0,'o-',c=clrs2[clrs2reord[o]],alpha=(1 if appor[p] != 5 else 0.5),lw=2,label=name+extraname[o])
+			ax.legend(loc='upper right',prop={'size':10})
+			ax.grid(True)
+			axes.append(ax)
+			if max(hist0) > peakval: peakval = max(hist0)
+			ax.get_yaxis().set_major_locator(MaxNLocator(nbins=6,prune='both'))
+			ax.axes.set_yticklabels([])
+			if p != len(analyses)-1:
+				ax.set_xticklabels([])
+	for ax in axes:
+		ax.set_ylim((0,1.1*peakval))
+	axes[-1].set_xlabel('RMSD $\AA$',fontsize=14)
+	plt.savefig(pickles+'fig-dimple-resids.png',dpi=500,bbox_inches='tight')
 	plt.show()
