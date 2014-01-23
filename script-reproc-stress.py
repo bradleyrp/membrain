@@ -59,9 +59,13 @@ if 0:
 
 	#---plots
 	plot_maps = 0
-	plot_hist = 0
-	plot_hist_subdivide = 1
+	plot_hist = 1
+	plot_hist_subdivide = 0
 	plot_hist_subdivide_mean = 0
+
+	#---methods
+	smoothmaps = False
+	smoothwindow = 2.
 	
 	#---settings
 	nbins = 31
@@ -88,6 +92,8 @@ if 0:
 
 #---plot spontaneous curvature (C0) histograms, averaged across all voxels and all frames (together)
 if plot_hist:
+	which_brewer_colors = [0,1,2,3,4,5,6,7]
+	clrs = [brewer2mpl.get_map('paired','qualitative',9).mpl_colors[i] for i in which_brewer_colors]
 	pdist0 = signchange*array([i for j in mean([i[0] for i in raw_maps[0]],axis=0) for i in j])
 	pdist1 = signchange*array([i for j in mean([i[0] for i in raw_maps[1]],axis=0) for i in j])
 	pdist2 = signchange*array([i for j in mean([i[0] for i in raw_maps[2]],axis=0) for i in j])
@@ -104,9 +110,9 @@ if plot_hist:
 	mid0 = (binedge0[1:]+binedge0[:-1])/2
 	mid1 = (binedge1[1:]+binedge1[:-1])/2
 	mid2 = (binedge2[1:]+binedge2[:-1])/2	
-	plt.plot(mid0,hist0,'bo-',alpha=1.,lw=2,label=mapslabels[0])
-	plt.plot(mid1,hist1,'co-',alpha=1.,lw=2,label=mapslabels[1])
-	plt.plot(mid2,hist2,'ko-',alpha=1.,lw=2,label=mapslabels[2])
+	plt.plot(mid0,hist0,'o-',c=clrs[1],alpha=1.,lw=2,label=mapslabels[0])
+	plt.plot(mid1,hist1,'o-',c=clrs[3],alpha=1.,lw=2,label=mapslabels[1])
+	plt.plot(mid2,hist2,'o-',c=clrs[5],alpha=1.,lw=2,label=mapslabels[2])
 	plt.xlabel(r'$\mathsf{C_{0}(nm^{-1})}$',labelpad = 10,fontsize=20)
 	plt.ylabel('frequency', labelpad = 10,fontsize=20)
 	ax.set_xlim((-0.05,0.05))
@@ -208,7 +214,7 @@ if plot_hist_subdivide:
 			ax.set_ylim((0,maxval*1.1))
 		plt.show()
 	#---stacked method without averaging next to unstacked method with averaging
-	if 1:
+	if 0:
 		plot_hist_subdivide_mean = False
 		which_brewer_colors = [0,1,2,3,4,5,6,7]
 		clrs = [brewer2mpl.get_map('paired','qualitative',9).mpl_colors[i] for i in which_brewer_colors]
@@ -256,6 +262,7 @@ if plot_hist_subdivide:
 			ax.set_ylim((0,maxval*1.1))
 			ax.set_ylabel('frequency',fontsize=18)
 			ax.grid(True)
+			ax.get_yaxis().set_major_locator(mpl.ticker.MaxNLocator(nbins=6,prune='both'))
 		axes1[-1].set_xlabel('$\mathsf{C_{0}\,(nm^{-1})}$',fontsize=18)
 		plot_hist_subdivide_mean = True
 		gridsize = shape(raw_maps[0][0][0])[0]
@@ -303,6 +310,63 @@ if plot_hist_subdivide:
 			ax.set_ylabel('frequency',fontsize=18)
 			ax.yaxis.set_label_position("right")
 			ax.grid(True)
+			ax.get_yaxis().set_major_locator(mpl.ticker.MaxNLocator(nbins=6,prune='both'))
+		axes2[-1].set_xlabel('$\mathsf{C_{0}\,(nm^{-1})}$',fontsize=18)
+		plt.savefig(pickles+'fig-stress-master-summary-centerbox-ENTH.png',dpi=500,bbox_inches='tight')
+		plt.show()
+	#---stacked method WITHOUT averaging WITHOUT THE other one
+	if 1:
+		which_brewer_colors = [0,1,2,3,4,5,6,7]
+		clrs = [brewer2mpl.get_map('paired','qualitative',9).mpl_colors[i] for i in which_brewer_colors]
+		plot_hist_subdivide_mean = True
+		gridsize = shape(raw_maps[0][0][0])[0]
+		zooms = [
+			[slice(int(round(0.25*gridsize)),int(round(0.75*gridsize))),
+				slice(int(round(0.25*gridsize)),int(round(0.75*gridsize)))],
+			[slice(int(round(0.*gridsize)),int(round(1.*gridsize))),
+				slice(int(round(0.*gridsize)),int(round(1.*gridsize)))]]
+		zoomnames = (', full',', center')
+		lims = (-0.1,0.1)
+		plotlims = (-0.06,0.06)
+		clrsi = 0
+		maxval = 0
+		axes2 = []
+		fig = plt.figure(figsize=(6,8))
+		gs = gridspec.GridSpec(3,1,wspace=0.0,hspace=0.0)
+		for d in range(len(raw_maps)):
+			ax = fig.add_subplot(gs[d,0])
+			axes2.append(ax)
+			ax.axvline(x=0,ls='-',lw=1,c='k')
+			ax.set_ylim((0,0.04))
+			for z in range(len(zooms)):
+				zoom = zooms[z]
+				dat = raw_maps[d]
+				if plot_hist_subdivide_mean:
+					pdist = signchange*flatten(mean(array([array(i[0])[zoom[0],zoom[1]] for i in dat]),axis=0))
+				else:
+					pdist = signchange*flatten(array([array(i[0])[zoom[0],zoom[1]] for i in dat]))
+				print mean(pdist)
+				hist,binedge = numpy.histogram(pdist,bins=nbins,weights=[1./len(pdist) for i in pdist],
+					range=lims)
+				mid = (binedge[1:]+binedge[:-1])/2
+				posmid = [i for i in range(len(hist)) if round(mid[i],8) >= 0.]
+				negmid = [i for i in range(len(hist)) if round(mid[i],8) <= 0.]
+				#ax.plot([mid[i] for i in posmid],[hist[i] for i in posmid],'-',c=clrs[clrsi%len(clrs)],alpha=1.,lw=2,label=mapslabels[d]+zoomnames[z])
+				#ax.plot([-mid[i] for i in negmid],[hist[i] for i in negmid],'-.',c=clrs[clrsi%len(clrs)],alpha=1.,lw=2,label=mapslabels[d]+zoomnames[z])
+				ax.plot(mid,hist,'o-',c=clrs[clrsi%len(clrs)],alpha=1.,lw=2,label=mapslabels[d]+zoomnames[z])				
+				clrsi += 1
+				ax.legend(prop={'size':14})
+				if max(hist) > maxval: maxval = max(hist)
+			ax.set_xlim(plotlims)
+		for ax in axes2:
+			ax.set_ylim((0,maxval*1.1))
+			#ax.yaxis.tick_right()
+			ax.set_ylabel('frequency',fontsize=18)
+			#ax.yaxis.set_label_position("right")
+			ax.grid(True)
+			ax.get_yaxis().set_major_locator(mpl.ticker.MaxNLocator(nbins=7,prune='both'))
+		for ax in axes2[:-1]:
+			ax.set_xticklabels([])
 		axes2[-1].set_xlabel('$\mathsf{C_{0}\,(nm^{-1})}$',fontsize=18)
 		plt.savefig(pickles+'fig-stress-master-summary-centerbox-ENTH.png',dpi=500,bbox_inches='tight')
 		plt.show()
@@ -474,13 +538,20 @@ if plot_maps:
 	gs = mpl.gridspec.GridSpec(4,1,width_ratios=[1,1,2,1],height_ratios=[1])
 	plt.rc('font', family='sans-serif')
 	extremum = max([max([max(i) for i in result_stack[j][0]]) for j in range(3)])
-	extremum = 0.06
+	extremum = 0.05
 	ax0 = plt.subplot2grid((1,4),(0,0))
 	ax0.set_title(mapslabels[0])
 	ax0.set_xticklabels([])
 	ax0.set_yticklabels([])
 	ax0.set_adjustable('box-forced')
+
 	dat = result_stack[0][0]
+	if smoothmaps:
+		dat2 = []
+		for i in dat:
+			dat2.append(ndimage.gaussian_filter(i, sigma=smoothwindow*256/(4.*50)))
+		dat = dat2
+	
 	nprots = nprots_list[0]
 	if nprots > 0:
 		protlen = int(shape(msets[0].protein[0])[0]/nprots)
@@ -493,7 +564,7 @@ if plot_maps:
 				for i in range(len(hull.vertices))]
 			shifthully = [protpts[hull.vertices[(i+1)%len(hull.vertices)]][1] 
 				for i in range(len(hull.vertices))]
-			ax0.plot(shifthullx,shifthully,'k-',lw=0.6)
+			ax0.plot(shifthullx,shifthully,'k-',lw=1.0)
 	ax0.imshow(signchange*array(dat).T,interpolation='nearest',
 		origin='LowerLeft',vmax=extremum,vmin=-extremum,
 		cmap='bwr',extent=[0,numgridpts,0,numgridpts])
@@ -502,7 +573,14 @@ if plot_maps:
 	ax1.set_xticklabels([])
 	ax1.set_yticklabels([])
 	ax1.set_adjustable('box-forced')
+
 	dat = result_stack[1][0]
+	if smoothmaps:
+		dat2 = []
+		for i in dat:
+			dat2.append(ndimage.gaussian_filter(i, sigma=smoothwindow*256/(4.*50)))
+		dat = dat2
+
 	nprots = nprots_list[1]
 	if nprots > 0:
 		protlen = int(shape(msets[1].protein[0])[0]/nprots)
@@ -515,7 +593,7 @@ if plot_maps:
 				for i in range(len(hull.vertices))]
 			shifthully = [protpts[hull.vertices[(i+1)%len(hull.vertices)]][1] 
 				for i in range(len(hull.vertices))]
-			ax1.plot(shifthullx,shifthully,'k-',lw=0.6)
+			ax1.plot(shifthullx,shifthully,'k-',lw=1.0)
 	ax1.imshow(signchange*array(dat).T,interpolation='nearest',origin='LowerLeft',
 		vmax=extremum,vmin=-extremum,
 		cmap='bwr',extent=[0,numgridpts,0,numgridpts])
@@ -525,6 +603,13 @@ if plot_maps:
 	ax2.set_yticklabels([])
 	ax2.set_adjustable('box-forced')
 	dat = result_stack[2][0]
+	
+	if smoothmaps:
+		dat2 = []
+		for i in dat:
+			dat2.append(ndimage.gaussian_filter(i, sigma=smoothwindow*256/(4.*50)))
+		dat = dat2
+
 	img = ax2.imshow(-1*array(dat).T,interpolation='nearest',origin='LowerLeft',vmax=extremum,vmin=-extremum,
 		cmap='bwr',extent=[0,numgridpts,0,numgridpts])
 	cax = inset_axes(ax2,

@@ -31,11 +31,12 @@ class MembraneData:
 		elif self.calctype == 'cells':
 			self.struct = {'frame':0,'monolayer':1,'type':2}
 			self.struct_opts = {'type' : {'points':0,'voronoi':1,'areas':2}}
-		#---Retire the following data type, representing a verbatim port from old method
+		#---retire the following data type, representing a verbatim port from old method
 		elif self.calctype == 'dimple_filter':
 			self.struct = {'frame':0,'type':1}
 			self.struct_opts = {'type' : {'points':0,'domain':1,'protptsplus':2,'domainw':3,'frameno':4}}
-		elif self.calctype == 'dimple':
+		#---retired method, formerly named "dimple" so be careful not to confuse them
+		elif self.calctype == 'dimple_for':
 			self.struct = {'frame':0,'type':1}
 			self.struct_opts = {'type' : {'params':0,'maxhs':1,'maxhxys':2,'target_zones':3,'frameno':4}}
 		elif self.calctype == 'tilt_deprecated':
@@ -54,6 +55,9 @@ class MembraneData:
 		elif self.calctype == 'lipid_positions':
 			self.struct = {'frame':0,'type':1,'monolayer':2,'lipid':3}
 			self.struct_opts = {'type' : {'position':0,'mindist':1}}
+		elif self.calctype == 'dimple':
+			self.struct = {'frame':0,'type':1}
+			self.struct_opts = {'type' : {'params':0,'maxhs':1,'maxhxys':2,'target_zones':3,'frameno':4}}
 		if label != None:
 			self.description = label
 		else:
@@ -69,6 +73,13 @@ class MembraneData:
 	#---Add a note
 	def addnote(self,notable):
 		self.notes.append(notable)
+	#---retrieve a note
+	def getnote(self,note):
+		availnotes = [i[0] for i in self.notes]
+		if note in availnotes:
+			return self.notes[availnotes.index(note)][1]
+		else:
+			print 'missing note'
 	#---Retrieve data
 	def get(self,*args,**kwargs):
 		#---Flatten the data as necessary, or depending on the calculation
