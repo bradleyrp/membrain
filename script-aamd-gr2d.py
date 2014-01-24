@@ -27,7 +27,9 @@ if 0:
 		(['membrane-v530'],'all',director_asymmetric,-1,
 			[['resname DOPS and name P','resname PI2P and name P','DOPS-PIP2']]),
 		(['membrane-v509'],'all',director_symmetric,-1,
-			[['resname DOPS and name P','resname PI2P and name P','DOPS-PIP2']])]
+			[['resname DOPS and name P','resname PI2P and name P','DOPS-PIP2']]),
+		(['membrane-v509'],'all',director_symmetric,-1,
+			[['name P','name P','DOPS-PIP2']])]
 
 	#---Functions
 	#-------------------------------------------------------------------------------------------------------------
@@ -70,7 +72,22 @@ def torus_norm(x1,x2):
 		#---below is the re-written version for periodic boundary conditions
 		#return sqrt(((x1-x2)**2).sum(axis=0)) 
 		stddist = x1-x2
-		stddist = array([abs(stddist[i])-(0.5 if stddist[i] > 0.5*vecs[i] else 0)*vecs[i] for i in range(len(x1))])
+		stddist = array([abs(stddist[i])-(0.5*vecs[i] if stddist[i] > 0.5*vecs[i] else 0) for i in range(len(x1))])
+		if 0:		
+			if any((stddist)!=abs(x1-x2)):
+				print 'inside torus_norm'
+				print temp
+				print shape(temp)
+				print (stddist)==abs(x1-x2)
+				print x1
+				print x2
+				print 'stddist = '+str(stddist)
+				print 'length = '+str(sqrt((stddist**2).sum(axis=0)))
+		if sqrt((stddist**2).sum(axis=0)) < stddist[0] or sqrt((stddist**2).sum(axis=0)) < stddist[1]:
+			print 'you done fucked u[p'
+			print stddist
+			print sqrt((stddist**2).sum(axis=0))
+			print temp
 		return sqrt((stddist**2).sum(axis=0))
 	elif len(shape(temp)) == 2:
 		filt = array([[min([abs(dimswitch[d]*(temp[d][j]-vecs[d]*i)) for i in [-1,0,1]]) \
@@ -114,9 +131,17 @@ if 1:
 	dmat2 = scipy.spatial.distance.cdist(pts1,pts2)
 	
 	if 1:
-		hist0 = numpy.histogram([i for j in dmat for i in j])
-		#plt.bar(hist0[1][:-1],2*hist0[0],color='b',alpha=0.5)
-		plt.plot(hist0[1][:-1],1*hist0[0],'o-')
+		hist0,binedge0 = numpy.histogram([i for j in dmat for i in j],range=(0,250),bins=200)
+		mid0 = (binedge0[1:]+binedge0[:-1])/2
+		hist1,binedge1 = numpy.histogram([i for j in dmat2 for i in j],range=(0,250),bins=200)
+		mid1 = (binedge1[1:]+binedge1[:-1])/2
+		binwidth = mid0[1]-mid0[0]
+		areas = [((mid0[i]+binwidth/2.)**2-(mid0[i]-binwidth/2.)**2)*pi for i in range(len(mid0))]
+		
+		plt.plot(mid0,hist0/areas,'o-',c='r')
+		plt.plot(mid1,hist1/areas,'o-',c='b')
+		#plt.plot(mid0,areas,'o-',c='g')
+		
 		plt.show()
 
 	
