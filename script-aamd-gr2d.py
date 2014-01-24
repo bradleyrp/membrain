@@ -27,9 +27,7 @@ if 0:
 		(['membrane-v530'],'all',director_asymmetric,-1,
 			[['resname DOPS and name P','resname PI2P and name P','DOPS-PIP2']]),
 		(['membrane-v509'],'all',director_symmetric,-1,
-			[['resname DOPS and name P','resname PI2P and name P','DOPS-PIP2']]),
-		(['membrane-v509'],'all',director_symmetric,-1,
-			[['name P','name P','DOPS-PIP2']])]
+			[['resname PI2P and name P','resname PI2P and name P','DOPS-DOPS']])]
 
 	#---Functions
 	#-------------------------------------------------------------------------------------------------------------
@@ -53,7 +51,6 @@ if 0:
 	mset.identify_monolayers(director)
 	self = mset
 	
-if 0:
 	print 'code here'
 	
 	for lnum in range(2):
@@ -120,7 +117,7 @@ def crap_norm(x1,x2):
 		print 'Error: wrong dimensionality of the inputs to torus_norm.'
 		return 0
 	
-if 1:
+if 0:
 
 	frameno = 0
 
@@ -138,40 +135,96 @@ if 1:
 		binwidth = mid0[1]-mid0[0]
 		areas = [((mid0[i]+binwidth/2.)**2-(mid0[i]-binwidth/2.)**2)*pi for i in range(len(mid0))]
 		
-		plt.plot(mid0,hist0/areas,'o-',c='r')
-		plt.plot(mid1,hist1/areas,'o-',c='b')
-		#plt.plot(mid0,areas,'o-',c='g')
+		plt.plot(mid0,hist0,'o-',c='r',label='torus')
+		plt.plot(mid1,hist1,'o-',c='b',label='reg')
+		plt.plot(mid0,areas,'o-',c='g')
+		plt.xlim((0,300))
+		plt.legend()
 		
 		plt.show()
+		
+if 0:	
+	
+	pts1 = array(self.get_points(frameno,selection_index=0))[:,0:2]
+	pts2 = array(self.get_points(frameno,selection_index=0))[:,0:2]
 
+	smalldists = []
+	images1 = []
+	for i in range(len(pts1)):
+		for j in range(len(pts2)):
+			v = array([pts2[i][0]-pts1[j][0],pts2[i][1]-pts1[j][1]])
+			#---images1
+			#if abs(v[0]) <= 0.5*vecs[0] and abs(v[1]) <= 0.5*vecs[1]:
+			smalldists.append(scipy.linalg.norm(v))
+			for shift in [[-1,-1],[-1,0],[0,-1],[0,1],[1,0],[1,1],[1,-1],[-1,1]]:
+				images1.append(scipy.linalg.norm(v+shift*vecs[0:2]))
 	
 	
-	'''
-	#---Batches of g(r)-voronoi calculations
-	for pair in pairs:
-		print pair
-		mset.batch_gr_lipid_lipid([pair[0],pair[1]],framecount=framecount,skip=skip,
-			label=pair[2],mode='voronoi_bin',monolayer_rep='P')
-	#---Save the data
-	pickledump(mset,'pkl.gr-vornoi.'+tests[testno]+'.'+basename+'.pkl')
-	return mset
-	'''
+if 1:
+	allcurvs = []
+	#frameno = 0
+	for frameno in range(0,300,10):
+		pts1 = array(self.get_points(frameno,selection_index=0))[:,0:2]
+		pts2 = array(self.get_points(frameno,selection_index=0))[:,0:2]
 
-#---MAIN
-#-------------------------------------------------------------------------------------------------------------
+		points = pts2
+		dims=[0,1]
+		ans = []
+		for p in points:
+			for tr in [[i,j] for i in arange(-2,2+1,1) for j in arange(-2,2+1,1) if not (i == 0 and j == 0)]:
+				ans.append([p[i]+tr[i]*vecs[i] if i in dims else p[i] for i in range(2)])
+		pts2pbc = concatenate((points,array(ans)))
 
-'''
-starttime = time.time()
-print 'Starting analysis job.'
-for ad in analysis_descriptors:
-	#---Load global variables with calculation specifications used in analysis functions above.
-	(tests,selector,director,trajno,pairs) = ad
-	for t in range(len(tests)):
-		print 'Running calculation: monolayer unstructured triangulation '+tests[t]+'.'
-		for traj in [trajectories[systems.index(tests[t])][trajno]]:
-			#---Run the analysis function on the desired system
-			mset = analyze_ion_distributions(t,traj)
-			if erase_when_finished:
-				del mset
-print 'Job complete and it took '+str(1./60*(time.time()-starttime))+' minutes.'
-'''
+		'''
+		points = pts1
+		dims=[0,1]
+		ans = []
+		for p in points:
+			for tr in [[1,0],[0,1],[-1,0],[0,-1],[-1,1],[-1,-1],[1,1],[1,-1]]:
+				ans.append([p[i]+tr[i]*vecs[i] if i in dims else p[i] for i in range(2)])
+		pts1pbc = concatenate((points,array(ans)))
+		points = pts2
+		dims=[0,1]
+		ans = []
+		for p in points:
+			for tr in [[1,0],[0,1],[-1,0],[0,-1],[-1,1],[-1,-1],[1,1],[1,-1]]:
+				ans.append([p[i]+tr[i]*vecs[i] if i in dims else p[i] for i in range(2)])
+		pts2pbc = concatenate((points,array(ans)))
+		'''
+
+		cutoff = 2*(vecs[0] if vecs[0]<vecs[1] else vecs[1])
+	
+		sysarea = pi*cutoff**2
+
+		dmat2 = scipy.spatial.distance.cdist(pts1,pts2pbc)
+		binsizeabs = 4
+		hist,binedge = numpy.histogram(array(dmat2[0])[array(dmat2[0])!=0.],range=(0.,int(cutoff)),bins=int(cutoff/binsizeabs))
+		mid = (binedge[1:]+binedge[:-1])/2
+		areas = [pi*binwidth*mid[i]*2 for i in range(len(binedge)-1)]
+		areas = [pi*((binedge[i+1])**2-(binedge[i])**2) for i in range(len(binedge)-1)]
+	
+		histcomb = []
+		for r in range(len(dmat2)):
+			row = dmat2[r]
+			hist,binedge = numpy.histogram(array(row)[array(row)!=0.],range=(0.,int(cutoff)),bins=int(cutoff/binsizeabs))
+			histcomb.append(hist)
+			#if r%5 == 0:
+			#	plt.plot(mid,hist/areas/(len(dmat2)/(vecs[0]*vecs[1])),'-',label='name',alpha=0.5)
+		grcurve = sum(histcomb,axis=0)/float(len(histcomb))
+
+		'''
+		dmat2flat = array(dmat2).flatten()
+		dmat2flat = dmat2flat[dmat2flat<=cutoff]
+		dmat2flat = dmat2flat[dmat2flat!=0.]
+		'''
+
+		allcurvs.append(grcurve)
+
+	mid = (binedge[1:]+binedge[:-1])/2
+	binwidth = mid[1]-mid[0]
+	plt.plot(mid,mean(allcurvs,axis=0)/areas/(len(dmat2)/(vecs[0]*vecs[1])),'o-',c='r',label='reg')
+	plt.xlim((0,100))
+	plt.ylim((0,2))
+	#plt.legend()
+	plt.show()
+	
