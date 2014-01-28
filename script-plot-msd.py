@@ -23,11 +23,11 @@ for ad in analyses:
 	[bz,az] = polyfit(tdat[:,0],tdat[:,1],1)
 	print bz
 	fitted = [bz*i+az for i in tdatall[:,0]]
-	plt.plot(tdatall[:,0],tdatall[:,1],'-',c=clrs[0],lw=2,label=str(ad))
+	plt.plot(tdatall[:,0],tdatall[:,1],'-',c=clrs[int(i%2)],lw=2,label=ad)
 #	plt.plot(tdat[:,0],tdat[:,1],'-',c='r',lw=2)
 #	plt.plot(tdatall[:,0],fitted,'-',c='k',lw=1,alpha=0.5)
 	plt.xlabel('Time')
 	plt.ylabel('MSD')
-	plt.legend
+	plt.legend()
 
 plt.show()
