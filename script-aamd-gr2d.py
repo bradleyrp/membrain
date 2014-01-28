@@ -107,8 +107,9 @@ for ad in analyses:
 						histcomb.append(hist)
 					grcurve = sum(histcomb,axis=0)/float(len(histcomb))
 					allcurvs.append(grcurve)
-			mset.selections = []
-			#---write output
+				mset.selections = []
+	
+			#---write output ??????????????
 			result_data = MembraneData('gr2d',label=)
 			mset.store.append(result_data)
 			del result_data
