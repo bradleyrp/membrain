@@ -30,12 +30,12 @@ struct=/home/rpb/compbio-alt/membrane-v533/s3-sim-kraken/system-input.gro
 /home/rpb/compbio-alt/membrane-v533/s3-sim-kraken/md.part0003.2000-5000-20.xtc
 /home/rpb/compbio-alt/membrane-v533/s3-sim-kraken/md.part0003.2000-5000-4.xtc
 
+name=membrane-v509
+struct=/home/rpb/worker/repo-membrane/membrane-v509/system-input.gro
+/home/rpb/worker/repo-membrane/membrane-v509/md.part0035.xtc
+
 ############## EVERYTHING BELOW IS DEPRECATED
 # changed base directory on 2013.20.21
-
-name=membrane-v509
-struct=./look-v509/system-input.gro
-./look-v509/md.part0035.xtc
 
 name=membrane-v530
 struct=/home/rpb/worker/repo-membrane/membrane-v530/system-input.gro

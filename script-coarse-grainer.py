@@ -9,7 +9,7 @@ from scipy.linalg import norm
 
 #---method
 skip = None
-framecount = None
+framecount = 100
 location = ''
 execfile('locations.py')
 
@@ -101,6 +101,10 @@ bonds = [
 	[5,3],
 	[1,6],
 	[2,6],
+	[3,2],
+	[4,1],
+	[5,2],
+	[5,1],
 	[1,2]
 	]
 	
@@ -219,23 +223,33 @@ basename = traj.split('/')[-1][:-4]
 sel_surfacer = sel_aamd_surfacer
 print 'Accessing '+basename+'.'
 mset.load_trajectory((basedir+'/'+gro,basedir+'/'+traj),resolution='aamd')
-nfr = 100
-fr = [ frame(i) for i in range(nfr+1) ]
-i = 0
-for snap in mset.universe.trajectory:
-	print snap
+#---frame selection header
+end = None
+start = None
+if framecount == None:
+	if end == None: end = mset.nframes
+	if start == None: start = 0
+	if skip == None: skip = 1
+else:
+	start = 0
+	end = mset.nframes
+	skip = int(float(mset.nframes)/framecount)
+	skip = 1 if skip < 1 else skip
+#---load
+nfr = len(range(start,end,skip))
+fr = [frame(i) for i in range(nfr)]
+counter = 0
+for frameno in range(start,end,skip):
+	mset.gotoframe(frameno)
 	for r in mset.universe.selectAtoms(selector).residues:
 		newres = residue(r.resids()[0],r.name)
 		for a in r:
 			newres.add_atom(str(a.name),list(a.pos))
-		fr[i].add_res(newres)
-	i += 1
-	if i > nfr:
-		break
-
+		fr[counter].add_res(newres)
+	counter += 1
 #---move the structures into simple frame/residue objects
-frcg = [ frame(i) for i in range(nfr+1) ]
-for t in range(nfr+1):
+frcg = [frame(i) for i in range(nfr)]
+for t in range(nfr):
 	for resnr in range(len(fr[t].res)):
 		if updated_names:
 			beadgroups = [[fr[t].res[resnr].namelist.index(map_old_index_new[j]) for j in i] for i in aamap]
@@ -296,4 +310,15 @@ angle_aa_stds = list(array(angled).std(0).std(0))
 dihed_aa_means = list(mean(mean(ma.masked_array(dihedd,isnan(dihedd)),axis=1),axis=0).filled(np.nan))
 dihed_aa_stds =  list(std(std(ma.masked_array(dihedd,isnan(dihedd)),axis=1),axis=0).filled(np.nan))
 
-#---filter these according to custom rules
+#---interesting bonds
+print bond_aa_means[bonds.index([5,1])] # PI34 martini says 0.4 nm vs 0.94 here
+print bond_aa_means[bonds.index([3,4])] # PI34 martini says 0.4 nm vs 0.357 here
+print bond_aa_means[bonds.index([5,3])] # PI34 martini says 0.4 nm vs 0.357 here
+print bond_aa_means[bonds.index([4,5])] # PI34 martini says 0.4 nm vs 0.294 here
+print bond_aa_means[bonds.index([4,1])] # PI34 martini says 0.31 nm vs 0.916 here
+print bond_aa_means[bonds.index([3,2])] # PI34 martini says 0.4 nm vs 0.621 here
+print bond_aa_means[bonds.index([1,2])] # PI34 martini says 0.4 nm vs 0.874 here
+print bond_aa_means[bonds.index([5,6])] # PI34 martini says 0.4 nm vs 0.511 here
+print bond_aa_means[bonds.index([6,7])] # PI34 martini says 0.4 nm vs 0.662 here
+print dihed_aa_means[dihedrals.index([4,5,6,7])] # PI34 martini says -30 vs 96.77 here
+
