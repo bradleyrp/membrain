@@ -44,15 +44,17 @@ for ad in analyses:
 	tdatx = array(lines)[1:,0]
 	tdaty = array(lines)[1:,1]
 	# Create a list of all the y values (MSD).
-	all_y.append([lines[1:,1][i] for i in range(len(lines[1:,1]))])
-	all_x.append([lines[1:,0][i] for i in range(len(lines[1:,0]))])
+	first_ten = int(len(lines)*.1)+2
+	last_ten =  int(len(lines)*.9)+1
+	all_x.append([lines[first_ten:last_ten,0][i] for i in range(len(lines[first_ten:last_ten]))])
+	all_y.append([lines[first_ten:last_ten,1][i] for i in range(len(lines[first_ten:last_ten]))])
 	tdatall = log10(lines[1:])
 	tdat = log10(lines[int(len(tdatall)*.1)+2:int(len(tdatall)*.9)+1])
 	[bz,az] = polyfit(tdat[:,0],tdat[:,1],1)
-	print bz
+	print str(ad)+' D = '+str(bz)
 	bzs.append(bz)
 	fitted = [bz*i+az for i in tdatall[:,0]]
-	ax.plot(tdatx,tdaty,'-',c=clrs[analyses.index(ad)%len(clrs)],lw=2,label=ad,alpha=0.5)
+	ax.plot(tdatx,tdaty,'-',c=clrs[analyses.index(ad)%len(clrs)],lw=2,alpha=0.5)
 	if 0:
 		ax.plot(tdat[:,0],tdat[:,1],'-',c='r',lw=2)
 		ax.plot(tdatall[:,0],fitted,'-',c='k',lw=1,alpha=0.5)
@@ -61,27 +63,23 @@ ax.set_ylabel('MSD (nm$^{2}$)')
 ax.set_xscale('log')
 ax.set_yscale('log')
 #--- Recreate the best fit for all the curves, create a 95% confidence interval and shade.
-# First I tried averaging all y values, but then I realized I was throwing away lots of data.
-
 all_x_flat = [log10(x) for sublist in all_x for x in sublist]
 all_y_flat = [log10(y) for sublist in all_y for y in sublist]
 
 [q,r], covariance = polyfit(all_x_flat, all_y_flat, 1, cov=True)
 print 'Overall average D = ' + str(q) + ' (some crazy units)'
-# Reduce the number of data points by 10x, also we only need to do enough data points for one time series.
-reduce_factor = 10
-fitted_y = [q*i+r for i in all_x_flat[1:len(lines):reduce_factor]]
-fitted_x = lines[1:-1:reduce_factor,0]
+
+fitted_y = [q*i+r for i in log10(lines[first_ten:last_ten,0])]
+fitted_x = lines[first_ten:last_ten,0]
 # Confidence interval:
 t = stats.t.ppf(0.975, len(fitted_y) - 2) # Students' t distribution 97.5 percentile, n-2 d.o.f.
 # The problem is we need to find the residual for all the y values to the fitted line, but we can't do a point-by-point subtraction because fitted is smaller than all_y_flat. Also, it won't work to average all y values for a single x point and do that subtraction, because that is losing degrees of freedom and thus, power.
 #residuals = [all_y_flat[i]] - fitted[i] for i in range(len(fitted))]
 #s_err = sqrt(sum(residuals**2)/(len(all_y_flat) - 2))  # Standard deviation of the error (residuals)
 #ci = t * s_err * sqrt(1/len(all_y_flat) + (x2 - mean(all_x_flat))**2/sum((all_x_flat-mean(all_x_flat))**2))
-
-# When plotting, we want to plot the un-logged numbers.
 unlogged_y = [10**fitted_y[i] for i in range(len(fitted_y))]
-ax.plot(fitted_x,unlogged_y,'-',c='k',lw=2)
+ax.plot(lines[first_ten:last_ten,0],unlogged_y,'-',c='k',lw=2,label='D = %1.4f'%q)
+plt.legend()
 #ax.fill_between(unlogged_x,unlogged_y+ci,unlogged_y-ci, c='k',alpha=0.1)
 
 
