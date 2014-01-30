@@ -2,7 +2,7 @@
 
 from membrainrunner import *
 
-#---Settings
+#---SETTINGS
 #-------------------------------------------------------------------------------------------------------------
 
 #---settings
@@ -26,13 +26,8 @@ analysis_descriptors = [
 		[['resname DOPS and name P','resname PI2P and name P','DOPS-PIP2']]),
 	(['membrane-v509'],'all',director_symmetric,-1,
 		[['resname PI2P and name P','resname PI2P and name P','DOPS-DOPS']]),
-
 	(['membrane-v530'],'all',director_asymmetric,-1,
-		[['resname PI2P and name P','resname PI2P and name P','PIP2-PIP2']]),
-
-
-		
-		]
+		[['resname PI2P and name P','resname PI2P and name P','PIP2-PIP2']])]
 analyses = [analysis_descriptors[i] for i in [-1]]
 
 #---MAIN
