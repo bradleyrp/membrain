@@ -107,7 +107,7 @@ bonds = [
 	[5,1],
 	[1,2]
 	]
-	
+
 angles = [
 	[1,3,4],
 	[3,4,2],
@@ -310,15 +310,36 @@ angle_aa_stds = list(array(angled).std(0).std(0))
 dihed_aa_means = list(mean(mean(ma.masked_array(dihedd,isnan(dihedd)),axis=1),axis=0).filled(np.nan))
 dihed_aa_stds =  list(std(std(ma.masked_array(dihedd,isnan(dihedd)),axis=1),axis=0).filled(np.nan))
 
-#---interesting bonds
-print bond_aa_means[bonds.index([5,1])] # PI34 martini says 0.4 nm vs 0.94 here
-print bond_aa_means[bonds.index([3,4])] # PI34 martini says 0.4 nm vs 0.357 here
-print bond_aa_means[bonds.index([5,3])] # PI34 martini says 0.4 nm vs 0.357 here
-print bond_aa_means[bonds.index([4,5])] # PI34 martini says 0.4 nm vs 0.294 here
-print bond_aa_means[bonds.index([4,1])] # PI34 martini says 0.31 nm vs 0.916 here
-print bond_aa_means[bonds.index([3,2])] # PI34 martini says 0.4 nm vs 0.621 here
-print bond_aa_means[bonds.index([1,2])] # PI34 martini says 0.4 nm vs 0.874 here
-print bond_aa_means[bonds.index([5,6])] # PI34 martini says 0.4 nm vs 0.511 here
-print bond_aa_means[bonds.index([6,7])] # PI34 martini says 0.4 nm vs 0.662 here
-print dihed_aa_means[dihedrals.index([4,5,6,7])] # PI34 martini says -30 vs 96.77 here
+#---interesting bonds from v509 reported here 2014.01.30
+for i in [[5,3],[3,4],[4,5],[1,3],[2,4],[1,2],[4,1],[5,2],[5,1],[3,2]]:
+	print 'measured bond '+str(i)+'\t'+str(bond_aa_means[bonds.index(i)])
+for i in [[3,5,6,7]]:
+	print 'measured dihedral '+str(i)+'\t'+str(dihed_aa_means[dihedrals.index(i)])
+for i in [[5,6,7],[6,7,9],[6,7,8],[7,8,14],[7,9,10],[9,10,11],[10,11,12],[11,12,13],[8,14,15],[14,15,16],[15,16,17]]:
+	print 'measured angle '+str(i)+'\t'+str(angle_aa_means[angles.index(i)])
 
+'''
+results here:
+measured bond [5, 3]    3.80572267426
+measured bond [3, 4]    3.57238315199
+measured bond [4, 5]    2.93794162342
+measured bond [1, 3]    6.24657787968
+measured bond [2, 4]    6.11645342962
+measured bond [1, 2]    8.74659382876
+measured bond [4, 1]    9.16745441545
+measured bond [5, 2]    8.2769739615
+measured bond [5, 1]    9.4233254962
+measured bond [3, 2]    6.20524625576
+measured dihedral [3, 5, 6, 7]  86.395124608
+measured angle [5, 6, 7]        108.02616488
+measured angle [6, 7, 9]        129.560611867
+measured angle [6, 7, 8]        91.1754289009
+measured angle [7, 8, 14]       112.282558159
+measured angle [7, 9, 10]       134.631986002
+measured angle [9, 10, 11]      142.450861093
+measured angle [10, 11, 12]     141.941370852
+measured angle [11, 12, 13]     134.648911705
+measured angle [8, 14, 15]      150.28116282
+measured angle [14, 15, 16]     148.076076437
+measured angle [15, 16, 17]     145.671827928
+'''
