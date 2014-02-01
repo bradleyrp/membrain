@@ -1,4 +1,4 @@
-#!/usr/bin/python2.7 -i
+#!/usr/bin/python -i
 
 import matplotlib as mpl
 import matplotlib.pyplot as plt
@@ -19,7 +19,8 @@ import matplotlib.gridspec as gridspec
 import scipy.stats as stats
 
 
-basedir = '/home/davids/xfer/v532/' # Change this later.
+#basedir = '/home/davids/xfer/v532/' # Change this later.
+basedir = '/home/rpb/worker/lipidwise-msd/'
 analysis_descriptors = [str(basedir)+'msd-'+str("%04d"%i)+'.xvg' for i in range(0,40)] 
 analyses = [analysis_descriptors[i] for i in range(len(analysis_descriptors))]
 
