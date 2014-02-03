@@ -59,7 +59,11 @@ analysis_descriptors = [
 		'pkl.stressdecomp.membrane-v614-stress.md.part0002.rerun.pkl',2],
 	['v612.part0003','pkl.structures.membrane-v612-stress.md.part0003.pkl','',2,
 		'/home/rpb/compbio/membrane-v612-enthx1-12800/a3-localpressure.v612.framewise/',
-		'pkl.stressdecomp.membrane-v612-stress.md.part0002.rerun.pkl',3]]
+		'pkl.stressdecomp.membrane-v612-stress.md.part0002.rerun.pkl',3],
+	['v700.part0009.500000-700000-400','pkl.structures.membrane-v700.md.part0009.500000-700000-400.pkl',
+        'localpressure.v701.part0009.500000-700000-400.3Dpp.dat',1,
+        '/home/rpb/compbio-alt/membrane-v700-exo70-dilute/a4-stress-1.0-framewise-500000-700000-400/results',
+        'pkl.stressdecomp.membrane-v700.md.part0009.500000-700000-400.pkl',9]]
 		
 #---Type of looping or parameter sweeps to do
 #---Note: that I am temporarily dropping support for everything but batch_parameter_sweep_framewise
