@@ -116,7 +116,7 @@ for part in ${filelist[@]}; do
 			-f $part \
 			-s ${part:0:-4}".tpr" \
 			-o $tmpname".xtc" \
-			-b 12000. \
+			-b $slicestart \
 			-e $sliceend \
 			-skip $(float_eval $sliceskip"/"$timestepps) \
 			&> log-trjconv-$tmpname
@@ -131,9 +131,10 @@ fi
 #-------------------------------------------------------------------------------------------------------------
 
 echo "TIMESLICE: Concatenating."
+basename=${filelist2[0]}
 trjcat \
 	-f $(echo ${filelist2[@]}) \
-	-o ${filelist2:-4}"."$slicestart"-"$sliceend"-"$sliceskip$subsetid".xtc" \
+	-o ${basename:0:-4}"."$slicestart"-"$sliceend"-"$sliceskip$subsetid".xtc" \
 	&> log-trjcat
 echo "TIMESLICE: Cleaning up."
 

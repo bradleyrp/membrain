@@ -1,4 +1,4 @@
-#!/usr/bin/python
+#!/usr/bin/python -i
 
 from membrainrunner import *
 
@@ -20,8 +20,10 @@ selector = '(name P and not resname CHL1) or (name C3 and resname CHL1)'
 
 #---analysis plan
 analysis_descriptors = [
-	(['membrane-v531'],'all',director_asymmetric,[-1],
-		[['resname PI2P and name P','resname PI2P and name P','PIP2-PIP2']],'v531.PIP2-PIP2')]
+	(['membrane-v531'],'all',director_asymmetric,[-2,-1],
+		[['resname PI2P and name P','resname PI2P and name P','PIP2-PIP2']],'v531.PIP2-PIP2'),
+	(['membrane-v532'],'all',director_asymmetric,[-2,-1],
+		[['resname PI2P and name P','resname PI2P and name P','PIP2-PIP2']],'v532.PIP2-PIP2')]
 analyses = [analysis_descriptors[i] for i in [-1]]
 
 #---MAIN
@@ -61,7 +63,7 @@ for ad in analyses:
 				else:
 					framerange = range(start,end,skip)
 			for pair in pairs:
-				result_data = MembraneData('gr2d')
+				result_data = MembraneData('gr2d',label=pair[2])
 				allcurves = []
 				for mononum in range(2):
 					for lnum in range(2):
