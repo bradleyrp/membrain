@@ -19,7 +19,8 @@ if 0:
 	#-------------------------------------------------------------------------------------------------------------
 
 	exo70pip2_study = 0
-	enth_study = 1
+	exo70pip2_study_v2 = 1
+	enth_study = 0
 	#---Pickles containing kC0 plots from script-postproc-stress.py
 	if exo70pip2_study:
 		#---Note: this is the set for the Exo70+PIP2 simulations
@@ -56,10 +57,28 @@ if 0:
 		mapslabels = [r'$\textbf{{ENTH}\ensuremath{\times}4}$',
 			r'$\textbf{{ENTH}\ensuremath{\times}1}$',
 			r'$\textbf{{control}}$']
+	elif exo70pip2_study_v2:
+		#---Note: this is the set for the Exo70+PIP2 simulations
+		raw_maps_names = [
+			'pkl.stressdecomp.membrane-v701.md.part0003.60000-160000-200.pkl',
+			'pkl.stressdecomp.membrane-v700.md.part0009.500000-700000-400.pkl',
+			'pkl.stressdecomp.membrane-v550.md.part0006.300000-400000-200.pkl']
+		pickle_structure_names = [
+			'pkl.structures.membrane-v701.md.part0003.60000-160000-200.pkl',
+			'pkl.structures.membrane-v700.md.part0009.500000-700000-400.pkl',
+			'pkl.structures.membrane-v550.md.part0006.300000-400000-200.pkl']
+		#---Master ID string
+		outname = 'v701.v700.v550.ver4'
+		#---Numbers of proteins in each system
+		nprots_list = [2,2,0]
+		#---Maps labels
+		mapslabels = [r'$\textbf{{EXO70}\ensuremath{\times}2{\small (antiparallel)}}$',
+			r'$\textbf{{EXO70}\ensuremath{\times}2{\small (parallel)}}$',
+			r'$\textbf{{control}}$']
 
 	#---plots
-	plot_maps = 0
-	plot_hist = 1
+	plot_maps = 1
+	plot_hist = 0 ######## needs centered at 0!?!
 	plot_hist_subdivide = 0
 	plot_hist_subdivide_mean = 0
 

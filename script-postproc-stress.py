@@ -175,8 +175,8 @@ if batch_parameter_sweep_framewise:
 		for frame in range(len(mset.surf)):
 			print 'running frame = '+str(frame)
 			#---Previously stored the frames in the pickle directory - now found with the simulations
-			file3dpp = pickles+'/'+datdir3dpp+'/'+'md.part'+str('%04d'%framewise_part)+'.fr'+str('%04d'%frame)+\
-				'.lp.dat3d'
+			file3dpp = pickles+'/'+datdir3dpp+'/'+'md.part'+str('%04d'%framewise_part)+'.fr'+\
+				str('%04d'%frame)+'.lp.dat3d'
 			file3dpp = datdir3dpp+'/'+'md.part'+str('%04d'%framewise_part)+'.fr'+str('%04d'%frame)+'.lp.dat3d'
 			dat3dpp = array([[float(i) for i in line.strip().split()] for line in open(file3dpp)])
 			griddims = [int(max(dat3dpp[:,i])) for i in range(3)]

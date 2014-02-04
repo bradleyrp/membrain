@@ -289,7 +289,7 @@ class MembraneSet:
 		'''Interpolate the molecular dynamics bilayers.'''
 		if timeslice != None:
 			start = int((float(timeslice[0])-self.time_start)/timeslice[2])
-			end = int((float(timeslice[1])-self.time_start)/timeslice[2])
+			end = int((float(timeslice[1])-self.time_start+self.time_dt)/self.time_dt)
 			skip = int(float(timeslice[2])/self.time_dt)
 			print 'Starting midplaner with [start,end,skip] = ['+\
 				str(start)+','+str(end)+','+str(skip)+']'
