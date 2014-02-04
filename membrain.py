@@ -198,6 +198,61 @@ class MembraneSet:
 				self.vecs_index = range(len(whichframes))
 				self.griddims = [int(nbase),int(nbase)]
 		
+	def load_points_vtu(self,vtudir,extra_props=None,nbase=0,start=None,end=None,
+		prefix='equib-conf-',suffix='.vtu',xyzform='',rounder=1.0,lenscale=None,skip=1):
+		'''Load points and extra data from paraview-style VTU files.'''
+		import xml.etree.ElementTree as ET
+		if self.nframes != 0:
+			print 'Clearing trajectory.'
+			self.vecs = []
+			self.vecs_index = []
+			self.griddims = []
+			self.xyzs = []
+			self.surf = []
+			self.nframes = 0
+		self.lenscale = lenscale if lenscale != None else 1.0
+		suffix = suffix.replace('\\','')
+		dirlistall = os.listdir(vtudir)
+		dirlist = [int(i[len(prefix):-len(suffix)]) \
+			for i in dirlistall if i[:len(prefix)] == prefix and i[-len(suffix):] == suffix]
+		dirlist.sort()
+		if start == None and end == None: 
+			whichframes = dirlist[::skip]
+		else:
+			whichframes = dirlist[start:end:skip]
+		print 'The trajectory directory has '+str(len(whichframes))+' frames available.'
+		extradat = []
+		for index in whichframes:
+			tree = ET.parse(vtudir+'/'+prefix+str(index)+suffix)
+			root = tree.getroot()
+			if index == whichframes[0]:
+				extra_item_nums = []
+				if extra_props != None:
+					print root[0].find('Piece').find('PointData').getchildren()
+					if type(extra_props) == str: extra_props = [extra_props]
+					for propstring in extra_props:
+						extra_item_nums.append([j[1][1] for j in [i.items() 
+							for i in root[0].find('Piece').find('PointData').\
+							getchildren()]].index(propstring))
+			print 'reading vtu file number '+str(index)
+			coord = root[0].find('Piece').find('Points').find('DataArray').text.split()
+			coord = map(float,coord)
+			n = coord.__len__()/3
+			vcoord = (numpy.array(coord).reshape(n,3))
+			somedata = []
+			for itemno in extra_item_nums:
+				somedata.append(map(float,root[0].find('Piece').find('PointData').\
+					getchildren()[itemno].text.split()))
+			extradat.append(somedata)
+			self.xyzs.append(array(vcoord))
+			self.nframes += 1
+			self.rounder = rounder
+		scalefac = 1.3
+		self.vecs = [[scalefac*sqrt(3)/2*int(nbase),scalefac*int(nbase)] for index in whichframes]
+		self.vecs_index = range(len(whichframes))
+		self.griddims = [int(round(self.vecs[0][0]/rounder)),int(round(self.vecs[0][1]/rounder))]
+		return extradat
+	
 	def gotoframe(self,frameno):
 		'''Iterate to another frame, quickly.'''
 		print 'Moving to frame '+str(frameno)
@@ -275,7 +330,7 @@ class MembraneSet:
 			
 #---Shape functions
 
-	def surfacer(self,rounder=1.0,skip=1,interp='best'):
+	def surfacer(self,skip=1,interp='best'):
 		'''Interpolate the mesoscale bilayers.'''
 		for i in range(0,len(self.xyzs),skip):
 			print 'Interpolating splines, '+str(i)
@@ -283,6 +338,18 @@ class MembraneSet:
 			res1 = self.makemesh(res0,self.vecs[i],self.griddims,method=interp)
 			rezip = self.rezipgrid(res1)
 			self.surf.append(rezip-mean(rezip))
+			
+	def surfacer_general(self,surfdata,skip=1,interp='best'):
+		'''Interpolate any quantity, as long as you supply it in the order of the xyz positions.'''
+		interpdata = []
+		for fr in range(0,len(self.xyzs),skip):
+			print 'Interpolating splines, '+str(fr)
+			res0 = self.wrappbc(array([[self.xyzs[fr][j][0],self.xyzs[fr][j][1],surfdata[fr][j]] 
+				for j in range(len(surfdata[fr]))]),vecs=self.vecs[fr],mode='grow')
+			res1 = self.makemesh(res0,self.vecs[fr],self.griddims,method=interp)
+			rezip = self.rezipgrid(res1)
+			interpdata.append(rezip)
+		return interpdata
 			
 	def midplaner(self,selector,rounder=4.0,framecount=None,start=None,end=None,
 		skip=None,interp='best',protein_selection=None,residues=None,timeslice=None):
