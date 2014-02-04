@@ -118,7 +118,7 @@ for ad in analyses:
 					result_data.addnote([item,globals()[item]])
 				result_data.data = allcurves
 				result_data.label = framerange
-				mset.store.append(result_data)
+				mset.store.append(list(np.transpose(array(result_data))))
 				del result_data
 			pickledump(mset,'pkl.gr2d.'+exptname+'.'+basename.strip('md.')+'.pkl',directory=pickles)
 			del mset
