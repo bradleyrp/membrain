@@ -1,4 +1,4 @@
-#!/usr/bin/python -i
+#!/usr/bin/python
 
 from membrainrunner import *
 
@@ -116,7 +116,7 @@ for ad in analyses:
 				result_data.data = allcurves
 				result_data.label = [i for i in range(start,end,skip)]
 				mset.store.append(result_data)
-				#del result_data
-			pickledump(mset,'pkl.gr2d.'+exptname+'.'+basename.strip('md.')+'.pkl')
-			#del mset
+				del result_data
+			pickledump(mset,'pkl.gr2d.'+exptname+'.'+basename.strip('md.')+'.pkl',directory=pickles)
+			del mset
 			
