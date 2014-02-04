@@ -60,6 +60,7 @@ for ad in analyses:
 					framerange = list([int(round(i)) for i in linspace(0,mset.nframes-1,framecount)])
 				else:
 					framerange = range(start,end,skip)
+			print framerange
 			for pair in pairs:
 				result_data = MembraneData('gr2d')
 				allcurves = []
