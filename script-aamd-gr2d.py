@@ -95,20 +95,17 @@ for ad in analyses:
 							sysarea = pi*cutoff**2
 							dmat2 = scipy.spatial.distance.cdist(pts1,pts2pbc)
 							binsizeabs = 4
-							hist,binedge = numpy.histogram(array(dmat2[0])[array(dmat2[0])!=0.],
-								range=(0.,int(cutoff)),bins=int(cutoff/binsizeabs))
-							mid = (binedge[1:]+binedge[:-1])/2
-							binwidth = mid[1]-mid[0]
-							areas = [pi*binwidth*mid[i]*2 for i in range(len(binedge)-1)]
-							areas = [pi*((binedge[i+1])**2-(binedge[i])**2) for i in range(len(binedge)-1)]
+							scanrange = arange(0,int(cutoff),binsizeabs)
 							histcomb = []
 							for r in range(len(dmat2)):
 								row = dmat2[r]
 								hist,binedge = numpy.histogram(array(row)[array(row)!=0.],
-									range=(0.,int(cutoff)),bins=int(cutoff/binsizeabs))
+									range=(0.,int(max(scanrange))),bins=len(scanrange)-1)
+								mid = (binedge[1:]+binedge[:-1])/2
 								histcomb.append(hist)
 							grcurve = sum(histcomb,axis=0)/float(len(histcomb))
 							allcurves_by_monolayer.append(grcurve)
+						cutoff = 2*min([int(i) for i in np.mean(mset.vecs,axis=0)[0:2]])
 					allcurves.append(allcurves_by_monolayer)
 					mset.selections = []
 				points_counts = [shape(pts1),shape(pts2pbc)]
@@ -121,7 +118,7 @@ for ad in analyses:
 				result_data.data = [[allcurves[0][i],allcurves[1][i]] for i in range(len(framerange))]
 				result_data.label = framerange
 				mset.store.append(result_data)
-				#del result_data
+				del result_data
 			pickledump(mset,'pkl.gr2d.'+exptname+'.'+basename.strip('md.')+'.pkl',directory=pickles)
-			#del mset
+			del mset
 			
