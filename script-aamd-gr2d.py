@@ -7,7 +7,7 @@ from membrainrunner import *
 
 #---method
 skip = None
-framecount = 20
+framecount = 200
 framecount_force_exact = True
 location = ''
 execfile('locations.py')
@@ -24,7 +24,7 @@ analysis_descriptors = [
 		[['resname PI2P and name P','resname PI2P and name P','PIP2-PIP2']],'v531.PIP2-PIP2'),
 	(['membrane-v532'],'all',director_asymmetric,[-2,-1],
 		[['resname PI2P and name P','resname PI2P and name P','PIP2-PIP2']],'v532.PIP2-PIP2')]
-analyses = [analysis_descriptors[i] for i in [-1]]
+analyses = [analysis_descriptors[i] for i in [-1,-2]]
 
 #---MAIN
 #-------------------------------------------------------------------------------------------------------------
