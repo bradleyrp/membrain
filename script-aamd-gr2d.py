@@ -118,10 +118,10 @@ for ad in analyses:
 				savelist = ['cutoff','sysarea','points_counts','binsizeabs','pair_selects','pair_name']
 				for item in savelist:
 					result_data.addnote([item,globals()[item]])
-				result_data.data = list(np.transpose(array(allcurves)))
+				result_data.data = [[allcurves[0][i],allcurves[1][i]] for i in range(len(framerange))]
 				result_data.label = framerange
 				mset.store.append(result_data)
-				del result_data
+				#del result_data
 			pickledump(mset,'pkl.gr2d.'+exptname+'.'+basename.strip('md.')+'.pkl',directory=pickles)
-			del mset
+			#del mset
 			
