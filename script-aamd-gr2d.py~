@@ -74,7 +74,7 @@ for ad in analyses:
 							list(allselect_lipids.resids()).index(i+1)].selectAtoms(pair[lnum]) 
 							for i in validresids]))
 					allcurves_by_monolayer = []
-					if mset.selections[0] == 0.0 or mset.selections[1] == 0.0:
+					if mset.sele/media/store-pascal/ryb/membrane-v5xx/trajectory-map-membrane-v5xxctions[0] == 0.0 or mset.selections[1] == 0.0:
 						print 'Note: missing lipids in this monolayer.'
 						allcurves_by_monolayer = [[] for i in range(start,end,skip)]
 					else:
