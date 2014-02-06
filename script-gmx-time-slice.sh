@@ -1,23 +1,20 @@
 #!/bin/bash
 
-<<'notes'
-This script finds the right XTC files and makes concatenated slices of trajectories with an optional subset
-of the system. It writes the final file in the "part-file-start-end-skip.xtc" format.
-notes
-
 #---method
 masterdir=/home/ryb/membrane-v5xx
-sysname=membrane-v531
+loc=$(pwd)
+tmpname=$(echo ${loc:$((${#masterdir}))})
+sysname=$(echo $tmpname | awk 'BEGIN { FS = "/" } ; { print $2}')
 timestepps=2
-slicestart=12000
-sliceend=16000
-sliceskip=10
+slicestart=40000
+sliceend=90000
+sliceskip=100
 
 #---flags for subset of system
 subset=1
 subsetstring="keep 0\nr PI2P\nkeep 1\nq\n"
 subsetid=".pi2p"
-sysinputgro=../s4-sim-trestles/system-input.gro
+sysinputgro=../s3-start-to-lonestar/system-input.gro
 
 #-------------------------------------------------------------------------------------------------------------
 
@@ -143,3 +140,5 @@ for part in ${filelist2[@]}; do
 done
 
 #-------------------------------------------------------------------------------------------------------------
+
+if 
