@@ -18,7 +18,6 @@ import matplotlib.gridspec as gridspec
 
 import scipy.stats as stats
 
-
 #basedir = '/home/davids/xfer/v532/' # Change this later.
 basedir = '/home/rpb/worker/lipidwise-msd/'
 analysis_descriptors = [str(basedir)+'msd-'+str("%04d"%i)+'.xvg' for i in range(0,40)] 
@@ -61,16 +60,19 @@ for ad in analyses:
 		ax.plot(tdatall[:,0],fitted,'-',c='k',lw=1,alpha=0.5)
 ax.set_xlabel('Time (ps)')
 ax.set_ylabel('MSD (nm$^{2}$)')
-ax.set_xscale('log')
-ax.set_yscale('log')
+#ax.set_xscale('log')
+#ax.set_yscale('log')
 #--- Recreate the best fit for all the curves, create a 95% confidence interval and shade.
-all_x_flat = [log10(x) for sublist in all_x for x in sublist]
-all_y_flat = [log10(y) for sublist in all_y for y in sublist]
+#all_x_flat = [log10(x) for sublist in all_x for x in sublist]
+#all_y_flat = [log10(y) for sublist in all_y for y in sublist]
+all_x_flat = [x for sublist in all_x for x in sublist]
+all_y_flat = [y for sublist in all_y for y in sublist]
 
 [q,r], covariance = polyfit(all_x_flat, all_y_flat, 1, cov=True)
-print 'Overall average D = ' + str(q) + ' (some crazy units)'
+print 'Overall average D = ' + str(q*10**6/4.) + ' (um2/s)'
 
-fitted_y = [q*i+r for i in log10(lines[first_ten:last_ten,0])]
+#fitted_y = [q*i+r for i in log10(lines[first_ten:last_ten,0])]
+fitted_y = [q*i+r for i in lines[first_ten:last_ten,0]]
 fitted_x = lines[first_ten:last_ten,0]
 # Confidence interval:
 t = stats.t.ppf(0.975, len(fitted_y) - 2) # Students' t distribution 97.5 percentile, n-2 d.o.f.
@@ -78,8 +80,9 @@ t = stats.t.ppf(0.975, len(fitted_y) - 2) # Students' t distribution 97.5 percen
 #residuals = [all_y_flat[i]] - fitted[i] for i in range(len(fitted))]
 #s_err = sqrt(sum(residuals**2)/(len(all_y_flat) - 2))  # Standard deviation of the error (residuals)
 #ci = t * s_err * sqrt(1/len(all_y_flat) + (x2 - mean(all_x_flat))**2/sum((all_x_flat-mean(all_x_flat))**2))
-unlogged_y = [10**fitted_y[i] for i in range(len(fitted_y))]
-ax.plot(lines[first_ten:last_ten,0],unlogged_y,'-',c='k',lw=2,label='D = %1.4f'%q)
+#unlogged_y = [10**fitted_y[i] for i in range(len(fitted_y))]
+#ax.plot(lines[first_ten:last_ten,0],unlogged_y,'-',c='k',lw=2,label='D = %1.4f'%q)
+ax.plot(lines[first_ten:last_ten,0],fitted_y,'-',c='k',lw=2,label='D = %1.4f'%q)
 plt.legend()
 #ax.fill_between(unlogged_x,unlogged_y+ci,unlogged_y-ci, c='k',alpha=0.1)
 
