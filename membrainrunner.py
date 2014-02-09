@@ -40,7 +40,7 @@ sel_cgmd_surfacer = ['name PO4 or name POG','name C2A']
 sel_all = ['all']
 
 #---Master membrane class object
-mset = MembraneSet()
+if 'mset' not in globals(): mset = MembraneSet()
 
 #---FUNCTIONS
 #-------------------------------------------------------------------------------------------------------------

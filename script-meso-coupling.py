@@ -1,76 +1,192 @@
 #!/usr/bin/python -i
 
-if 0:
+from membrainrunner import *
 
-	from membrainrunner import *
+import numpy
+import glob
+import sys
+import xml.etree.ElementTree as ET
+import scipy
+import os
+from numpy.linalg import norm
+import matplotlib.gridspec as gridspec
 
-	import numpy
-	import glob
-	import sys
-	import xml.etree.ElementTree as ET
-	import scipy
-	import os
+#---SETTINGS
+#-------------------------------------------------------------------------------------------------------------
 
-	#---SETTINGS
-	#-------------------------------------------------------------------------------------------------------------
+#---methods
+location = ''
+execfile('locations.py')
 
-	#---methods
-	location = ''
-	execfile('locations.py')
+#---settings
+xyzform = 'rect'
+nbase = 22
+length = None
 
-	#---settings
-	vtudir = '/home/rpb/worker/repo-membrane/mesoscale-v2002/t2-anis-22/run1-size-sweep/rep-0/equilibrate/'
-	xyzform = 'rect'
-	nbase = 22
-	length = None
+#---plan
+analysis_descriptors = [
+	('/home/rpb/worker/repo-membrane/mesoscale-v2002/t2-anis-22/run1-size-sweep/rep-0/equilibrate/',
+		1500,2000,'v2002-t2-anis-22-run1-rep-0-1500-2000',True,''),
+	('/home/rpb/worker/repo-membrane/membrane-v2002/bare-rep-0/equilibrate',1500,2000,
+		'v2002-bare-rep-0-1500-2000',True,''),
+	('',0,0,'v700',False,'pkl.structures.membrane-v700.md.part0009.500000-700000-400.pkl')]
+ad = analysis_descriptors[-1]
+vtudir,start,end,testname,ismeso,pklname = ad
 
-	#---FUNCTIONS
-	#-------------------------------------------------------------------------------------------------------------
+#---FUNCTIONS
+#-------------------------------------------------------------------------------------------------------------
 
-	def fftredundant(dat):
-		# was divided by lenscale before?
-		return fft.fftshift(fft.fft2(array(dat)[:-1,:-1]))
+def fftredundant(dat):
+	return fft.fftshift(fft.fft2(array(dat)[:-1,:-1]))
 
-	#---MAIN
-	#-------------------------------------------------------------------------------------------------------------
+#---MAIN
+#-------------------------------------------------------------------------------------------------------------
 
-	extradat = mset.load_points_vtu(vtudir,extra_props='induced_cur',start=100,end=110,nbase=nbase)
-	mset.surfacer()
-	c0s = mset.surfacer_general(array(extradat)[:,0])
-	# plot with: meshplot(array([[mset.xyzs[0][i][0],mset.xyzs[0][i][1],extradat[0][i]] for i in range(574)]))
-
-if 0:
+	#|------load
+	#||-----calc
+	#|||----calc2
+	#||||---plot
+seq='0001'
+	   	
+if int(seq[0]):
+	if ismeso:
+		extradat = mset.load_points_vtu(vtudir,extra_props='induced_cur',start=start,end=end,nbase=nbase)
+		mset.surfacer()
+		c0s = mset.surfacer_general(array(extradat)[:,0])
+	else:
+		mset = unpickle(pickles+pklname)
+if int(seq[1]):
 	grid = mset.griddims
-	qs0 = [[x,y] for x in linspace(0,mset.vecs[0][0],mset.griddims[0]) 
-		for y in linspace(0,mset.vecs[0][1],mset.griddims[1])]
-	qs1 = [[x,y] for x in linspace(0,mset.vecs[0][0],mset.griddims[0]) 
-		for y in linspace(0,mset.vecs[0][1],mset.griddims[1])]
-	qis0 = [[x,y] for x in range(1,grid[0]-1) 
-		for y in range(1,grid[1]-1)]
-	qis1 = [[x,y] for x in range(1,grid[0]-1) 
-		for y in range(1,grid[1]-1)]
-	hq = fftredundant(mset.surf[0])
-	cq = fftredundant(c0s[0])
-	dat_raw = [[arccos(np.dot(q0,q1)/np.linalg.norm(q0)/np.linalg.norm(q1)),cq[q0[0],q0[1]]*hq[q1[0],q1[1]]] for q0 in qis0[1:] for q1 in qis1[1:]]
-	dat = [[float(abs(i[0])),float(abs(i[1]))] for i in dat_raw if (not np.isnan(abs(i[0])) and not np.isnan(abs(i[1])))]
-	rangey=(min(array(dat)[:,1]),max(array(dat)[:,1]))
-	rangex=(min(array(dat)[:,0]),max(array(dat)[:,0]))
-if 1:
-	import matplotlib.gridspec as gridspec
-	fig = plt.figure(figsize=(6,6))
-	gs = gridspec.GridSpec(1,1)
-	ax = plt.subplot(gs[0])
-	fingerprint, xedges, yedges = numpy.histogram2d(array(dat)[:,0],array(dat)[:,1],bins=20,range=([rangex[0],rangex[1]],[rangey[0],10**-1]))
-	midx = (xedges[1:]+xedges[:-1])/2.
-	midy = (yedges[1:]+yedges[:-1])/2.
-	extent = [xedges[1], xedges[-1], yedges[1], yedges[-1]]
-	cmap = mpl.cm.jet
-	#cmap.set_bad(cmap(0),1.)
-	ax.imshow(array(fingerprint).T, extent=None, interpolation='nearest',aspect='equal',origin='lower',
-		norm=None,cmap=cmap)
-	plt.show()
-	#[[q0,q1] for q0 in qis0 for q1 in qis1]
+	qxn,qyn = grid
+	q0x,q0y = [int(round(i/2.))-1 for i in grid]
+	q = [[[x-q0x,y-q0y] for y in linspace(0,mset.vecs[0][1],grid[1])]
+		for x in linspace(0,mset.vecs[0][0],grid[0])]
+	qp = [[[x-q0x,y-q0y] for y in linspace(0,mset.vecs[0][1],grid[1])]
+		for x in linspace(0,mset.vecs[0][0],grid[0])]
+	q0x,q0y = [int(round(i/2.))-1 for i in shape(q)[0:2]]
 	
+	hqs = []
+	for i in range(len(mset.surf)):
+		hqs.append(fftredundant(mset.surf[i]))
+	cq = fftredundant(c0s[0])
+	print 0
+	term0 = [[
+		norm(sum([norm(q[qjx][qjy])**2*norm(qp[qix][qiy])**2*mean([hqs[i][qjx][qjy]*hqs[i][qix][qiy] 
+		for i in range(len(hqs))])
+		for qix in range(qxn-1) 
+		for qiy in range(qyn-1)]))
+		for qjy in range(qyn-1)]
+		for qjx in range(qxn-1)]
+	print 1
+	term1 = [[
+		norm(sum([norm(q[qjx][qjy])**2*mean([hqs[i][qjx][qjy]*cq[qix][qiy] for i in range(len(hqs))])
+		for qix in range(qxn-1) 
+		for qiy in range(qyn-1)]))
+		for qjy in range(qyn-1)]
+		for qjx in range(qxn-1)]
+	print 2
+	term2 = [[
+		norm(sum([norm(qp[qix][qiy])**2*mean([cq[qjx][qjy]*hqs[i][qix][qiy] for i in range(len(hqs))])
+		for qix in range(qxn-1) 
+		for qiy in range(qyn-1)]))
+		for qjy in range(qyn-1)]
+		for qjx in range(qxn-1)]
+	print 3
+	term3 = [[
+		norm(sum([mean([cq[qjx][qjy]*cq[qix][qiy] for i in range(len(hqs))])
+		for qix in range(qxn-1) 
+		for qiy in range(qyn-1)]))
+		for qjy in range(qyn-1)]
+		for qjx in range(qxn-1)]
+if int(seq[2]):
+	grid = mset.griddims
+	qxn,qyn = grid
+	q0x,q0y = [int(round(i/2.))-1 for i in grid]
+	q = [[[x-q0x,y-q0y] for y in linspace(0,mset.vecs[0][1],grid[1])]
+		for x in linspace(0,mset.vecs[0][0],grid[0])]
+	qp = [[[x-q0x,y-q0y] for y in linspace(0,mset.vecs[0][1],grid[1])]
+		for x in linspace(0,mset.vecs[0][0],grid[0])]
+	q0x,q0y = [int(round(i/2.))-1 for i in shape(q)[0:2]]
+	
+	hqs = []
+	for i in range(len(mset.surf)):
+		hqs.append(fftredundant(mset.surf[i]))
+	cq = fftredundant(c0s[0])
+	print 0
+	term0 = [[
+		norm(sum([norm(q[qjx][qjy])**2*norm(qp[qix][qiy])**2*mean(np.real([hqs[i][qjx][qjy]*hqs[i][qix][qiy]
+		for i in range(len(hqs))]))
+		for qix in range(qxn-1) 
+		for qiy in range(qyn-1)]))
+		for qjy in range(qyn-1)]
+		for qjx in range(qxn-1)]
+	if ismeso:
+		print 1
+		term1 = [[
+			norm(sum([norm(q[qjx][qjy])**2*mean(np.real([hqs[i][qjx][qjy]*cq[qix][qiy] for i in range(len(hqs))]))
+			for qix in range(qxn-1)
+			for qiy in range(qyn-1)]))
+			for qjy in range(qyn-1)]
+			for qjx in range(qxn-1)]
+		print 2
+		term2 = [[
+			norm(sum([norm(qp[qix][qiy])**2*mean(np.real([cq[qjx][qjy]*hqs[i][qix][qiy] for i in range(len(hqs))]))
+			for qix in range(qxn-1)
+			for qiy in range(qyn-1)]))
+			for qjy in range(qyn-1)]
+			for qjx in range(qxn-1)]
+		print 3
+		term3 = [[
+			norm(sum([mean(np.real([cq[qjx][qjy]*cq[qix][qiy] for i in range(len(hqs))]))
+			for qix in range(qxn-1) 
+			for qiy in range(qyn-1)]))
+			for qjy in range(qyn-1)]
+			for qjx in range(qxn-1)]
+	else:
+		term1 = term0
+		term2 = term0
+		term3 = term0
+if int(seq[3]):
+	islognorm = True
+	fig = plt.figure(figsize=(20,12))
+	cmap = mpl.cm.jet
+	gs = gridspec.GridSpec(2,4)
+	ax = plt.subplot(gs[0,0])
+	ax.set_title('term 1')
+	ax.imshow(array(term0).T, extent=None, interpolation='nearest',aspect='equal',origin='lower',
+		cmap=cmap,norm=(mpl.colors.LogNorm() if islognorm else None))
+	ax.set_xlabel(str(array(term0).max()))
+	ax = plt.subplot(gs[0,1])
+	ax.set_title('term 2')
+	ax.imshow(array(term1).T, extent=None, interpolation='nearest',aspect='equal',origin='lower',
+		cmap=cmap,norm=(mpl.colors.LogNorm() if islognorm else None))
+	ax.set_xlabel(str(array(term1).max()))
+	ax = plt.subplot(gs[1,0])
+	ax.set_title('term 3')
+	ax.imshow(array(term2).T, extent=None, interpolation='nearest',aspect='equal',origin='lower',
+		cmap=cmap,norm=(mpl.colors.LogNorm() if islognorm else None))
+	ax.set_xlabel(str(array(term2).max()))
+	ax = plt.subplot(gs[1,1])
+	ax.set_title('term 4')
+	ax.imshow(array(term3).T, extent=None, interpolation='nearest',aspect='equal',origin='lower',
+		cmap=cmap,norm=(mpl.colors.LogNorm() if islognorm else None))
+	ax.set_xlabel(str(array(term3).max()))
+	
+	ax = plt.subplot(gs[0,2])
+	ax.set_title('sum')
+	ax.imshow(array(array(term0)-array(term1)-array(term2)+array(term3)).T, extent=None, interpolation='nearest',aspect='equal',origin='lower',
+		cmap=cmap,norm=(mpl.colors.LogNorm() if islognorm else None))
+	ax.set_xlabel(str(array(array(term0)-array(term1)-array(term2)+array(term3)).max()))
+
+	ax = plt.subplot(gs[1,2])
+	ax.set_title('sum raw ')
+	ax.imshow(array(array(term0)-array(term1)-array(term2)+array(term3)).T, extent=None, interpolation='nearest',aspect='equal',origin='lower',
+		cmap=cmap)
+	ax.set_xlabel(str(array(array(term0)-array(term1)-array(term2)+array(term3)).max()))
+	plt.savefig(pickles+'fig-bilayer-couple-view'+testname+('-lognorm' if islognorm else '')+'.png',
+		dpi=500,bbox_inches='tight')	
+	plt.show()
+
 			
 
 
