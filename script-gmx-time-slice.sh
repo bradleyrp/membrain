@@ -12,8 +12,9 @@ sliceskip=100
 
 #---flags for subset of system
 subset=1
-subsetstring="keep 0\nr PI2P\nkeep 1\nq\n"
-subsetid=".pi2p"
+subsetstring="keep 0\nr DOPC\nkeep 1\nq\n"
+subsetid=".dopc"
+sig="dopc"
 sysinputgro=../s3-start-to-lonestar/system-input.gro
 
 #-------------------------------------------------------------------------------------------------------------
@@ -71,7 +72,7 @@ if [[ $subset -eq 1 ]]; then
 echo "TIMESLICE: Generating group file."
 echo -e $subsetstring | make_ndx \
 	-f $sysinputgro \
-	-o index-subset.ndx \
+	-o index-$sig.ndx \
 	&> log-make-ndx
 
 declare -a filelist2=( )
@@ -86,7 +87,7 @@ for part in ${filelist[@]}; do
 			-s ${part:0:-4}".tpr" \
 			-o $tmpname".xtc" \
 			-b $slicestart \
-			-n index-subset.ndx \
+			-n index-$sig.ndx \
 			-e $sliceend \
 			-skip $(float_eval $sliceskip"/"$timestepps) \
 			&> log-trjconv-$tmpname
@@ -95,6 +96,15 @@ for part in ${filelist[@]}; do
 		echo "missing "$part
 	fi
 done
+
+echo "TIMESLICE: Creating subset GRO file."
+trjconv \
+	-f $sysinputgro \
+	-o system.$sig.gro \
+	-s ${part:0:-4}".tpr" \
+	-n index-$sig.ndx \
+	-pbc mol \
+	&> log-trjconv-subset-gro
 
 #-------------------------------------------------------------------------------------------------------------
 
@@ -141,4 +151,3 @@ done
 
 #-------------------------------------------------------------------------------------------------------------
 
-if 

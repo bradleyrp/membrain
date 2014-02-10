@@ -7,8 +7,11 @@ basedir=../s8-kraken #---Nb only necessary to get a single tpr
 sig=pi2p
 resmolname=PI2P
 subsetstring="keep 0\nr PI2P\nkeep 1\nq\n"
+sublipidsel=" & a P"
+subsubsetstring="keep 0\nr PI2P"$sublipidsel"\nkeep 1\nq\n"
 sysinputgro=../s3-start-to-lonestar/system-input.gro
 systoploc=../s3-start-to-lonestar/
+syssubsetgro=./system.pi2p.gro #---from time-spider
 inputfile=input-md-in.mdp
 declare -a systopfiles=(charmm36.ff lipids-tops system.top)
 nlipids=80
@@ -20,8 +23,8 @@ for file in ${systopfiles[@]}; do
         cp -r $systoploc/$file ./
 done
 
-#---generate a lipid-only trajectory
-echo -e "keep 0\nr PI2P\nkeep 1\nq\n" | make_ndx \
+#---generate index relative to full system
+echo -e $subsetstring | make_ndx \
     -f $sysinputgro \
     -o index-$sig.ndx \
 &> log-make-ndx-$sig
@@ -36,44 +39,44 @@ echo "start lipid is "$subjstartres
 sed '/molecules/q' system.top > system.$sig.top
 echo $resmolname" "$nlipids >> system.$sig.top
 
-#---generate a lipid-only trajectory
-echo -e $subsetstring | make_ndx \
-    -f $sysinputgro \
-    -o index-$sig.ndx \
-&> log-make-ndx-$sig
-
-#---generate a single lipid-only structure
+#---take a subset of the full system
 trjconv \
         -f $sysinputgro \
         -s $(echo `ls -1t $basedir/md.part????.tpr | head -n 1`) \
         -n index-$sig.ndx \
-        -o system-input.$sig.gro  \
+        -o system.$sig.gro  \
 &> log-trjconv-gro
 
-#---generate tpr for a single lipid
+#---generate tpr for the subset of the full system
 echo "writing master tpr"
 grompp \
     -f $inputfile \
-    -c system-input.$sig.gro \
+    -c system.$sig.gro \
     -p system.$sig.top \
     -o md.parts.msd.$sig.tpr \
     -po mdp-master.mdp \
 &> log-grompp-$sig
 
-#---generate a lipid-only trajectory
+#---generate indices for the subset relative to the subset trajectory
 echo -e $subsetstring | make_ndx \
-    -f system-input.$sig.gro \
-    -o index-subset-$sig.ndx \
-&> log-make-ndx-$sig
+    -f system.$sig.gro \
+    -o index-$sig-subset.ndx \
+&> log-make-ndx-$sig-subset
 
-#---generate a single lipid-only structure
+#---generate a subset trajectory
 trjconv \
         -f $basetraj \
         -s md.parts.msd.$sig.tpr \
-        -n index-subset-$sig.ndx \
+        -n index-$sig-subset.ndx \
         -o system.$sig.xtc \
 		-pbc nojump \
 &> log-trjconv-xtc
+
+#---generate indices for the sub-subset
+echo -e $subsubsetstring | make_ndx \
+	-f system.$sig.gro \
+	-o index-$sig-subsubset.ndx \
+&> log-make-ndx-$sig-subset
 
 #---re-write the topology with only a single lipid
 sed '/molecules/q' system.top > system.single.top
@@ -83,65 +86,31 @@ echo $resmolname" 1" >> system.single.top
 for nlip in $(eval echo {0..$(($nlipids-1))}); do
 	echo "starting lipid "$nlip
 
-	#---identify one lipid and write index file
+	#---generate index for the sub-subset single lipid
 	echo "writing index"
-	echo -e "keep 0\nr "$(($nlip+$subjstartres))"\nkeep 1\nq\n" | make_ndx \
-		-f system-input.$sig.gro \
+	echo -e "keep 0\nr "$(($nlip+$subjstartres))""$sublipidsel"\nkeep 1\nq\n" | make_ndx \
+		-f system.$sig.gro \
 		-o $(printf index-%04d.ndx $nlip) \
 	&> $(printf log-make-ndx-%04d.log $nlip)
 
-<<'thiswasstupid'
-	#---write structure for single lipid
-	echo "writing structure"
-	trjconv \
-		-f system-input.$sig.gro \
-		-s md.parts.msd.$sig.tpr \
-		-n $(printf index-%04d.ndx $nlip) \
-		-o $(printf conf-%04d.gro $nlip) \
-	&> $(printf log-trjconv1-%04d.log $nlip)
-
-	#---generate tpr for a single lipid
-	echo "writing tpr"
-	grompp \
-		-f $inputfile \
-		-c $(printf conf-%04d.gro $nlip) \
-		-p system.single.top \
-		-po $(printf mdpout-%04d.mdp $nlip) \
-		-o $(printf conf-%04d.tpr $nlip) \
-	&> $(printf log-grompp-%04d.log $nlip)
-
-	#---isolate the single lipid from the lipid-only trajectory
-	echo "writing xtc"
-	trjconv \
-		-f $basetraj \
-		-o $(printf conf-%04d.xtc $nlip) \
-		-s md.parts.msd.$sig.tpr \
-		-n $(printf index-%04d.ndx $nlip) \
-		-pbc nojump \
-	&> $(printf log-trjconv2-%04d.log $nlip)
-	
 	#---calculate MSD
 	echo "calculating msd"
-	echo -e "0\n" | g_msd \
-		-f $(printf conf-%04d.xtc $nlip) \
-		-o $(printf msd-%04d.xvg $nlip) \
-		-s $(printf conf-%04d.tpr $nlip) \
-		-lateral z \
-	&> $(printf log-msd-%04d.log $nlip)
-thiswasstupid
-
-	#---calculate MSD
-	echo "calculating msd"
-	echo -e "0\n" | g_msd \
+	g_msd \
 		-f system.$sig.xtc \
 		-n $(printf index-%04d.ndx $nlip) \
-		-o $(printf msd-%04d.xvg $nlip) \
+		-o $(printf msd-"$sig"-%04d.xvg $nlip) \
 		-s md.parts.msd.$sig.tpr \
 		-lateral z \
 	&> $(printf log-msd-%04d.log $nlip)
-
-
 done
 
-
+#---final calculation with all molecules selected above, sub-subset
+echo "calculating MSD for the full system"
+echo -e "0\n" | g_msd \
+	-f system.$sig.xtc \
+	-n index-$sig-subsubset.ndx \
+	-o msd-$sig-all.xvg \
+	-s md.parts.msd.$sig.tpr \
+	-lateral z \
+&> log-gmsd-all
 
