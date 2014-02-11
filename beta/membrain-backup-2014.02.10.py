@@ -604,32 +604,62 @@ class MembraneSet:
 						array(self.surf_mean)/lenscale)))
 	
 	def analyze_undulations(self,qmagfilter=[10**-6,10**6],subset=0,redundant=1,
-		lenscale=None,imagefile=None):
+		lenscale=None,imagefile=None,method=None):
 		'''Compute the undulation spectrum.'''
-		self.qcollect = []
-		self.uqcollect = []
-		nframes = len(self.uqraw)
-		if subset == 0: subset = range(len(self.uqraw))
-		#---Compute, fold, and store the fluctuation magnitudes for each frame
-		lenscale = self.lenscale if lenscale == None else lenscale
-		for fr in subset:
-			[m,n] = shape(self.uqraw[0])
-			#---There might be problems here if you calculate the spectrum from the pickle, and the 
-			#---code tries to look up new frames from the universe.
-			[Lx,Ly] = [self.vec(fr)[0]/lenscale,self.vec(fr)[1]/lenscale]
-			flankpos = [[0,0],[0,1],[1,0],[-1,0],[0,-1]]
-			flanking = [[int([round(i/2.) for i in shape(self.uqraw[0])][k]+j[k]) for k in range(2)] for j in flankpos]
-			flankvals = [linalg.norm(self.uqraw[0][i[0]][i[1]]) for i in flanking]
-			flankvals.index(min(flankvals))
-			flankpos[flankvals.index(min(flankvals))]
-			center = [int(round(shape(self.uqraw[0])[j]/2.))+flankpos[flankvals.index(min(flankvals))][j] for j in range(2)]
-			qmag = [[sqrt(((i-center[0])/((Lx)/1.)*2*pi)**2+((j-center[1])/((Ly)/1.)*2*pi)**2) for j in range(0,n)] for i in range(0,m)]
-			endpost = -redundant if redundant != 0 else None
-			self.qcollect.append(array(qmag)[:endpost,:endpost])
-			self.uqcollect.append(array(1.*(abs(self.uqraw[fr])/double(m*n))**2)[:endpost,:endpost])
-		self.uqrawmean = array([i for j in mean(self.uqcollect,axis=0) for i in j])
-		self.uqrawstd = array([i for j in std(self.uqcollect,axis=0) for i in j])
-		self.qrawmean = array([i for j in mean(self.qcollect,axis=0) for i in j])
+		if method == 'before':
+			#---Deprecated/incorrect method. All frames are plotted and fitted before the ensemble average.
+			self.qcollect = []
+			self.uqcollect = []
+			nframes = len(self.uqraw)
+			if subset == 0: subset = range(len(self.uqraw))
+			#---Compute, fold, and store the fluctuation magnitudes for each frame
+			lenscale = self.lenscale if lenscale == None else lenscale
+			for fr in subset:
+				[m,n] = shape(self.uqraw[0])
+				[Lx,Ly] = [self.vec(fr)[0]/lenscale,self.vec(fr)[1]/lenscale]
+				flankpos = [[0,0],[0,1],[1,0],[-1,0],[0,-1]]
+				flanking = [[int([round(i/2.) for i in shape(self.uqraw[0])][k]+j[k]) for k in range(2)] \
+					for j in flankpos]
+				flankvals = [linalg.norm(self.uqraw[0][i[0]][i[1]]) for i in flanking]
+				flankvals.index(min(flankvals))
+				flankpos[flankvals.index(min(flankvals))]
+				center = [int(round(shape(self.uqraw[0])[j]/2.))+\
+					flankpos[flankvals.index(min(flankvals))][j] for j in range(2)]
+				qmag = [[sqrt(((i-center[0])/((Lx)/1.)*2*pi)**2+((j-center[1])/((Ly)/1.)*2*pi)**2) \
+					for j in range(0,n)] for i in range(0,m)]
+				qvecs1d = [i for j in qmag for i in j]
+				uqvecs1d = [i for j in 1.*(abs(self.uqraw[fr])/double(m*n))**2 for i in j]
+				self.qcollect.extend(qvecs1d)
+				self.uqcollect.extend(uqvecs1d)
+			uqrawnormed = [[[linalg.norm(self.uqraw[k][m][n]) for n in range(self.griddims[1]-redundant)] \
+				for m in range(self.griddims[0]-redundant)] for k in range(len(self.uqraw))]
+			self.uqrawmean = array(mean(uqrawnormed,axis=0))
+			self.qrawmean = array(self.qcollect)
+		elif method == None:
+			self.qcollect = []
+			self.uqcollect = []
+			nframes = len(self.uqraw)
+			if subset == 0: subset = range(len(self.uqraw))
+			#---Compute, fold, and store the fluctuation magnitudes for each frame
+			lenscale = self.lenscale if lenscale == None else lenscale
+			for fr in subset:
+				[m,n] = shape(self.uqraw[0])
+				#---There might be problems here if you calculate the spectrum from the pickle, and the 
+				#---code tries to look up new frames from the universe.
+				[Lx,Ly] = [self.vec(fr)[0]/lenscale,self.vec(fr)[1]/lenscale]
+				flankpos = [[0,0],[0,1],[1,0],[-1,0],[0,-1]]
+				flanking = [[int([round(i/2.) for i in shape(self.uqraw[0])][k]+j[k]) for k in range(2)] for j in flankpos]
+				flankvals = [linalg.norm(self.uqraw[0][i[0]][i[1]]) for i in flanking]
+				flankvals.index(min(flankvals))
+				flankpos[flankvals.index(min(flankvals))]
+				center = [int(round(shape(self.uqraw[0])[j]/2.))+flankpos[flankvals.index(min(flankvals))][j] for j in range(2)]
+				qmag = [[sqrt(((i-center[0])/((Lx)/1.)*2*pi)**2+((j-center[1])/((Ly)/1.)*2*pi)**2) for j in range(0,n)] for i in range(0,m)]
+				self.qcollect.append(array(qmag)[:-1-redundant,:-1-redundant])
+				self.uqcollect.append(array(1.*(abs(self.uqraw[fr])/double(m*n))**2)[:-1-redundant,:-1-
+					redundant])
+			self.uqrawmean = array([i for j in mean(self.uqcollect,axis=0) for i in j])
+			self.uqrawstd = array([i for j in std(self.uqcollect,axis=0) for i in j])
+			self.qrawmean = array([i for j in mean(self.qcollect,axis=0) for i in j])
 			
 #---Lipid packing and tilt properties
 
