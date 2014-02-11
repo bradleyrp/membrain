@@ -2,36 +2,39 @@
 
 #---settings
 #---Nb the following locations are required, as is the mdp file and topologies.
-basetraj=s6-kraken-md.part0018.40000-90000-100.pi2p.xtc
+basetraj=s6-kraken-md.part0018.40000-90000-100.dopc.xtc
 basedir=../s8-kraken #---Nb only necessary to get a single tpr
-sig=pi2p
-resmolname=PI2P
-subsetstring="keep 0\nr PI2P\nkeep 1\nq\n"
+sig=dopc
+resmolname=DOPC
+subsetstring="keep 0\nr DOPC\nkeep 1\nq\n"
 sublipidsel=" & a P"
-subsubsetstring="keep 0\nr PI2P"$sublipidsel"\nkeep 1\nq\n"
+subsubsetstring="keep 0\nr DOPC"$sublipidsel"\nkeep 1\nq\n"
 sysinputgro=../s3-start-to-lonestar/system-input.gro
 systoploc=../s3-start-to-lonestar/
-syssubsetgro=./system.pi2p.gro #---from time-spider
+syssubsetgro=./system.dopc.gro #---from time-spider
 inputfile=input-md-in.mdp
 declare -a systopfiles=(charmm36.ff lipids-tops system.top)
-nlipids=80
-nats=150
 
 #---copy topology files to the current directory for tpr generation
 echo "CALCULATING MSD, LIPID-WISE"
 for file in ${systopfiles[@]}; do
         cp -r $systoploc/$file ./
 done
+nlipids=$(awk -v lname="$resmolname " '$0 ~ lname {print $2}' system.top)
+echo "nlipids = "$nlipids
 
 #---generate index relative to full system
+echo "generating index for the full system"
 echo -e $subsetstring | make_ndx \
     -f $sysinputgro \
     -o index-$sig.ndx \
 &> log-make-ndx-$sig
 
 #---calculate the starting residue for the selected block of lipids
-startatom=$(awk 'NR == 2 {print $1}' index-pi2p.ndx)
-resnrline=$(awk -v startat="$startatom" '$0 ~ startat' $sysinputgro | awk -v name="$resmolname" '$0 ~ name {print $0}')
+startatom=$(awk 'NR == 2 {print $1}' index-$sig.ndx)
+#---replaced previous method with general one
+#resnrline=$(awk -v startat="$startatom" '$0 ~ startat' $sysinputgro | awk -v name="$resmolname" '$0 ~ name {print $0}')
+resnrline=$(sed -n -e "/^.\{5\}$(printf %-5s $resmolname).\{5\}$(printf %5s $startatom)/p" ../s3-start-to-lonestar/system-input.gro)
 subjstartres=$(echo "$resnrline" | cut -c 1-5)
 echo "start lipid is "$subjstartres
 
@@ -88,7 +91,7 @@ for nlip in $(eval echo {0..$(($nlipids-1))}); do
 
 	#---generate index for the sub-subset single lipid
 	echo "writing index"
-	echo -e "keep 0\nr "$(($nlip+$subjstartres))""$sublipidsel"\nkeep 1\nq\n" | make_ndx \
+	echo -e "keep 0\nr "$(($nlip+$subjstartres))$sublipidsel "\nkeep 1\nq\n" | make_ndx \
 		-f system.$sig.gro \
 		-o $(printf index-%04d.ndx $nlip) \
 	&> $(printf log-make-ndx-%04d.log $nlip)
