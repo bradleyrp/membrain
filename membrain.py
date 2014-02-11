@@ -603,8 +603,7 @@ class MembraneSet:
 					self.uqraw.append(fft.fftshift(fft.fft2(array(self.surf[k])/lenscale-
 						array(self.surf_mean)/lenscale)))
 	
-	def analyze_undulations(self,qmagfilter=[10**-6,10**6],subset=0,redundant=1,
-		lenscale=None,imagefile=None):
+	def analyze_undulations(self,qmagfilter=[10**-6,10**6],subset=0,lenscale=None,imagefile=None):
 		'''Compute the undulation spectrum.'''
 		self.qcollect = []
 		self.uqcollect = []
@@ -624,9 +623,10 @@ class MembraneSet:
 			flankpos[flankvals.index(min(flankvals))]
 			center = [int(round(shape(self.uqraw[0])[j]/2.))+flankpos[flankvals.index(min(flankvals))][j] for j in range(2)]
 			qmag = [[sqrt(((i-center[0])/((Lx)/1.)*2*pi)**2+((j-center[1])/((Ly)/1.)*2*pi)**2) for j in range(0,n)] for i in range(0,m)]
-			endpost = -redundant if redundant != 0 else None
-			self.qcollect.append(array(qmag)[:endpost,:endpost])
-			self.uqcollect.append(array(1.*(abs(self.uqraw[fr])/double(m*n))**2)[:endpost,:endpost])
+			#endpost = -redundant if redundant != 0 else None
+			#---removed endpost
+			self.qcollect.append(array(qmag))
+			self.uqcollect.append(array(1.*(abs(self.uqraw[fr])/double(m*n))**2))
 		self.uqrawmean = array([i for j in mean(self.uqcollect,axis=0) for i in j])
 		self.uqrawstd = array([i for j in std(self.uqcollect,axis=0) for i in j])
 		self.qrawmean = array([i for j in mean(self.qcollect,axis=0) for i in j])
