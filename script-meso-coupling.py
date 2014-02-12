@@ -2,12 +2,8 @@
 
 from membrainrunner import *
 
-import numpy
-import glob
-import sys
+import numpy, glob, sys, scipy, os
 import xml.etree.ElementTree as ET
-import scipy
-import os
 from numpy.linalg import norm
 import matplotlib.gridspec as gridspec
 
@@ -26,168 +22,130 @@ length = None
 #---plan
 analysis_descriptors = [
 	('/home/rpb/worker/repo-membrane/mesoscale-v2002/t2-anis-22/run1-size-sweep/rep-0/equilibrate/',
-		1500,2000,'v2002-t2-anis-22-run1-rep-0-1500-2000',True,''),
+		1500,1750,'v2002-t2-anis-22-run1-rep-0-1500-2000',True,''),
 	('/home/rpb/worker/repo-membrane/mesoscale-v2002/t1-bare-22/run1-size-sweep/rep-0/equilibrate/',
-		1500,2000,'v2002-t2-bare-22-run1-rep-0-1500-2000',True,''),
+		1500,1510,'v2002-t2-bare-22-run1-rep-0-1500-2000',True,''),
 	('',0,0,'v700',False,'pkl.structures.membrane-v700.md.part0009.500000-700000-400.pkl')]
 ad = analysis_descriptors[0]
 vtudir,start,end,testname,ismeso,pklname = ad
 
+#---method
+#------|------load
+#------||-----calc
+#------|||----plot
+seq = '011'
+
 #---FUNCTIONS
 #-------------------------------------------------------------------------------------------------------------
 
-def fftredundant(dat):
-	return fft.fftshift(fft.fft2(array(dat)[:-1,:-1]))
-	#return fft.fft2(array(dat)[:-1,:-1])
+def fftwrap(dat,redundant=1):
+	'''This function wraps the standard discrete FFT for a system with possible-redundant rows.'''
+	trim = -1 if redundant == 1 else None 
+	return fft.fftshift(fft.fft2(array(dat)[:trim,:trim]))
+	
+def autocorr(dat,direct=0):
+	'''Standard procedure for turning a possibly even grid into an odd one with a distinct center.'''
+	m,n = shape(dat[0])
+	if direct == 0:
+		return array(dat)[:,slice((1 if m%2==0 else None),None),
+			slice((1 if n%2==0 else None),None)]
+	elif direct == 1:
+		return array(dat)[:,slice((-1 if m%2==1 else None),(0 if m%2==0 else None),-1),
+			slice((-1 if n%2==1 else None),(0 if n%2==0 else None),-1)]
 
 #---MAIN
 #-------------------------------------------------------------------------------------------------------------
 
-#------|------load
-#------||-----calc
-#------|||----test, 2d
-#------||||---plot
-seq = '0111'
-
+#---load and interpolate
 if int(seq[0]) or mset.surf == []:
 	if ismeso:
-		extradat = mset.load_points_vtu(vtudir,extra_props='induced_cur',start=start,end=end,nbase=nbase)
+		c0sraw = array(mset.load_points_vtu(vtudir,extra_props='induced_cur',
+			start=start,end=end,nbase=nbase))[:,0]
 		mset.surfacer()
-		c0s = mset.surfacer_general(array(extradat)[:,0])
+		c0s = mset.surfacer_general(c0sraw)
 	else:
 		mset = unpickle(pickles+pklname)
-#---calculations, trial B
+
+#---calculate mode couplings
 if int(seq[1]):
-	mset.calculate_undulation_spectrum(redundant=1)
+	mset.calculate_undulation_spectrum()
 	mset.analyze_undulations()
 	grid = mset.griddims
-	qxn,qyn = grid
-	q0x,q0y = [int(round(i/2.))-1 for i in grid]
-	#q0x,q0y = [float(q0x)/grid[0],float(q0y)/grid[1]]*array(mean(mset.vecs,axis=0))[0:2]
-	Lx,Ly = mean(mset.vecs,axis=0)[0:2]
-	#q0x,q0y = 0,0
-	q = [[[x-q0x,y-q0y] for y in linspace(0,mset.vecs[0][1],grid[1])]
-		for x in linspace(0,mset.vecs[0][0],grid[0])]
-	qp = [[[x-q0x,y-q0y] for y in linspace(0,mset.vecs[0][1],grid[1])]
-		for x in linspace(0,mset.vecs[0][0],grid[0])]
-	qmags = [[norm([x-mset.vecs[0][0]/2,y-mset.vecs[0][1]/2]) for y in linspace(0,mset.vecs[0][1],grid[1])] for x in linspace(0,mset.vecs[0][0],grid[0])]
-	#q0x,q0y = Lx*(grid[0]-0)/(grid[0]+1)/2.,Ly*(grid[1]-0)/(grid[1]+1)/2.
-	qmags = array([[sqrt(((i-q0x)/((Lx)/1.)*2*pi)**2+((j-q0y)/((Ly)/1.)*2*pi)**2) for j in range(0,grid[1])] for i in range(0,grid[0])])
-	#qmags[12][14] = 0.
-	hqs = []
-	for i in range(len(mset.surf)):
-		hqs.append(fftredundant(mset.surf[i]))
-	if not ismeso:
-		c0s = [zeros(grid)]
-	cq = (fftredundant(c0s[0])/double(grid[0]*grid[1]))**2
-	print 0
-	term0 = [[
-		qmags[qjx][qjy]**4*norm(mean(np.real([hqs[i][qjx][qjy]*hqs[i][qjx][qjy]
-		for i in range(len(hqs))])))
-		for qjy in range(qyn-1)]
-		for qjx in range(qxn-1)]
-	print 1
-	term1 = [[
-		qmags[qjx][qjy]**2*norm(mean(np.real([cq[qjx][qjy]*hqs[i][qjx][qjy]
-		for i in range(len(hqs))])))
-		for qjy in range(qyn-1)]
-		for qjx in range(qxn-1)]	
-	print 2
-	term2 = [[
-		qmags[qjx][qjy]**2*norm(mean(np.real([hqs[i][qjx][qjy]*cq[qjx][qjy]
-		for i in range(len(hqs))])))
-		for qjy in range(qyn-1)]
-		for qjx in range(qxn-1)]
-	print 3
-	term3 = [[
-		norm(mean(np.real([cq[qjx][qjy]*cq[qjx][qjy]
-		for i in range(len(hqs))])))
-		for qjy in range(qyn-1)]
-		for qjx in range(qxn-1)]
-#---check 2D FFTs
-if int(seq[2]):
-	redundant = 1
 	m,n = grid[0]-1,grid[1]-1
-	center = [12,14]
+	hqs = [fftwrap(mset.surf[i])/double(m*n) for i in range(len(mset.surf))]
+	cqs = [fftwrap(c0s[i])/double(m*n) for i in range(len(c0s))]
+	Lx,Ly = mean(mset.vecs,axis=0)[0:2]
+	cm,cn = [int(round(i/2.-1)) for i in shape(hqs[0])]
+	qmags = array([[sqrt(((i-cm)/((Lx)/1.)*2*pi)**2+((j-cn)/((Ly)/1.)*2*pi)**2) 
+		for j in range(0,n)] for i in range(0,m)])
+	hqsa = autocorr(hqs,direct=0)
+	hqsb = autocorr(hqs,direct=1)
+	center = [cm,cn]
+	cqsa = autocorr(cqs,direct=0)
+	cqsb = autocorr(cqs,direct=1)
+	qmagst = qmags[0:(-1 if m%2==0 else None),0:(-1 if n%2==0 else None)]
+	mt,nt = shape(hqsa[0])
+	t0 = uqrawmean = mean((abs(array(hqsa)))**2,axis=0)
+	spectrum1d = array([[qmagst[i,j],uqrawmean[i,j]] for j in range(nt) for i in range(mt)])
+	t1 = mean(abs(hqsa)*abs(cqsb),axis=0)
+	t2 = mean(abs(cqsa*hqsb),axis=0)
+	t3 = mean(abs(cqsa*cqsb),axis=0)
+	t1spec = array([[qmagst[i,j],t1[i,j]] for j in range(nt) for i in range(mt)])
+	t2spec = array([[qmagst[i,j],t2[i,j]] for j in range(nt) for i in range(mt)])
+	t3spec = array([[qmagst[i,j],t3[i,j]] for j in range(nt) for i in range(mt)])
+	termsum = t0*qmagst**4-t1*qmagst**2-t2*qmagst**2+t3
+	termsumspec = array([[qmagst[i,j],termsum[i,j]] for j in range(nt) for i in range(mt)])
+	t0spec2 = array([[qmagst[i,j],uqrawmean[i,j]*qmagst[i,j]**4] for j in range(nt) for i in range(mt)])
 
-	uqrawmean = mean((abs(array(hqs))/double(m*n))**2,axis=0)
-	qraw = qmags
-	spectrum1d = array([[qmags[i,j],uqrawmean[i,j]] for j in range(n) for i in range(m)])
-	
-	#---ATOMIC OPERATION !!!
-	hqsa = array(hqs)[:,-1:center[0]%2:-1,-1:center[0]%2:-1]
-	hqsb = array(hqs)[:,(center[0]+1)%2:,(center[0]%2+1):]
-	uqrawmeanlit = mean(abs(hqsa*hqsb)/double(m*n)**2,axis=0)
-	c = center[0]-(center[0]+1)%2,center[1]-(center[1]+1)%2
-	spectrum1d = array([[qmags[i+((center[0]+1)%2),j+((center[1]+1)%2)],uqrawmeanlit[i,j]] for j in range(n-((center[1]+1)%2)) for i in range(m-((center[0]+1)%2))])
-	
-	cqb = cq[(center[0]+1)%2:,(center[0]%2+1):]
-	cqa = cq[-1:center[0]%2:-1,-1:center[0]%2:-1]
-	term1alt = array([[norm(mean(np.real([cqb[qjx][qjy]*hqsa[i][qjx][qjy] for i in range(len(hqs))]))) for qjy in range(qyn-1-(center[0]+1)%2)] for qjx in range(qxn-1-(center[0]+1)%2)])
-	term1spec = array([[qmags[i+((center[0]+1)%2),j+((center[1]+1)%2)],term1alt[i,j]] for j in range(n-((center[1]+1)%2)) for i in range(m-((center[0]+1)%2))]) 
-	term2alt = array([[norm(mean(np.real([hqsb[i][qjx][qjy]*cqa[qjx][qjy] for i in range(len(hqs))]))) for qjy in range(qyn-1-(center[0]+1)%2)] for qjx in range(qxn-1-(center[0]+1)%2)])
-	term2spec = array([[qmags[i+((center[0]+1)%2),j+((center[1]+1)%2)],term2alt[i,j]] for j in range(n-((center[1]+1)%2)) for i in range(m-((center[0]+1)%2))]) 
-	term3alt = array([[norm(mean(np.real([cqb[qjx][qjy]*cqa[qjx][qjy] for i in range(len(hqs))]))) for qjy in range(qyn-1-(center[0]+1)%2)] for qjx in range(qxn-1-(center[0]+1)%2)])
-	term3spec = array([[qmags[i+((center[0]+1)%2),j+((center[1]+1)%2)],term3alt[i,j]] for j in range(n-((center[1]+1)%2)) for i in range(m-((center[0]+1)%2))]) 
-
-	termsumalt2d = [[uqrawmeanlit[i,j]*qmags[i+((center[0]+1)%2),j+((center[1]+1)%2)]**4-
-		term1alt[i,j]*qmags[i+((center[0]+1)%2),j+((center[1]+1)%2)]**2-
-		term2alt[i,j]*qmags[i+((center[0]+1)%2),j+((center[1]+1)%2)]**2+
-		term3alt[i,j] for j in range(n-1)] for i in range(m-1)]
-	termsumalt = [spectrum1d[i,1]*spectrum1d[i,0]**4-2*term1spec[i,1]*term1spec[i,0]**2+term3spec[i,1] for i in range(len(spectrum1d))]
-
-	
-#---plot comparison
-if int(seq[3]):
+#---plots
+if int(seq[2]):
 	islognorm = True
 	fig = plt.figure(figsize=(18,8))
 	cmap = mpl.cm.jet
-	cmap = mpl.cm.get_cmap('RdGy',100)
-	cmap = mpl.cm.binary
 	gs = gridspec.GridSpec(2,5)
 	ax = plt.subplot(gs[0,0])
 	ax.set_title('term 1')
-	ax.imshow(array(uqrawmeanlit).T, extent=None, interpolation='nearest',aspect='equal',origin='lower',
+	ax.imshow(array(t0).T, extent=None, interpolation='nearest',aspect='equal',origin='lower',
 		cmap=cmap,norm=(mpl.colors.LogNorm() if islognorm else None))
-	ax.set_xlabel(str(array(uqrawmeanlit).max()))
+	ax.set_xlabel(str(array(t0).max()))
 	ax = plt.subplot(gs[0,1])
 	ax.set_title('term 2')
-	ax.imshow(array(term1alt).T, extent=None, interpolation='nearest',aspect='equal',origin='lower',
+	ax.imshow(array(t1).T, extent=None, interpolation='nearest',aspect='equal',origin='lower',
 		cmap=cmap,norm=(mpl.colors.LogNorm() if islognorm else None))
-	ax.set_xlabel(str(array(term1alt).max()))
+	ax.set_xlabel(str(array(t1).max()))
 	ax = plt.subplot(gs[1,0])
 	ax.set_title('term 3')
-	ax.imshow(array(term2alt).T, extent=None, interpolation='nearest',aspect='equal',origin='lower',
+	ax.imshow(array(t2).T, extent=None, interpolation='nearest',aspect='equal',origin='lower',
 		cmap=cmap,norm=(mpl.colors.LogNorm() if islognorm else None))
-	ax.set_xlabel(str(array(term2alt).max()))
+	ax.set_xlabel(str(array(t2).max()))
 	ax = plt.subplot(gs[1,1])
 	ax.set_title('term 4')
-	ax.imshow(array(term3alt).T, extent=None, interpolation='nearest',aspect='equal',origin='lower',
+	ax.imshow(array(t3).T, extent=None, interpolation='nearest',aspect='equal',origin='lower',
 		cmap=cmap,norm=(mpl.colors.LogNorm() if islognorm else None))
-	ax.set_xlabel(str(array(term3alt).max()))
+	ax.set_xlabel(str(array(t3).max()))
 	
-	termsum = array(term0)-array(term1)-array(term2)+array(term3)
+	#termsum = array(term0)-array(term1)-array(term2)+array(term3)
 
 	ax = plt.subplot(gs[0,2])
 	ax.set_title('sum')
-	ax.imshow(array(termsumalt2d).T, extent=None,
+	ax.imshow(array(termsum).T, extent=None,
 		interpolation='nearest',aspect='equal',origin='lower',
 		cmap=cmap,norm=(mpl.colors.LogNorm() if islognorm else None))
-	ax.set_xlabel(str(array(termsumalt2d).max()))
+	ax.set_xlabel(str(array(termsum).max()))
 
 	ax = plt.subplot(gs[1,2])
 	ax.set_title('sum raw ')
-	ax.imshow(array(termsumalt2d).T, extent=None,
+	ax.imshow(array(termsum).T, extent=None,
 		interpolation='nearest',aspect='equal',origin='lower',
 		cmap=cmap)
-	ax.set_xlabel(str(array(termsumalt2d).max()))
+	ax.set_xlabel(str(array(termsum).max()))
 
+	#---combined 1D spectra
 	ax2 = plt.subplot(gs[:,3:])
-	
+
+	#---plot undulation spectra 1D
 	lenscale = 1.0
 	qmagfilter=[10**-10,10**6]
-	#ax2.set_xlabel(r"$\left|q\right|$",fontsize=18)
-	#ax2.set_ylabel(r"$\left\langle z_{q}z_{-q}\right\rangle$",fontsize=18)
 	ax2.set_xscale('log')
 	ax2.set_yscale('log')
 	ax2.grid(True)
@@ -215,97 +173,13 @@ if int(seq[3]):
 	ax2.plot(xmod2,ymod2,color='#FF3399',linestyle='-',linewidth=2.5)
 	ax2.plot(xmod4,ymod4,color='#3399FF',linestyle='-',linewidth=2.5)
 	ax2.text(0.1, 0.2, r'$\kappa = %3.2f$'%kappa, transform=ax2.transAxes,fontsize=16)
-	if 0:
-		unscaled0 = sqrt(array(array(term0)))
-		specs0 = array([[qmags[qjx][qjy],unscaled0[qjx][qjy]/qmags[qjx][qjy]**0] 
-			for qjy in range(qyn-1) for qjx in range(qxn-1)])
-		ax2.set_xscale('log')
-		ax2.set_yscale('log')
-		ax2.scatter(specs0[:,0],specs0[:,1],color='r')
-		unscaled1 = sqrt(array(array(term1)))
-		specs1 = array([[qmags[qjx][qjy],unscaled1[qjx][qjy]/qmags[qjx][qjy]**0]
-			for qjy in range(qyn-1)
-			for qjx in range(qxn-1)])
-		ax2.scatter(specs1[:,0],specs1[:,1],color='b')
-		unscaled3 = sqrt(array(array(term3)))
-		specs3 = array([[qmags[qjx][qjy],unscaled3[qjx][qjy]]
-			for qjy in range(qyn-1)
-			for qjx in range(qxn-1)])
-		ax2.scatter(specs3[:,0],specs3[:,1],color='g')
-	
-		unscaledall = sqrt(array(array(termsum)))
-		specsall = array([[qmags[qjx][qjy],unscaledall[qjx][qjy]]
-			for qjy in range(qyn-1)
-			for qjx in range(qxn-1)])
-		ax2.scatter(specsall[:,0],specsall[:,1],color='c')
-		#ax2.set_ylim((0.9*array(term3).min(),1.1*max(array(term0).max(),max(spectrum[:,1]))))
-		#ax2.set_xlim((0.9*min(spectrum[:,0]),1.1*sort(array(qmags).max())))
-	else:
-		ax2.scatter(spectrum1d[:,0],spectrum1d[:,1],color='c')
-	#ax2.set_ylim((10**-14,10**1))
-	#ax2.set_xlim((10**-1,10**1))
-	ax2.scatter(term1spec[:,0],term1spec[:,1],color='r')	
-	ax2.scatter(term2spec[:,0],term2spec[:,1],color='b')
-	ax2.scatter(term3spec[:,0],term3spec[:,1],color='g')
-	ax2.scatter(term3spec[:,0],termsumalt,color='m')
+	ax2.scatter(spectrum1d[:,0],spectrum1d[:,1],color='c')
+	ax2.scatter(t1spec[:,0],t1spec[:,1],color='b',marker='+')	
+	ax2.scatter(t2spec[:,0],t2spec[:,1],color='p',marker='x')
+	ax2.scatter(t3spec[:,0],t3spec[:,1],color='r')
+	ax2.scatter(t0spec2[:,0],t0spec2[:,1],color='g')
+	ax2.scatter(termsumspec[:,0],termsumspec[:,1],color='m')
 	plt.savefig(pickles+'fig-bilayer-couple-view-'+testname+('-lognorm' if islognorm else '')+'.png',
 		dpi=500,bbox_inches='tight')
 	plt.show()
-
-#---EXTRAS
-#-------------------------------------------------------------------------------------------------------------
 	
-#---calculation, trial A
-if 0:
-	grid = mset.griddims
-	qxn,qyn = grid
-	q0x,q0y = [int(round(i/2.))-1 for i in grid]
-	q0x,q0y = [float(q0x)/grid[0],float(q0y)/grid[1]]*array(mean(mset.vecs,axis=0))[0:2]
-	q = [[[x-q0x,y-q0y] for y in linspace(0,mset.vecs[0][1],grid[1])]
-		for x in linspace(0,mset.vecs[0][0],grid[0])]
-	qp = [[[x-q0x,y-q0y] for y in linspace(0,mset.vecs[0][1],grid[1])]
-		for x in linspace(0,mset.vecs[0][0],grid[0])]
-	hqs = []
-	for i in range(len(mset.surf)):
-		hqs.append(fftredundant(mset.surf[i]))
-	if not ismeso:
-		c0s = [zeros(grid)]
-	cq = fftredundant(zeros(grid))
-	print 0
-	term0 = [[
-		norm(sum([norm(q[qjx][qjy])**2*norm(qp[qix][qiy])**2*mean(np.real([hqs[i][qjx][qjy]*hqs[i][qix][qiy]
-		for i in range(len(hqs))]))
-		for qix in range(qxn-1) 
-		for qiy in range(qyn-1)]))
-		for qjy in range(qyn-1)]
-		for qjx in range(qxn-1)]
-	if ismeso:
-		print 1
-		term1 = [[
-			norm(sum([norm(q[qjx][qjy])**2*mean(np.real([hqs[i][qjx][qjy]*cq[qix][qiy] 
-			for i in range(len(hqs))]))
-			for qix in range(qxn-1)
-			for qiy in range(qyn-1)]))
-			for qjy in range(qyn-1)]
-			for qjx in range(qxn-1)]
-		print 2
-		term2 = [[
-			norm(sum([norm(qp[qix][qiy])**2*mean(np.real([cq[qjx][qjy]*hqs[i][qix][qiy] 
-			for i in range(len(hqs))]))
-			for qix in range(qxn-1)
-			for qiy in range(qyn-1)]))
-			for qjy in range(qyn-1)]
-			for qjx in range(qxn-1)]
-		print 3
-		term3 = [[
-			norm(sum([mean(np.real([cq[qjx][qjy]*cq[qix][qiy] for i in range(len(hqs))]))
-			for qix in range(qxn-1) 
-			for qiy in range(qyn-1)]))
-			for qjy in range(qyn-1)]
-			for qjx in range(qxn-1)]
-	else:
-		term1 = term0
-		term2 = term0
-		term3 = term0
-
-

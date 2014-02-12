@@ -222,6 +222,7 @@ class MembraneSet:
 			whichframes = dirlist[start:end:skip]
 		print 'The trajectory directory has '+str(len(whichframes))+' frames available.'
 		extradat = []
+		boundary_pts = []
 		for index in whichframes:
 			tree = ET.parse(vtudir+'/'+prefix+str(index)+suffix)
 			root = tree.getroot()
@@ -234,6 +235,11 @@ class MembraneSet:
 						extra_item_nums.append([j[1][1] for j in [i.items() 
 							for i in root[0].find('Piece').find('PointData').\
 							getchildren()]].index(propstring))
+				boundsind = [j[1][1] for j in [i.items() for i in root[0].find('Piece').find('PointData').\
+					getchildren()]].index('boundary')
+				nonbounds = list(where(array(map(float,root[0].find('Piece').find('PointData').\
+					getchildren()[boundsind].text.split()))==0.0)[0])
+				print nonbounds
 			print 'reading vtu file number '+str(index)
 			coord = root[0].find('Piece').find('Points').find('DataArray').text.split()
 			coord = map(float,coord)
@@ -243,8 +249,8 @@ class MembraneSet:
 			for itemno in extra_item_nums:
 				somedata.append(map(float,root[0].find('Piece').find('PointData').\
 					getchildren()[itemno].text.split()))
-			extradat.append(somedata)
-			self.xyzs.append(array(vcoord))
+			extradat.append(array(somedata)[:,nonbounds])
+			self.xyzs.append(array(vcoord)[nonbounds])
 			self.nframes += 1
 			self.rounder = rounder
 		scalefac = 1.3
@@ -332,11 +338,15 @@ class MembraneSet:
 
 	def surfacer(self,skip=1,interp='best'):
 		'''Interpolate the mesoscale bilayers.'''
-		for i in range(0,len(self.xyzs),skip):
-			print 'Interpolating splines, '+str(i)
-			res0 = self.wrappbc(self.xyzs[i],vecs=self.vecs[i],mode='grow')
-			res1 = self.makemesh(res0,self.vecs[i],self.griddims,method=interp)
-			rezip = self.rezipgrid(res1)
+		for fr in range(0,len(self.xyzs),skip):
+			print 'Interpolating splines, '+str(fr)
+			#---Nb currently set for VTU files from RWT simulations. Needs explained.
+			vecs = self.vecs[fr]
+			grid = self.griddims[0],self.griddims[1]
+			vecs = [vecs[i]-vecs[i]/(grid[i]-1) for i in range(2)]
+			res0 = self.wrappbc(self.xyzs[fr],vecs=vecs,mode='grow')
+			res1 = self.makemesh(res0,vecs,self.griddims,method=interp)
+			rezip = self.rezipgrid(res1,diff=True)
 			self.surf.append(rezip-mean(rezip))
 			
 	def surfacer_general(self,surfdata,skip=1,interp='best'):
@@ -344,10 +354,14 @@ class MembraneSet:
 		interpdata = []
 		for fr in range(0,len(self.xyzs),skip):
 			print 'Interpolating splines, '+str(fr)
+			#---Nb currently set for VTU files from RWT simulations. Needs explained.
+			vecs = self.vecs[fr]
+			grid = self.griddims[0],self.griddims[1]
+			vecs = [vecs[i]-vecs[i]/(grid[i]-1) for i in range(2)]
 			res0 = self.wrappbc(array([[self.xyzs[fr][j][0],self.xyzs[fr][j][1],surfdata[fr][j]] 
-				for j in range(len(surfdata[fr]))]),vecs=self.vecs[fr],mode='grow')
-			res1 = self.makemesh(res0,self.vecs[fr],self.griddims,method=interp)
-			rezip = self.rezipgrid(res1)
+				for j in range(len(surfdata[fr]))]),vecs=vecs,mode='grow')
+			res1 = self.makemesh(res0,vecs,grid,method=interp)
+			rezip = self.rezipgrid(res1,diff=True)
 			interpdata.append(rezip)
 		return interpdata
 			
@@ -1009,14 +1023,23 @@ class MembraneSet:
 		surfreplot = array(surfreplot)
 		return surfreplot
 		
-	def rezipgrid(self,xyz,vecs=None,frameno=0,grid=None,rounder_vecs=[1.0,1.0],reverse=0,diff=0,whichind=2):
+	def rezipgrid(self,xyz,vecs=None,frameno=0,grid=None,rounder_vecs=[1.0,1.0],
+		reverse=0,diff=False,whichind=2):
 		'''Turns a regular set of points in 3-space into a 2D matrix.'''
-		if grid == None: grid = self.griddims
+		#---Nb this is the source of the transpose error, which needs fixed.
+		#---Modifications in the following section for compatibility with the general interpolation function.
+		#---Nb "diff" describes whether we are handling redundant points. Needs explained.
+		if grid == None and diff != True: grid = self.griddims
+		elif grid == None and diff == True: grid = self.griddims[0],self.griddims[1]
+		#elif grid == None and diff == True: grid = self.griddims[0]-1,self.griddims[1]-1
 		if vecs == None: vecs = self.vec(frameno)
-		steps = [vecs[i]/(grid[i]-1) for i in range(2)] if diff == 0 else [vecs[i]/(grid[i]-1)
-			for i in range(2)]
+		print grid
+		print vecs
+		steps = ([vecs[i]/(grid[i]-1) for i in range(2)] 
+			if diff == False else [vecs[i]/(grid[i]) for i in range(2)])
+		print steps
 		poslookup = [[xyz[i][j]/steps[j] for j in range(2)] for i in range(len(xyz))]
-		surfgrid = [[0. for i in range(grid[1]-1*(diff==1))] for j in range(grid[0]-1*(diff==1))]
+		surfgrid = [[0. for i in range(grid[1])] for j in range(grid[0])]
 		for i in range(len(xyz)): 
 			#---Note: added the round command below changes calculate_midplane time from 0.25 to 0.35!
 			if int(poslookup[i][0]) < grid[0] and int(poslookup[i][1]) < grid[1]:
