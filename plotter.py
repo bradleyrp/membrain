@@ -163,7 +163,7 @@ def checkmesh(data,tri=None,vecs=None,grid=None,tess=1,show='both',wirecolor=Non
 	'''Check a triangulated surface. Includes tesselation options.'''
 	if type(data) != ndarray:
 		data = array(data)
-	elif tess == 2:
+	if tess == 2:
 		movetess = [[0,0],[0,1]]
 	elif tess == -1:
 		movetess = [[1,0]]
@@ -184,7 +184,7 @@ def checkmesh(data,tri=None,vecs=None,grid=None,tess=1,show='both',wirecolor=Non
 	elif tess == 'plus':
 		movetess = [[1,0],[0,1],[-1,0],[0,-1]]
 	else:
-		movetess = movetess = [[0,0]]
+		movetess = [[0,0]]
 	for move in movetess:
 		meshplot(data,vecs=vecs,tri=tri,show=show,translate=[move[0]*vecs[0],move[1]*vecs[1],0],
 			wirecolor=wirecolor,surfcolor=None,lsize=lsize)

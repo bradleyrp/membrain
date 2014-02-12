@@ -142,8 +142,8 @@ if int(seq[3]):
 	islognorm = True
 	fig = plt.figure(figsize=(18,8))
 	cmap = mpl.cm.jet
-	#cmap = mpl.cm.get_cmap('RdGy',100)
-	#cmap = mpl.cm.binary
+	cmap = mpl.cm.get_cmap('RdGy',100)
+	cmap = mpl.cm.binary
 	gs = gridspec.GridSpec(2,5)
 	ax = plt.subplot(gs[0,0])
 	ax.set_title('term 1')
