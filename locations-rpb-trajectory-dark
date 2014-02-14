@@ -1,3 +1,14 @@
+#---TRAJECTORY LISTING, DARK, RPB
+#---Note: if proteins in your system, run "editconf -resnr 1" to remove residue numbering redundancies
+
+name=membrane-v614
+struct=/home/rpb/compbio-alt/membrane-v614/s9-lonestar/system-input.resnr.gro
+/home/rpb/compbio-alt/membrane-v614/s9-lonestar/md.part0004.120000-220000-200.trr
+/home/rpb/compbio-alt/membrane-v614/s9-lonestar/md.part0004.120000-220000-200.xtc
+
+name=membrane-v612
+struct=./membrane-v612-analyze/md.part0003.resnr.gro
+
 name=membrane-v700
 struct=/home/rpb/compbio-alt/membrane-v700-exo70-dilute/s6-pip2-fix-begin-start/system-input.resnr.gro
 /home/rpb/compbio-alt/membrane-v700-exo70-dilute/s9-lonestar/md.part0006.360000-460000-200.xtc
@@ -17,133 +28,3 @@ struct=/home/rpb/compbio-alt/membrane-v550/s0-trajectory-full/md.part0007.450.gr
 /home/rpb/compbio-alt/membrane-v550/s0-trajectory-full/md.part0006.200000-300000-200.xtc
 /home/rpb/compbio-alt/membrane-v550/s0-trajectory-full/md.part0006.300000-400000-200.xtc
 
-name=membrane-v534
-struct=/home/rpb/compbio-alt/membrane-v534/s3-sim-kraken/system-input.gro
-/home/rpb/compbio-alt/membrane-v534/s3-sim-kraken/md.part0003.xtc
-/home/rpb/compbio-alt/membrane-v534/s3-sim-kraken/md.part0004.xtc
-/home/rpb/compbio-alt/membrane-v534/s3-sim-kraken/md.part0003.2000-5000-20.xtc
-/home/rpb/compbio-alt/membrane-v534/s3-sim-kraken/md.part0003.2000-5000-4.xtc
-
-name=membrane-v533
-struct=/home/rpb/compbio-alt/membrane-v533/s3-sim-kraken/system-input.gro
-/home/rpb/compbio-alt/membrane-v533/s3-sim-kraken/md.part0003.xtc
-/home/rpb/compbio-alt/membrane-v533/s3-sim-kraken/md.part0004.xtc
-/home/rpb/compbio-alt/membrane-v533/s3-sim-kraken/md.part0003.2000-5000-20.xtc
-/home/rpb/compbio-alt/membrane-v533/s3-sim-kraken/md.part0003.2000-5000-4.xtc
-
-name=membrane-v509
-struct=/home/rpb/worker/repo-membrane/membrane-v509/system-input.gro
-/home/rpb/worker/repo-membrane/membrane-v509/md.part0035.xtc
-
-############## EVERYTHING BELOW IS DEPRECATED
-# changed base directory on 2013.20.21
-
-name=membrane-v530
-struct=/home/rpb/worker/repo-membrane/membrane-v530/system-input.gro
-/home/rpb/worker/repo-membrane/membrane-v530/md.part0004.skip100.xtc
-
-#---Note: if proteins in your system, run "editconf -resnr 1" to remove residue numbering redundancies
-#---name, location may be outdated
-name=membrane-v614
-struct=/compbio/membrane-v614-enthx4-12800/md.part0002.resnr.gro
-./membrane-v614-analyze/md.part0002.skip10.trr
-./membrane-v614-analyze/md.part0002.skip10.xtc
-/compbio/membrane-v614-enthx4-12800/a5-stress-1.0-berendsen/
-
-#---name, location may be outdated
-name=membrane-v612
-struct=./membrane-v612-analyze/md.part0003.resnr.gro
-./membrane-v612-analyze/md.part0003.skip10.xtc
-
-#---name, location may be outdated
-name=membrane-v700-deprec
-struct=./membrane-v700-analyze/md.part0005.resnr.gro
-./membrane-v700-analyze/md.part0005.skip10.xtc
-
-name=membrane-v700
-struct=./membrane-v700-exo70-dilute/a1-stress-1.0-framewise/system-input.gro
-./membrane-v700-exo70-dilute/s9-lonestar/md.part0006.xtc
-
-
-#---name, location may be outdated
-name=membrane-v623-stress-test
-struct=./membrane-v623-stress-test/system-input.resnr.gro
-./membrane-v623-stress-test/md.part0005.skip10.xtc
-./membrane-v623-stress-test/md.part0007.skip10.trr
-
-#---This entry corresponds to the corrected exo70 antiparallel
-#---name, location may be outdated
-name=membrane-v599-old
-struct=./membrane-v599-exo70-antiparallel-alt/relevant.gro
-./membrane-v599-exo70-antiparallel-alt/relevant.xtc
-
-name=membrane-v599-select
-struct=/home/rpb/compbio/membrane-v599-exo70-antiparallel-alt/s1-trajectory-full/md.part0003.select.nosol.gro
-/home/rpb/compbio/membrane-v599-exo70-antiparallel-alt/s1-trajectory-full/md.part0003.select.nosol.xtc
-
-
-#---name, location may be outdated
-name=membrane-v598
-struct=./membrane-v598-exo70-control/relevant.gro
-./membrane-v598-exo70-control/relevant.pbc.xtc
-
-#---name, location may be outdated
-name=membrane-v597
-struct=./membrane-v597-exo70-2xmutant/relevant.gro
-./membrane-v597-exo70-2xmutant/relevant.xtc
-
-#---name, location may be outdated
-name=membrane-v596-relevant
-struct=./membrane-v596-exo70-monomer/s0-trajectory/md.part0000.gro
-./membrane-v596-exo70-monomer/s0-trajectory/md.part0000.xtc
-name=membrane-v596
-struct=./membrane-v596-exo70-monomer/s1-trajectory-full/system-input.gro
-./membrane-v596-exo70-monomer/s1-trajectory-full/md.10to50.xtc
-
-name=membrane-v595
-struct=./membrane-v595-exo70-parallel/s0-trajectory/md.part0000.gro
-./membrane-v595-exo70-parallel/s0-trajectory/md.part0000.xtc
-
-name=membrane-v594-relevant
-struct=./membrane-v594-exo70-antiparallel/s0-trajectory/md.part0000.gro
-./membrane-v594-exo70-antiparallel/s0-trajectory/md.part0000.xtc
-./membrane-v594-exo70-antiparallel/s1-trajectory-full/md.10to50ns.xtc
-name=membrane-v594
-struct=./membrane-v594-exo70-antiparallel/s1-trajectory-full/system-input.gro
-./membrane-v594-exo70-antiparallel/s1-trajectory-full/md.10to50ns.xtc
-
-
-
-#---name, location may be outdated
-#---Note: if proteins in your system, run "editconf -resnr 1" to remove residue numbering redundancies
-name=membrane-v032
-struct=./membrane-v032-exo70-antiparallel-revisit/md.part0002.resnr.gro
-./membrane-v032-exo70-antiparallel-revisit/md.part0002.skip10.xtc
-
-#---name, location may be outdated
-#---Note: if proteins in your system, run "editconf -resnr 1" to remove residue numbering redundancies
-name=membrane-v550
-#struct=./membrane-v550-control/md.part0004.po4c2a.gro
-#./membrane-v550-control/md.parts4to7.skip10.po4c2a.xtc
-struct=/store-delta/compbio/membrane-v550/u0-sim-copy/system-input.gro
-/store-delta/compbio/membrane-v550/u0-sim-copy/md.part0008.shifted.xtc
-/store-delta/compbio/membrane-v550/u0-sim-copy/md.part0008.shifted.trr
-/store-delta/compbio/membrane-v550/u1-stress-1.0-skip10/md.part0008.rerun.trr
-
-name=membrane-v614-stress
-struct=/store-delta/compbio/membrane-v614-enthx4-12800/a5-stress-1.0-berendsen/system-input.resnr.gro
-/store-delta/compbio/membrane-v614-enthx4-12800/a5-stress-1.0-berendsen/md.part0002.rerun.trr
-/store-delta/compbio/membrane-v614-enthx4-12800/a4-stress-1.0-framewise/md.part0002.skip10.trr
-/store-delta/compbio/membrane-v614-enthx4-12800/s6-sim-lonestar/md.part0002.trr
-
-name=membrane-v612-stress
-struct=/store-delta/compbio/membrane-v612-enthx1-12800/a1-stress-1.0-berendsen/system-input.resnr.gro
-/store-delta/compbio/membrane-v612-enthx1-12800/a1-stress-1.0-berendsen/md.part0003.rerun.trr
-/store-delta/compbio/membrane-v612-enthx1-12800/s9-trestles/md.part0003.trr
-
-name=membrane-v550-stress
-struct=/store-delta/compbio/membrane-v550/u0-sim-copy/system-input.gro
-/store-delta/compbio/membrane-v550/u2-stress-1.0/md.part0008.rerun.trr
-/store-delta/compbio/membrane-v550/u0-sim-copy/md.part0008.shifted.trr
-
-############## EVERYTHING ABOVE IS DEPRECATED

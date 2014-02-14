@@ -4,6 +4,7 @@
 #-------------------------------------------------------------------------------------------------------------
 
 #---Basic libraries
+execfile('/etc/pythonstart')
 import time
 import argparse
 import string
@@ -16,6 +17,8 @@ import collections
 import time
 import random
 import subprocess
+import re
+import code
 
 #---Set up visualization
 os.environ['ETS_TOOLKIT'] = 'qt4'
@@ -336,7 +339,7 @@ class MembraneSet:
 			
 #---Shape functions
 
-	def surfacer(self,skip=1,interp='best'):
+	def surfacer(self,skip=1,interp='best',lenscale=None):
 		'''Interpolate the mesoscale bilayers.'''
 		for fr in range(0,len(self.xyzs),skip):
 			print 'Interpolating splines, '+str(fr)
@@ -346,8 +349,10 @@ class MembraneSet:
 			vecs = [vecs[i]-vecs[i]/(grid[i]-1) for i in range(2)]
 			res0 = self.wrappbc(self.xyzs[fr],vecs=vecs,mode='grow')
 			res1 = self.makemesh(res0,vecs,self.griddims,method=interp)
-			rezip = self.rezipgrid(res1,diff=True)
+			rezip = self.rezipgrid(res1)
 			self.surf.append(rezip-mean(rezip))
+		#---scale box vectors by the correct length scale
+		self.vecs = [[j*self.lenscale for j in i] for i in self.vecs]
 			
 	def surfacer_general(self,surfdata,skip=1,interp='best'):
 		'''Interpolate any quantity, as long as you supply it in the order of the xyz positions.'''
@@ -361,7 +366,7 @@ class MembraneSet:
 			res0 = self.wrappbc(array([[self.xyzs[fr][j][0],self.xyzs[fr][j][1],surfdata[fr][j]] 
 				for j in range(len(surfdata[fr]))]),vecs=vecs,mode='grow')
 			res1 = self.makemesh(res0,vecs,grid,method=interp)
-			rezip = self.rezipgrid(res1,diff=True)
+			rezip = self.rezipgrid(res1)
 			interpdata.append(rezip)
 		return interpdata
 			
@@ -447,9 +452,11 @@ class MembraneSet:
 		self.monolayer1.append(topmesh)
 		self.monolayer2.append(botmesh)
 		#---Take the average surface
-		surfz = [[1./2*(self.rezipgrid(topmesh,frameno=frameno)[i][j]+\
-			self.rezipgrid(botmesh,frameno=frameno)[i][j]) for i in range(self.griddims[0])] \
-			for j in range(self.griddims[1])]
+		#---Nb this is the location of the infamous transpose errors. Forgot to reverse order of list indices
+		topzip = self.rezipgrid(topmesh,frameno=frameno)
+		botzip = self.rezipgrid(botmesh,frameno=frameno)
+		surfz = [[1./2*(topzip[i][j]+botzip[i][j]) for j in range(self.griddims[1])] 
+			for i in range(self.griddims[0])]
 		self.surf_position.append(mean(surfz))
 		surfz = surfz - mean(surfz)
 		self.surf.append(surfz)
@@ -586,13 +593,13 @@ class MembraneSet:
 
 #---Undulation spectra functions
 
-	def calculate_undulation_spectrum(self,removeavg=0,redundant=1,whichframes=None):
+	def calculate_undulation_spectrum(self,removeavg=0,redundant=1,whichframes=None,lenscale=None):
 		'''Fourier transform surface heights.'''
 		if whichframes == None:
 			framerange = range(len(self.surf))
 		else:
 			framerange = whichframes
-		lenscale = self.lenscale
+		lenscale = self.lenscale if lenscale == None else lenscale
 		self.uqraw = []
 		if removeavg == 0:
 			for k in framerange:
@@ -1029,21 +1036,20 @@ class MembraneSet:
 		#---Nb this is the source of the transpose error, which needs fixed.
 		#---Modifications in the following section for compatibility with the general interpolation function.
 		#---Nb "diff" describes whether we are handling redundant points. Needs explained.
+		#---Nb I removed all references to diff in the process of fixing script-meso-coupling code.
+		print random.randn()
 		if grid == None and diff != True: grid = self.griddims
 		elif grid == None and diff == True: grid = self.griddims[0],self.griddims[1]
-		#elif grid == None and diff == True: grid = self.griddims[0]-1,self.griddims[1]-1
 		if vecs == None: vecs = self.vec(frameno)
-		print grid
-		print vecs
 		steps = ([vecs[i]/(grid[i]-1) for i in range(2)] 
 			if diff == False else [vecs[i]/(grid[i]) for i in range(2)])
-		print steps
 		poslookup = [[xyz[i][j]/steps[j] for j in range(2)] for i in range(len(xyz))]
 		surfgrid = [[0. for i in range(grid[1])] for j in range(grid[0])]
 		for i in range(len(xyz)): 
 			#---Note: added the round command below changes calculate_midplane time from 0.25 to 0.35!
 			if int(poslookup[i][0]) < grid[0] and int(poslookup[i][1]) < grid[1]:
-				surfgrid[int(round(poslookup[i][0]))][int(round(poslookup[i][1]))] = xyz[i][whichind]
+				surfgrid[int(round(poslookup[i][0]))][int(round(poslookup[i][1]))] = \
+					self.lenscale*xyz[i][whichind]
 		return surfgrid
 		
 #---Retrieving data

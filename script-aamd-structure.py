@@ -21,10 +21,11 @@ director_aamd_symmetric = ['name P and not resname CHL1','name C218','name C318'
 director_aamd_asymmetric = ['(name P and not resname CHL1) or (name C3 and resname CHL1)',
 	'(name C218 and not resname CHL1) or (name C25 and resname CHL1)']
 selector_aamd_symmetric = 'name P'
+selector_aamd_asymmetric = '(name P and not resname CHL1)'
 selector_aamd_asymmetric = '(name P and not resname CHL1) or (name C3 and resname CHL1)'
-#selector_aamd_asymmetric = '(name P and not resname CHL1)'
 residues_aamd_symmetric = ['DOPC','DOPS','PI2P']
 residues_aamd_asymmetric = ['DOPC','DOPS','DOPE','POPC','P35P','PI2P']
+sel_aamd_surfacer = ['name P','(name C2 and not resname CHL1)']
 	
 #---Analysis plan
 analysis_plan = slice(-1,None)

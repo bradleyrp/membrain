@@ -12,6 +12,7 @@ if 0:
 	director_cgmd = ['name PO4','name C4A','name C4B']
 	selector_cgmd = 'name PO4'
 	cgmd_protein = 'name BB'
+	sel_aamd_surfacer = ['name P','(name C2 and not resname CHL1)']
 
 	#---analysis plan
 	analysis_plan = slice(None,None)

@@ -1,7 +1,7 @@
 #!/usr/bin/python 
 
 #---Automatically detect location
-if location == '':
+if 'location' not in globals() or location == '' or location == None:
 	if subprocess.check_output(['echo $HOSTNAME'],shell=True).strip('\n') == 'dark.site': location = 'dark'
 	elif subprocess.check_output(['echo $HOSTNAME'],shell=True).strip('\n') == 'light.site': location = 'light'
 	elif subprocess.check_output(['echo $HOSTNAME'],shell=True).strip('\n') == 'dirac': location = 'dirac'
@@ -32,3 +32,17 @@ elif location == 'dark':
 
 #---Load locations from the table-of-contents
 [systems,structures,trajectories] = parse_locations_file(basedir,locations)
+
+#---Post-mortem (cleanup) function
+#---Nb: as far as I can tell, there is no way to implicitly send the script globals() object back to
+#---our wrapper module (membrainrunner.py). The other direction is easy with either "from __main__ import *" or 
+#---simply using execfile, in which case an import/execfile command drops the globals into the module. The other
+#---direction is impossible, and since we always call locations.py with execfile, it makes sense to put the
+#---following interactive terminal option in here. When you register the postmortem function here, it doesn't
+#---actually take globals until the script tries to exit, so it doesn't matter that this comes early.
+#---Would be nice to find a way to use the exception trick to grab the namespace, or something similar.
+if 'interact' in globals() and interact:
+	atexit.register(postmortem,
+		banner='Here is the interactive terminal you wanted.',
+		scriptglobals=globals())
+

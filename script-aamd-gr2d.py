@@ -17,6 +17,7 @@ director_symmetric = ['name P','name C218','name C318']
 director_asymmetric = ['(name P and not resname CHL1) or (name C3 and resname CHL1)',
 		'(name C218 and not resname CHL1) or (name C25 and resname CHL1)']
 selector = '(name P and not resname CHL1) or (name C3 and resname CHL1)'
+sel_aamd_surfacer = ['name P','(name C2 and not resname CHL1)']
 
 #---analysis plan
 analysis_descriptors = [
