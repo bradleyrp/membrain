@@ -61,9 +61,8 @@ for ad in analyses:
 		sel_surfacer = sel_cgmd_surfacer
 		print 'Accessing '+basename+'.'
 		starttime = time.time()
-		mset.load_trajectory((basedir+'/'+gro,basedir+'/'+traj),
-			resolution='cgmd')
-		print 'Load complete and it took '+str(1./60*(time.time()-starttime))+' minutes.'
+		mset.load_trajectory((basedir+'/'+gro,basedir+'/'+traj),resolution='cgmd')
+		print 'time = '+str(1./60*(time.time()-starttime))+' minutes.'
 		#---Average structure calculation
 		mset.identify_monolayers(director,startframeno=0)
 		if protein_select == None:
@@ -71,7 +70,7 @@ for ad in analyses:
 		else:
 			mset.midplaner(selector,skip=skip,rounder=rounder,framecount=framecount,
 				protein_selection=protein_select,timeslice=timeslice)
-		mset.calculate_undulation_spectrum(removeavg=0,redundant=0)
+		mset.calculate_undulation_spectrum(removeavg=0,redundant=1)
 		mset.analyze_undulations()
 		#---Save the data
 		pickledump(mset,'pkl.structures.'+sysname+'.'+basename[:11]+'.'+str(timeslice[0])+'-'+

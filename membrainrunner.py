@@ -10,7 +10,7 @@ import sys, atexit, code
 if '-d' in sys.argv: debugmode = True
 if '-i' in sys.argv:
 	interact = True
-	if logfile != None:
+	if 'logfile' in globals() and logfile != None:
 		print 'overriding log file because you set interactive flag'
 		logfile = None
 
@@ -129,7 +129,7 @@ elif 'logfile' in globals():
 #---switching to interactive mode on error
 #---enable via the "-d" flag to either the script or membrainrunner
 #---enable also via setting the debugmode variable to True in the script
-if ('debugmode' in globals() and debugmode) or args.debugmod:
+if ('debugmode' in globals() and debugmode) or args.debugmode:
 	sys.excepthook = postmortem_debug
 
 #---pass arguments and call a function

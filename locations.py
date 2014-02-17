@@ -20,6 +20,10 @@ elif location == 'light':
 	pickles = '/home/rpb/worker/repo-pickles/'
 	plot_suppress = False
 	execfile('plotter.py')
+	#---commands for sans-serif fonts on all plots
+	mpl.rc('font',**{'family':'sans-serif','sans-serif':['Helvetica']})
+	mpl.rc('text', usetex=True)
+	mpl.rc('text.latex', preamble='\usepackage{sfmath}')
 	erase_when_finished = False
 #---Set data locations according to system: RPB desktop
 elif location == 'dark':
@@ -28,7 +32,32 @@ elif location == 'dark':
 	pickles = '/home/rpb/worker/repo-pickles/'
 	plot_suppress = False
 	execfile('plotter.py')
+	#---commands for sans-serif fonts on all plots
+	mpl.rc('font',**{'family':'sans-serif','sans-serif':['Helvetica']})
+	mpl.rc('text', usetex=True)
+	if 0:
+		mpl.rc('text.latex', preamble='\usepackage{sfmath}')
+	else:
+		#---hacks to allow "boldsymbol" on wispy kappas
+		mpl.rcParams['text.latex.preamble'] = [
+			r'\usepackage{sfmath}',r'\usepackage{amsmath}',r'\usepackage{siunitx}',r'\sisetup{detect-all}',
+			r'\usepackage{helvet}',r'\usepackage{sansmath}',r'\sansmath']  
 	erase_when_finished = False
+	fsaxtext = 18
+	fsaxlabel = 18
+	fsaxticks = 18
+#---Set data locations according to system: DS
+elif location == 'ds':
+	#---Nb: put system-specific commands here. 
+	basedir = ''
+	locations = ''
+	pickles = ''
+	plot_suppress = False
+	execfile('plotter.py')
+	#---plot commands previously found in plotter.py
+	mpl.rc('font',**{'family':'sans-serif','sans-serif':['Helvetica']})
+	mpl.rc('text', usetex=True) 
+	mpl.rc('text.latex', preamble='\usepackage{sfmath}')
 
 #---Load locations from the table-of-contents
 [systems,structures,trajectories] = parse_locations_file(basedir,locations)
@@ -42,7 +71,12 @@ elif location == 'dark':
 #---actually take globals until the script tries to exit, so it doesn't matter that this comes early.
 #---Would be nice to find a way to use the exception trick to grab the namespace, or something similar.
 if 'interact' in globals() and interact:
-	atexit.register(postmortem,
-		banner='Here is the interactive terminal you wanted.',
-		scriptglobals=globals())
+	if 'postmortem' not in [i[0].__name__ for i in atexit._exithandlers]:
+		atexit.register(postmortem,
+			banner='Here is the interactive terminal you wanted.',
+			scriptglobals=globals())
 
+#---Universal definitions
+#---Nb: these are used for parsing frames, but I set the defaults here
+skip = None
+framecount = None

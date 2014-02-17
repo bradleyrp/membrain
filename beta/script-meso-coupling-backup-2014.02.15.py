@@ -9,7 +9,7 @@ execfile('locations.py')
 #---settings
 xyzform = 'rect'
 nbase = 22
-#lenscale = 1.0/(1.)
+lenscale = 4.0
 length = None
 qmagfilter=[10**-10,10**6]
 
@@ -24,11 +24,6 @@ ad = analysis_descriptors[0]
 vtudir,start,end,testname,ismeso,pklname,isbare = ad
 barecompare = True
 baresys = 1
-removeavg = False
-fitlims = [4,2]
-forcekappa = True
-mdcompare = True
-mdpkl = 'pkl.structures.membrane-v614.s9-lonestar.120000-220000-200.pkl'
 
 #---method 
 '''	   |---------load
@@ -37,13 +32,12 @@ mdpkl = 'pkl.structures.membrane-v614.s9-lonestar.120000-220000-200.pkl'
        ||||------plot compare hqhq
        |||||-----plot compare hqhqq4
        ||||||----plot spectrum, 1D '''
-seq = '010011'
+seq = '010001'
 
 #---settings
-showplots = True
-sskip = 4 #---sets the xy ticks spacing  in units of lenscale on any 2D spectra
-clrs = [(brewer2mpl.get_map('Set1', 'qualitative', 8).mpl_colors)[i] for i in [0,3,7,2,1,4]]
-cmap = mpl.cm.jet
+showplots = False
+sskip=4 #---sets the xy ticks spacing  in units of lenscale on any 2D spectra
+clrs = [(brewer2mpl.get_map('Set2', 'qualitative', 8).mpl_colors)[i] for i in [0,2,3,4,1,5,6,7]]
 
 #---FUNCTIONS
 #-------------------------------------------------------------------------------------------------------------
@@ -53,15 +47,14 @@ def fftwrap(dat,redundant=1):
 	trim = -1 if redundant == 1 else None 
 	return fft.fftshift(fft.fft2(array(dat)[:trim,:trim]))
 	
-def autocorr(dat,direct=0,lenscale=None):
+def autocorr(dat,direct=0):
 	'''Standard procedure for turning a possibly even grid into an odd one with a distinct center.'''
-	if lenscale == None: lenscale = 1.0
 	m,n = shape(dat[0])
 	if direct == 0:
-		return 1./lenscale*array(dat)[:,slice((1 if m%2==0 else None),None),
+		return array(dat)[:,slice((1 if m%2==0 else None),None),
 			slice((1 if n%2==0 else None),None)]
 	elif direct == 1:
-		return 1./lenscale*array(dat)[:,slice((-1 if m%2==1 else None),(0 if m%2==0 else None),-1),
+		return array(dat)[:,slice((-1 if m%2==1 else None),(0 if m%2==0 else None),-1),
 			slice((-1 if n%2==1 else None),(0 if n%2==0 else None),-1)]
 
 #---MAIN
@@ -69,14 +62,8 @@ def autocorr(dat,direct=0,lenscale=None):
 
 #---load and interpolate
 if int(seq[0]) or mset.surf == []:
-	if mdcompare:
-		print 'loading md comparison'
-		msetmd = unpickle(pickles+mdpkl)
-		#---infer the a0 factor to match system sizes
-		lenscale = max(mean(mset2.vecs,axis=0))/((mean(msetmd.vecs,axis=0))[0]/msetmd.lenscale)
-		print 'reset lenscale = '+str(lenscale)
 	if ismeso:
-		c0sraw = array(mset.load_points_vtu(vtudir,extra_props='induced_cur',
+		c0sraw = 1./lenscale*array(mset.load_points_vtu(vtudir,extra_props='induced_cur',
 			start=start,end=end,nbase=nbase,lenscale=lenscale))[:,0]
 		mset.surfacer()
 		c0s = mset.surfacer_general(c0sraw)
@@ -89,75 +76,75 @@ if int(seq[0]) or mset.surf == []:
 		mset2.load_points_vtu(vtudirb,start=startb,end=endb,nbase=nbase,lenscale=lenscale)
 		mset2.surfacer()
 		
-		
 #---calculate mode couplings
 if int(seq[1]):
-	mset.lenscale = lenscale
-	mset.calculate_undulations(removeavg=removeavg,fitlims=fitlims,forcekappa=forcekappa)
+	mset.calculate_undulation_spectrum(lenscale=1./lenscale)
+	mset.analyze_undulations()
 	grid = mset.griddims
 	m,n = grid[0]-1,grid[1]-1
 	hqs = [fftwrap(mset.surf[i])/double(m*n) for i in range(len(mset.surf))]
-	cqs = [fftwrap(lenscale*array(c0s[i]))/double(m*n) for i in range(len(c0s))]
+	cqs = [fftwrap(c0s[i])/double(m*n) for i in range(len(c0s))]
 	Lx,Ly = mean(mset.vecs,axis=0)[0:2]
 	cm,cn = [int(round(i/2.-1)) for i in shape(hqs[0])]
-	qmags = lenscale*array([[sqrt(((i-cm)/((Lx)/1.)*2*pi)**2+((j-cn)/((Ly)/1.)*2*pi)**2) 
+	qmags = array([[sqrt(((i-cm)/((Lx)/1.)*2*pi)**2+((j-cn)/((Ly)/1.)*2*pi)**2) 
 		for j in range(0,n)] for i in range(0,m)])
-	hqsa = autocorr(hqs,direct=0,lenscale=lenscale)
-	hqsb = autocorr(hqs,direct=1,lenscale=lenscale)
+	hqsa = autocorr(hqs,direct=0)
+	hqsb = autocorr(hqs,direct=1)
 	center = [cm,cn]
-	cqsa = autocorr(cqs,direct=0,lenscale=lenscale)
-	cqsb = autocorr(cqs,direct=1,lenscale=lenscale)
+	cqsa = autocorr(cqs,direct=0)
+	cqsb = autocorr(cqs,direct=1)
 	qmagst = qmags[0:(-1 if m%2==0 else None),0:(-1 if n%2==0 else None)]
-	qmagst_err = np.std(qmagst,axis=0)
 	mt,nt = shape(hqsa[0])
-	t0 = mean((abs(array(hqsa)))**2,axis=0)
+	t0 = uqrawmean = mean((abs(array(hqsa)))**2,axis=0)
+	spectrum1d = array([[qmagst[i,j],uqrawmean[i,j]] for j in range(nt) for i in range(mt)])
 	t1 = mean(abs(hqsa)*abs(cqsb),axis=0)
 	t2 = mean(abs(cqsa*hqsb),axis=0)
 	t3 = mean(abs(cqsa*cqsb),axis=0)
-	t0e = std((abs(array(hqsa)))**2,axis=0)
-	t1e = std(abs(hqsa)*abs(cqsb),axis=0)
-	t2e = std(abs(cqsa*hqsb),axis=0)
-	t3e = std(abs(cqsa*cqsb),axis=0)
-	t0spec = array([[qmagst[i,j],t0[i,j]] for j in range(nt) for i in range(mt)])
 	t1spec = array([[qmagst[i,j],t1[i,j]] for j in range(nt) for i in range(mt)])
 	t2spec = array([[qmagst[i,j],t2[i,j]] for j in range(nt) for i in range(mt)])
 	t3spec = array([[qmagst[i,j],t3[i,j]] for j in range(nt) for i in range(mt)])
-	area = double(mean([mset.vec(i)[0]*mset.vec(i)[1] for i in mset.surf_index])/mset.lenscale**2)
-	scalefac = mset.undulate_kappa*area
 	termsum = t0*qmagst**4-t1*qmagst**2-t2*qmagst**2+t3
 	extraterms = -1*t1*qmagst**2-t2*qmagst**2+t3
-	termsumspec = array([[qmagst[i,j],scalefac*termsum[i,j]] for j in range(nt) for i in range(mt)])
-	termsumspec_err = array([[qmagst[i,j],
-		scalefac*sqrt((t0e[i,j]*qmagst[i,j]**4)**2+(2*qmagst[i,j]**2*t1e[i,j])**2+(t3e[i,j])**2)] 
-		for j in range(nt) for i in range(mt)])
-	termsumspec_err[termsumspec_err>=termsumspec] = termsumspec[termsumspec_err>=termsumspec]*.999999
-	t0spec2 = array([[qmagst[i,j],t0[i,j]*qmagst[i,j]**4] for j in range(nt) for i in range(mt)])
+	termsumspec = array([[qmagst[i,j],termsum[i,j]] for j in range(nt) for i in range(mt)])
+	t0spec2 = array([[qmagst[i,j],uqrawmean[i,j]*qmagst[i,j]**4] for j in range(nt) for i in range(mt)])
 	t1spec2 = array([[qmagst[i,j],t1[i,j]*qmagst[i,j]**2] for j in range(nt) for i in range(mt)])
 	t2spec2 = array([[qmagst[i,j],t2[i,j]*qmagst[i,j]**2] for j in range(nt) for i in range(mt)])
 	t3spec2 = array([[qmagst[i,j],t3[i,j]] for j in range(nt) for i in range(mt)])
 	if barecompare:
-		mset2.lenscale = lenscale
-		mset2.calculate_undulations(removeavg=removeavg,fitlims=fitlims,forcekappa=forcekappa)
-		area = double(mean([mset2.vec(i)[0]*mset2.vec(i)[1] for i in mset2.surf_index])/mset2.lenscale**2)
-		scalefacbare = mset2.undulate_kappa*area
-		specbare = mset2.undulate_spec1d
-		energy_bare = array([[specbare[j,0],specbare[j,0]**4*specbare[j,1]*scalefacbare] 
-			for j in range(len(specbare))])
-		t0_bare = autocorr([mset2.undulate_hqhq2d])[0]
-	if mdcompare:
-		area = double(mean([msetmd.vec(i)[0]*msetmd.vec(i)[1] for i in msetmd.surf_index])/msetmd.lenscale**2)
-		scalefac = msetmd.undulate_kappa*area
-		specmd = msetmd.undulate_spec1d
-		energy_md = array([[specmd[j,0],specmd[j,0]**4*specmd[j,1]*scalefac] 
-			for j in range(len(specmd))])
+		mset2.calculate_undulation_spectrum(lenscale=1./lenscale)
+		mset2.analyze_undulations()
+		grid = mset2.griddims
+		m,n = grid[0]-1,grid[1]-1
+		hqs_bare = [fftwrap(mset2.surf[i])/double(m*n) for i in range(len(mset2.surf))]
+		hqsa_bare = autocorr(hqs_bare,direct=0)
+		t0_bare = uqrawmean = mean((abs(array(hqsa_bare)))**2,axis=0)
+		cqs = [fftwrap(c0s[i])/double(m*n) for i in range(len(c0s))]
+		Lx,Ly = mean(mset2.vecs,axis=0)[0:2]
+		cm,cn = [int(round(i/2.-1)) for i in shape(hqs_bare[0])]
+		qmags2 = array([[sqrt(((i-cm)/((Lx)/1.)*2*pi)**2+((j-cn)/((Ly)/1.)*2*pi)**2) 
+			for j in range(0,n)] for i in range(0,m)])
+		qmagfilter=[10**-10,10**6]
+		spectrum = array(sorted(zip(*[mset2.qrawmean,mset2.uqrawmean,mset2.uqrawstd]),
+			key=lambda x: x[0]))[1:]
+		spectrumf = array(filter(lambda x: x[0] >= qmagfilter[0] and x[0] <= qmagfilter[1], spectrum))
+		specbare = array(filter(lambda x: x[0] >= 1./10.*qmagfilter[0] and 
+			x[0] <= qmagfilter[1]*10.,spectrum))
+		energy_bare = array([[specbare[j,0],specbare[j,0]**4*specbare[j,1]] for j in range(len(specbare))])
 	
-#---view individual contributions to the energy terms in two dimensions
+#---plots
 if int(seq[2]):
+
+	#---settings
 	islognorm = True
 	vmin = 10**-10
 	vmax = 10**0
+	cmap = mpl.cm.jet
+
+	#---figure for 2D plots
 	fig = plt.figure(figsize=(8,8))
 	gs = gridspec.GridSpec(2,2)
+
+	#---2D plots
 	axes = []
 	ax = plt.subplot(gs[0,0])
 	axes.append(ax)
@@ -189,6 +176,7 @@ if int(seq[2]):
 	divider = make_axes_locatable(ax)
 	cax3 = divider.append_axes("right", size="5%", pad=0.05)
 	plt.colorbar(im3,cax=cax3)
+
 	for a in range(len(axes)):
 		ax = axes[a]
 		if a != 0:
@@ -203,6 +191,7 @@ if int(seq[2]):
 			ax.set_ylabel(r'$\left|\mathbf{q_y}\right|(\mathrm{nm^{-1}})$',fontsize=14)
 		if a in [2,3]:
 			ax.set_xlabel(r'$\left|\mathbf{q_x}\right|(\mathrm{nm^{-1}})$',fontsize=14)
+
 	plt.savefig(pickles+'fig-bilayer-couple-view-terms-'+testname+'.png',
 		dpi=500,bbox_inches='tight')
 	if showplots:
@@ -210,8 +199,10 @@ if int(seq[2]):
 	plt.cla()
 	plt.clf()
 
-#---plots, compare 2D undulation spectra between bare and protein systems
+#---plots, compare undulation spectra between bare and protein systems
 if int(seq[3]) and barecompare:
+
+	#---figure for 2D plots
 	fig = plt.figure(figsize=(8,8))
 	gs2 = gridspec.GridSpec(1,2,wspace=0.4)
 	axes = []
@@ -220,16 +211,23 @@ if int(seq[3]) and barecompare:
 	m,n = mset2.griddims
 	imdat1 = (abs(mean(mset2.uqraw,axis=0))/double(m*n)**2)
 	extrema = [min(imdat0.min(),imdat1.min()),max(imdat0.max(),imdat1.max())]
+
 	ax = plt.subplot(gs2[0])
 	axes.append(ax)
 	ax.set_title(r'$\mathbf{\left\langle h_{q}h_{-q}\right\rangle}$, protein',fontsize=18)
 	im = ax.imshow(array(imdat0).T, extent=None,interpolation='nearest',
 		aspect='equal',origin='lower',cmap=cmap,norm=mpl.colors.LogNorm(),vmin=extrema[0],vmax=extrema[1])
+
 	ax = plt.subplot(gs2[1])
 	axes.append(ax)
 	im = ax.imshow(array(imdat1).T,extent=None,interpolation='nearest',
 		aspect='equal',origin='lower',cmap=cmap,norm=mpl.colors.LogNorm(),vmin=extrema[0],vmax=extrema[1])
 	ax.set_title(r'$\mathbf{\left\langle h_{q}h_{-q}\right\rangle}$, bare',fontsize=18)
+	if 0:
+		divider = make_axes_locatable(ax)
+		cax = divider.append_axes("right", size="5%", pad=0.05)
+		plt.colorbar(im,cax=cax)
+
 	for a in range(len(axes)):
 		ax = axes[a]
 		ax.set_xlabel(r'$\left|\mathbf{q_x}\right|(\mathrm{nm^{-1}})$',fontsize=14)
@@ -241,6 +239,7 @@ if int(seq[3]) and barecompare:
 		ax.set_yticks(array(list(arange(0,n/2,sskip)*-1)[:0:-1]+list(arange(0,n/2,sskip)))+cn+1)
 		ax.axes.set_yticklabels([int(i) for i in array(list(arange(0,n/2,sskip)*-1)[:0:-1]+
 			list(arange(0,n/2,sskip)))*lenscale])
+
 	plt.savefig(pickles+'fig-bilayer-couple-view-comparehqhq-'+testname+'.png',
 		dpi=500,bbox_inches='tight')
 	if showplots:
@@ -248,8 +247,10 @@ if int(seq[3]) and barecompare:
 	plt.cla()
 	plt.clf()
 
-#---plots, compare 2D undulation spectra between bare and protein systems scaled by q4
+#---plots, compare undulation spectra between bare and protein systems scaled by q4
 if int(seq[4]) and barecompare:
+
+	#---figure for 2D plots
 	fig = plt.figure(figsize=(8,8))
 	gs2 = gridspec.GridSpec(1,2,wspace=0.4)
 	axes = []
@@ -258,20 +259,23 @@ if int(seq[4]) and barecompare:
 	m,n = mset2.griddims
 	imdat1 = t0_bare*qmagst**4
 	extrema = [min(imdat0.min(),imdat1.min()),max(imdat0.max(),imdat1.max())]
+
 	ax = plt.subplot(gs2[0])
 	axes.append(ax)
-	ax.set_title(\
-		r'$\mathbf{\left\langle h_{q}h_{-q}\right\rangle {\left|\mathbf{q_y}\right|}^{4}}$, protein',
-		fontsize=18)
+	ax.set_title(r'$\mathbf{\left\langle h_{q}h_{-q}\right\rangle {\left|\mathbf{q_y}\right|}^{4}}$, protein',fontsize=18)
 	im = ax.imshow(array(imdat0).T, extent=None,interpolation='nearest',
 		aspect='equal',origin='lower',cmap=cmap,vmin=extrema[0],vmax=extrema[1])
+
 	ax = plt.subplot(gs2[1])
 	axes.append(ax)
 	im = ax.imshow(array(imdat1).T,extent=None,interpolation='nearest',
 		aspect='equal',origin='lower',cmap=cmap,vmin=extrema[0],vmax=extrema[1])
-	ax.set_title(\
-		r'$\mathbf{\left\langle h_{q}h_{-q}\right\rangle {\left|\mathbf{q_y}\right|}^{4}}$, bare',
-		fontsize=18)
+	ax.set_title(r'$\mathbf{\left\langle h_{q}h_{-q}\right\rangle {\left|\mathbf{q_y}\right|}^{4}}$, bare',fontsize=18)
+	if 0:
+		divider = make_axes_locatable(ax)
+		cax = divider.append_axes("right", size="5%", pad=0.05)
+		plt.colorbar(im,cax=cax)
+
 	for a in range(len(axes)):
 		ax = axes[a]
 		ax.set_xlabel(r'$\left|\mathbf{q_x}\right|(\mathrm{nm^{-1}})$',fontsize=14)
@@ -283,6 +287,7 @@ if int(seq[4]) and barecompare:
 		ax.set_yticks(array(list(arange(0,n/2,sskip)*-1)[:0:-1]+list(arange(0,n/2,sskip)))+cn)
 		ax.axes.set_yticklabels([int(i) for i in array(list(arange(0,n/2,sskip)*-1)[:0:-1]+
 			list(arange(0,n/2,sskip)))*lenscale])
+
 	plt.savefig(pickles+'fig-bilayer-couple-view-comparehqhqq4-'+testname+'.png',
 		dpi=500,bbox_inches='tight')
 	if showplots:
@@ -290,99 +295,95 @@ if int(seq[4]) and barecompare:
 	plt.cla()
 	plt.clf()
 
-#---summary of 1D spectra
+#---plots
 if int(seq[5]):
+
+	#---separate 1D plot
 	fig = plt.figure(figsize=(12,6))
-	gs3 = gridspec.GridSpec(1,2,wspace=0.0,hspace=0.0)
-	#---undulation spectra
+	gs3 = gridspec.GridSpec(1,3,wspace=0.0,hspace=0.0)
+
+	#---combined 1D spectra
 	ax = plt.subplot(gs3[0])
-	#---from plotter_undulate
-	spec1d = array([i for i in array(mset.undulate_spec1d) if i[0] != 0.])
-	specfilter = array(filter(lambda x: x[0] >= mset.undulate_qmagfilter[0]
-		and x[0] <= mset.undulate_qmagfilter[1],spec1d))
-	[bz,az] = numpy.polyfit(log(specfilter[:,0]),log(specfilter[:,1]),1)
-	area = double(mean([mset.vec(i)[0]*mset.vec(i)[1] for i in mset.surf_index])/mset.lenscale**2)
+
+	#---plot undulation spectra 1D, code cribbed from plotter.py
+	ax.set_xscale('log')
+	ax.set_yscale('log')
+	ax.grid(True)
+	spectrum = array(sorted(zip(*[mset.qrawmean,mset.uqrawmean,mset.uqrawstd]), key=lambda x: x[0]))[1:]
+	ax.scatter(spectrum[:,0],spectrum[:,1],marker='o',color='k')
+	spectrumf = array(filter(lambda x: x[0] >= qmagfilter[0] and x[0] <= qmagfilter[1], spectrum))
+	spectrumf2 = array(filter(lambda x: x[0] >= 1./10.*qmagfilter[0] and x[0] <= qmagfilter[1]*10., spectrum))
+	[bz,az]=numpy.polyfit(log(spectrumf[:,0]),log(spectrumf[:,1]),1)
+	lenscale = mset.lenscale
+	area = double(mean([i[0]*i[1] for i in mset.vecs])/lenscale**2)
+	print 'q-magnitude scaling = '+str(bz)
 	kappa = 1/exp(az)/area
-	print 'kappa = '+str(kappa)+' kBT'
-	leftcom = [mean(log(specfilter[:,0])),mean(log(specfilter[:,1]))]
+	print 'kappa = '+str(kappa)
+	leftcom = [mean(log(spectrumf[:,0])),mean(log(spectrumf[:,1]))]
 	az_enforced = leftcom[1]+4.*leftcom[0]
 	kappa_enforced = 1./exp(az_enforced)/area
 	print 'kappa_enforced = '+str(kappa_enforced)
-	#---plot settings
-	ax.plot([10**-3,10**3],[exp(az_enforced)*(i**-4) for i in [10**-3,10**3]],c='k',lw=2,alpha=0.5)
-	ax.set_xscale('log')
-	ax.set_yscale('log')
-	ax.set_xlim((spec1d[:,0].min()/4,spec1d[:,0].max()*2))
-	ax.set_ylim((t3spec[:,1].min()/4,max(spec1d[:,1])*2))
-	ax.grid(True)
-	ax.set_ylabel(r'$\left\langle h_{\mathbf{q}}h_{\mathbf{-q}}\right\rangle \left(\mathrm{nm}^{2}\right)$',
-		fontsize=fsaxlabel)
-	#---comparison to control		
-	if barecompare:
-		ax.scatter(specbare[:,0],specbare[:,1],color=clrs[4],marker='o',s=20,
-			label=r'$\left\langle h_{q}h_{-q}\right\rangle$, bare')
-	if mdcompare:
-		ax.scatter(specmd[:,0],specmd[:,1],color=clrs[5],marker='o',s=20,
-			label=r'$\left\langle h_{q}h_{-q}\right\rangle$, MD')
-	ax.scatter(t0spec[:,0],t0spec[:,1],color=clrs[0],marker='o',s=20,
-		label=r'$\left\langle h_{q}h_{-q}\right\rangle$'+
-		'\n'+r'$\boldsymbol{\kappa} = '+str('%3.1f'%(kappa_enforced))+'\:k_BT$')
-	#---plotting extra terms
-	ax.scatter(t1spec[:,0],t1spec[:,1],color=clrs[1],marker='+')
+	ymod=[exp(az)*(i**bz) for i in spectrumf[:,0]]
+	xmod=[i for i in spectrumf[:,0]]
+	ymod2=[exp(az)*(i**bz) for i in spectrumf2[:,0]]
+	xmod2=[i for i in spectrumf2[:,0]]
+	ymod3=[exp(az)*(i**bz) for i in spectrumf2[:,0]]
+	xmod3=[i for i in spectrumf2[:,0]]
+	ymod4=[exp(az_enforced)*(i**-4.) for i in spectrumf2[:,0]]
+	xmod4=[i for i in spectrumf2[:,0]]
+	ax.plot(xmod2,ymod2,color='k',linestyle='-',linewidth=1.5)
+	ax.text(0.05,0.05,r'$\mathbf{\kappa = %3.2f}$'%kappa, transform=ax.transAxes,fontsize=14)
+	ax.set_ylabel(r'$\mathbf{\left\langle h_{q}h_{-q}\right\rangle}$',fontsize=14)
+	ax.scatter(spectrum1d[:,0],spectrum1d[:,1],color=clrs[0],
+		label=r'$\mathbf{\left\langle h_{q}h_{-q}\right\rangle}$')
+	ax.scatter(t1spec[:,0],t1spec[:,1],color=clrs[1],marker='+')	
 	ax.scatter(t2spec[:,0],t2spec[:,1],color=clrs[2],marker='x',
-		label=r'$\left\langle C_{0,q}h_{-q}\right\rangle$')
-	ax.scatter(t3spec[:,0],t3spec[:,1],color=clrs[3],marker='x',s=20,
-		label=r'$\left\langle C_{0,q}C_{0,-q}\right\rangle$')
-	ax.set_xlabel(r'$\left|q\right|(\mathrm{nm^{-1}})$',fontsize=fsaxlabel)
-	h,l = ax.get_legend_handles_labels()
-	ax.set_title('undulations')
+		label=r'$\mathbf{\left\langle C_{0,q}h_{-q}\right\rangle}$')
+	ax.scatter(t3spec[:,0],t3spec[:,1],color=clrs[3],marker='.',
+		label=r'$\mathbf{\left\langle C_{0,q}C_{0,-q}\right\rangle}$')
+		
 	if barecompare:
-		h = [h[1],h[0],h[2],h[3]]
-		l = [l[1],l[0],l[2],l[3]]
-	plt.legend(h,l,loc='lower left')
-	plt.tick_params(labelsize=fsaxticks)
-	#---plot energy terms on the right panel
+		ax.scatter(specbare[:,0],specbare[:,1],color=clrs[4],marker='.',
+			label=r'$\mathbf{\left\langle h_{q}h_{-q}\right\rangle}$, bare')
+	ax.set_xlabel(r'$\left|\mathbf{q}\right|(\mathrm{nm^{-1}})$',fontsize=14)
+	ax.set_title('undulations')
+	plt.legend(loc='upper right',fontsize=10)
+
 	ax = plt.subplot(gs3[1:])
 	reord0 = np.lexsort((termsumspec[:,1],termsumspec[:,0]))
-	ax.scatter(termsumspec[reord0,0],termsumspec[reord0,1]+termsumspec_err[reord0,1],
-		color='0.8',s=20,marker='o')
-	ax.fill_between(termsumspec[reord0,0],termsumspec[reord0,1]-termsumspec_err[reord0,1],
-		termsumspec[reord0,1]+termsumspec_err[reord0,1],color='0.8',alpha=1.)
-	corrects = array([[termsumspec[i,0],scalefacbare*t0spec2[i,1]] 
+	ax.plot(termsumspec[reord0,0],termsumspec[reord0,1],'.-',color='k',label='energy',lw=2)
+	corrects = array([[termsumspec[i,0],t0spec2[i,1]] 
 		for i in range(len(termsumspec))])
 	reord1 = np.lexsort((corrects[:,1],corrects[:,0]))
+	ax.plot(termsumspec[reord1,0],corrects[reord1,1],'.-',color=clrs[0],lw=2,
+		label=r'$\mathbf{\left\langle h_{q}h_{-q}\right\rangle} {\left|\mathbf{q}\right|}^4$')
 	if barecompare:
 		reord2 = np.lexsort((energy_bare[:,1],energy_bare[:,0]))
-		ax.plot(energy_bare[reord2,0],energy_bare[reord2,1],'-',lw=1.5,color=clrs[4],alpha=0.5)	
-		ax.scatter(energy_bare[reord2,0],energy_bare[reord2,1],marker='o',s=20,color=clrs[4],
-			label=r'$\left\langle h_{q}h_{-q}\right\rangle {\left|q\right|}^4$, bare',)
-	if mdcompare:
-		reord3 = np.lexsort((energy_md[:,1],energy_md[:,0]))
-		ax.plot(energy_md[reord3,0],energy_md[reord3,1],'-',lw=1.5,color=clrs[5],alpha=0.5)	
-		ax.scatter(energy_md[reord3,0],energy_md[reord3,1],marker='o',s=20,color=clrs[5],
-			label=r'$\left\langle h_{q}h_{-q}\right\rangle {\left|q\right|}^4$, MD',)
-	ax.plot(termsumspec[reord1,0],corrects[reord1,1],'o-',color=clrs[0],lw=2,markersize=5,alpha=0.5)
-	ax.scatter(termsumspec[reord1,0],corrects[reord1,1],marker='o',s=20,color=clrs[0],
-		label=r'$\left\langle h_{q}h_{-q}\right\rangle {\left|q\right|}^4$')
-	ax.plot(termsumspec[reord0,0],termsumspec[reord0,1],'-',color='k',lw=2,alpha=0.5)
-	ax.scatter(termsumspec[reord0,0],termsumspec[reord0,1],marker='o',color='k',s=20,label='energy')
+		ax.plot(energy_bare[reord2,0],energy_bare[reord2,1],'.-',lw=1.5,color=clrs[4],
+		label=r'$\mathbf{\left\langle h_{q}h_{-q}\right\rangle} {\left|\mathbf{q}\right|}^4$, bare')	
+	if 0:
+		ax.fill_between(termsumspec[reord1,0],termsumspec[reord1,1],
+			energy_bare[reord2,1],facecolor='k',alpha=0.35)
 	ax.set_xscale('log')
 	ax.set_yscale('log')
+	ax.grid(True)
 	ax.yaxis.tick_right()
-	ax.set_ylabel(\
-		r'$\left\langle \mathscr{H}_{el}\right\rangle \left(\frac{k_{B}T}{2}\right)^{-1}$',
-		fontsize=fsaxlabel)
-	ax.set_xlabel(r'$\left|q\right|(\mathrm{nm^{-1}})$',fontsize=fsaxlabel)
+	ax.set_ylabel(r'$\left\langle \mathscr{H}_{{\rm el}}\right\rangle \left[\kappa{\cal L}^{2}k_{B}T\right]^{-1}$',fontsize=18)
+	ax.set_xlabel(r'$\left|\mathbf{q}\right|(\mathrm{nm^{-1}})$',fontsize=14)
 	ax.yaxis.set_label_position("right")
-	h,l = ax.get_legend_handles_labels()
-	plt.legend(h[::-1],l[::-1],loc='lower right')
-	ax.grid(True,which='both')
-	ax.set_xlim((min([i for i in energy_bare[:,0] if i != 0.])/(3./2),max(energy_bare[:,0])*(3./2)))
-	ax.set_ylim((10**-2,10**1))
+	if 1:
+		ax.set_ylim((0.4*min(termsumspec[:,1]),1.1*max(max(termsumspec[:,1]),
+			max(corrects[:,1]),max(energy_bare[:,1]))))
+	else:
+		ax.set_ylim((10**-6,10**-4))
+	ax.get_xaxis().set_major_locator(mpl.ticker.MaxNLocator(prune='lower'))
+	plt.legend(loc='lower right')
 	ax.set_title('energy')
-	plt.tick_params(labelsize=fsaxticks)
+	ax.grid(True, which='minor')
 	plt.savefig(pickles+'fig-bilayer-couple-view-spectra1d-'+testname+'.png',
 		dpi=500,bbox_inches='tight')
 	if showplots:
 		plt.show()
+	plt.cla()
+	plt.clf()
 	

@@ -12,7 +12,6 @@ if plot_suppress:
 	mpl.use('Agg')
 
 #---Plotting libraries
-#---Nb: changed the following line to suit dark, which is having compatibility issues because new packages
 import matplotlib.pyplot as plt
 from matplotlib.pyplot import step
 from matplotlib.ticker import NullFormatter
@@ -29,15 +28,17 @@ from mayavi import mlab
 import brewer2mpl
 clrs = brewer2mpl.get_map('Set1', 'qualitative', 5).mpl_colors
 
-#---Neutral fonts
-mpl.rc('font',**{'family':'sans-serif','sans-serif':['Helvetica']})
-#---following may kill the program inexplicably
-mpl.rc('text', usetex=True) 
-#---Nb: if you use amsmath, it gives you serif fonts and I don't know why but annoying
-if 1:
-	mpl.rc('text.latex', preamble='\usepackage{amsmath}')
-else:
-	mpl.rc('text.latex', preamble='\usepackage{sfmath}')
+#---Use the axesgrid toolkit for insets
+import mpl_toolkits.axes_grid.inset_locator
+
+#---Tools for importing VTU files
+import numpy, glob, sys, scipy, os
+import xml.etree.ElementTree as ET
+from numpy.linalg import norm
+
+#---Gridspec tools
+import matplotlib.gridspec as gridspec
+from mpl_toolkits.axes_grid1 import make_axes_locatable
 
 #---PLOTTERS
 #-------------------------------------------------------------------------------------------------------------
@@ -133,6 +134,24 @@ def meshpoints(data,vecs=None,translate=[0.0,0.0,0.0],scale_mode=None,scale_fact
 	pts = mlab.points3d(X,Y,Z,s,scale_mode=scale_mode,mode='sphere',
 		scale_factor=0.5,color=color,opacity=opacity,resolution=resolution)
 		
+def unzipgrid(surf,vecs=None,grid=None,rounder_vecs=[1.0,1.0],reverse=0):
+	'''Turns a 2D array into a set of points in 3-space for meshplot and meshpoints.'''
+	#---Nb: this function is also a child of the MembraneSet class.
+	#---Nb: duplicated here for plotting purposes only.
+	if type(surf) != ndarray:
+		surf = array(surf)
+	grid = [shape(surf)[i] for i in range(2)]
+	if reverse != 0: grid = grid[::-1];
+	if vecs != None:
+		rounder_vecs = [vecs[i]/(grid[i]-1) for i in range(2)]
+	replotin = surf
+	surfreplot = []
+	for i in range(grid[0]):
+			for j in range(grid[1]):
+				surfreplot.append([i*rounder_vecs[0],j*rounder_vecs[1],replotin[i,j]])
+	surfreplot = array(surfreplot)
+	return surfreplot
+		
 def drawbox3d(vecs):
 	'''Draw a bounding box.'''
 	transpos = [[0,0,0],[1,0,0],[1,1,0],[0,1,0],[0,0,1],[1,0,1],[1,1,1],[0,1,1]]
@@ -174,139 +193,94 @@ def checkmesh(data,tri=None,vecs=None,grid=None,tess=1,show='both',wirecolor=Non
 		meshplot(data,vecs=vecs,tri=tri,show=show,translate=[move[0]*vecs[0],move[1]*vecs[1],0],
 			wirecolor=wirecolor,surfcolor=None,lsize=lsize)
 
-#---Undulation plots
+#---undulation plots
 
-def plotter_undulations_2d_zoom(mset,logcolor=False,maxval=None,minval=None,
-	imagefile=None,qmagfilter=[10**-6,10**6],lenscale=None):
-	'''Single plot of the 2D undulation spectrum pattern, zoomed to the center.'''
-	lenscale = mset.lenscale if lenscale == None else lenscale
-	#---Plot the 2D spectrum
-	[Lx,Ly] = [mean(mset.vecs[0])/lenscale,mean(mset.vecs[0])/lenscale]
-	[m,n] = mset.griddims
-	flanking = [int(round(i/2.)) for i in mset.griddims]
-	widths = [i/8 for i in mset.griddims]
-	fig = plt.figure(figsize=(5,5))
-	ax = plt.subplot(111)
-	ax.set_xlabel('x (nm)',fontsize=18)
-	ax.set_ylabel('y (nm)',fontsize=18)
-	ax.set_title('Undulation Spectrum (2D)',fontsize=18)
-	x = [(j-m/2)/Lx*2*pi for j in range(0,n)]
-	y = [(j-n/2)/Ly*2*pi for j in range(0,m)]
-	X,Y = np.meshgrid(x,y)
-	Z = mset.uqrawmean[int(flanking[0]-widths[0]):int(flanking[0]+widths[0]+1),
-		int(flanking[1]-widths[1]):int(flanking[1]+widths[1]+1)]
-	maxplotval = maxval if maxval != None else max([max(i) for i in mset.uqrawmean/2.])
-	minplotval = minval if minval != None else 10**1
-	if max([max(i) for i in mset.uqrawmean/2.]) > maxplotval: 
-		print "Warning: your maximum color is lower than your true maximum! May be washing out the pattern."
-	plt.imshow(Z,interpolation='nearest', cmap=mpl.cm.get_cmap('RdGy',100),
-		norm=(mpl.colors.LogNorm(vmin=minplotval,vmax=maxplotval) if logcolor == True else None),
-		origin='lower',aspect='equal',extent=[mset.griddims[0]/4,3/4*mset.griddims[0],
-		mset.griddims[1]/4,3/4*mset.griddims[1]])
-	plt.show()
-	
-def plotter_undulations_summary(mset,logcolor=False,maxval=None,minval=None,
-	imagefile=None,qmagfilter=[10**-6,10**6],lenscale=None,zoom=False):
-	'''Plot the 1D and 2D undulation spectra.'''
-	ax2errors = False
-	lenscale = mset.lenscale if lenscale == None else lenscale
-	#---Plot the 2D spectrum
-	[Lx,Ly] = [mean(mset.vecs[0])/lenscale,mean(mset.vecs[0])/lenscale]
-	[m,n] = mset.griddims
-	fig = plt.figure(figsize=(15, 5))
-	ax = plt.subplot2grid((1,2+(1 if zoom==True else 0)),(0,1))
-	ax.set_xlabel('x (nm)',fontsize=18)
-	ax.set_ylabel('y (nm)',fontsize=18)
-	ax.set_title('Undulation Spectrum (2D)',fontsize=18)
-	x = [(j-m/2)/Lx*2*pi for j in range(0,n)]
-	y = [(j-n/2)/Ly*2*pi for j in range(0,m)]
-	X,Y = np.meshgrid(x,y)
-	Z = mean(mset.uqcollect,axis=0)
-	maxplotval = maxval if maxval != None else max(mset.uqrawmean)
-	minplotval = minval if minval != None else 10**1
-	if max(mset.uqrawmean) > maxplotval: 
-		print "Warning: your maximum color is lower than your true maximum! May be washing out the pattern."
-	plt.imshow(Z,interpolation='nearest', cmap=mpl.cm.get_cmap('RdGy',100),
-		norm=(mpl.colors.LogNorm(vmin=minplotval,vmax=maxplotval) if logcolor == True else None),
-		origin='lower',aspect='equal',extent=[0,mset.griddims[0],0,mset.griddims[1]])
-	xtickx = [int(i) for i in list(arange(0,mset.griddims[0],int(mset.griddims[0]/10)))]
-	xticky = [int(i/lenscale) for i in list(arange(0,mset.vecs[0][0],int(mset.vecs[0][0]/(mset.griddims[0]-1)*
-		int(mset.griddims[0]/10))))]
-	ytickx = [int(i) for i in list(arange(0,mset.griddims[1],int(mset.griddims[1]/10)))]
-	yticky = [int(i/lenscale) for i in list(arange(0,mset.vecs[0][1],int(mset.vecs[0][1]/(mset.griddims[1]-1)*
-		int(mset.griddims[1]/10))))]
-	plt.xticks(xtickx,xticky)
-	plt.yticks(ytickx,yticky)
-	#---Plot the 1D spectrum
-	ax2 = plt.subplot2grid((1,2+(1 if zoom==True else 0)), (0,0))
-	ax2.set_xlabel(r"$\left|q\right|$",fontsize=18)
-	ax2.set_ylabel(r"$\left\langle z_{q}z_{-q}\right\rangle$",fontsize=18)
-	ax2.set_xscale('log')
-	ax2.set_yscale('log')
-	ax2.grid(True)
-	#plt.title('Undulation Spectrum (1D)',fontsize=18)
-	spectrum = array(sorted(zip(*[mset.qrawmean,mset.uqrawmean,mset.uqrawstd]), key=lambda x: x[0]))[1:]
-	if ax2errors:
-		ax2.errorbar(spectrum[:,0],spectrum[:,1],yerr=spectrum[:,2],color='b',fmt='.',alpha=0.2)
-	ax2.scatter(spectrum[:,0],spectrum[:,1],marker='o',color='k')
-	#---Fitting
-	spectrumf = array(filter(lambda x: x[0] >= qmagfilter[0] and x[0] <= qmagfilter[1], spectrum))
-	spectrumf2 = array(filter(lambda x: x[0] >= 1./10.*qmagfilter[0] and x[0] <= qmagfilter[1]*10., spectrum))
-	[bz,az]=numpy.polyfit(log(spectrumf[:,0]),log(spectrumf[:,1]),1)
-	#---Compute and display the bending rigidity
-	area = double(mean([i[0]*i[1] for i in mset.vecs])/lenscale**2)
-	print 'q-magnitude scaling = '+str(bz)
-	kappa = 1/exp(az)/area
-	print 'kappa = '+str(kappa)
-	leftcom = [mean(log(spectrumf[:,0])),mean(log(spectrumf[:,1]))]
+def plotter_undulate_spec2d(ax,mset,dat=None,nlabels=None,silence=False,cmap=None):
+	'''Standard function for plotting 2D spectra from MembraneSet objects.'''
+	if dat == None: dat = mset.undulate_hqhq2d
+	if cmap == None: cmap=mpl.cm.binary; cmap_washout = 1.0
+	else: cmap_washout = 0.65
+	m,n = shape(dat)
+	#---follows scipy DFFT convention on even/odd location of Nyquist component
+	cm,cn = [int(i/2) for i in shape(dat)]
+	#---nlabels sets the number of printed labels
+	if (m < 5 or n < 5): nlabels = 1; sskipx = 1;sskipy =1
+	elif nlabels == None: 
+		nlabels = 6
+		sskipx = m/nlabels
+		sskipy = n/nlabels
+	else:
+		sskipx = m/nlabels
+		sskipy = n/nlabels
+	#---plot
+	ax.imshow(array(dat).T,interpolation='nearest',origin='lower',
+		norm=mpl.colors.LogNorm(),cmap=cmap,alpha=cmap_washout)
+	#---set axes labels
+	if not silence:
+		ax.set_xticks(array(list(arange(0,m/2,sskipx)*-1)[:0:-1]+list(arange(0,m/2,sskipx)))+cm)
+		ax.axes.set_xticklabels([int(i) for i in array(list(arange(0,m/2,sskipx)*-1)[:0:-1]+
+			list(arange(0,m/2,sskipx)))*mset.rounder/mset.lenscale])
+		ax.set_yticks(array(list(arange(0,n/2,sskipy)*-1)[:0:-1]+list(arange(0,n/2,sskipy)))+cn)
+		ax.axes.set_yticklabels([int(i) for i in array(list(arange(0,n/2,sskipy)*-1)[:0:-1]+
+			list(arange(0,n/2,sskipy)))*mset.rounder/mset.lenscale])	
+		ax.set_ylabel(r'${\left|q_y\right|}^{-1}(\mathrm{nm})$')
+		ax.set_xlabel(r'${\left|q_x\right|}^{-1}(\mathrm{nm})$')
+	else:
+		ax.set_xticklabels([])
+		ax.set_yticklabels([])
+		ax.set_xticks([])
+		ax.set_yticks([])
+
+def plotter_undulate(mset,qmagfilter=None,inset2d=True,inset2d2=True,ax=None):
+	'''Standard function for plotting 1D undulation spectra, with inset options.'''
+	if qmagfilter == None: qmagfilter = mset.undulate_qmagfilter
+	spec1d = array([i for i in array(mset.undulate_spec1d) if i[0] != 0.])
+	#---some repeat comands from mset.calculate_undulations here, necessary for plotting
+	m,n = shape(mset.undulate_hqhq2d)
+	cm,cn = [int(i/2) for i in shape(mset.undulate_hqhq2d)]
+	specfilter = array(filter(lambda x: x[0] >= qmagfilter[0] 
+		and x[0] <= qmagfilter[1],mset.undulate_spec1d))
+	[bz,az] = numpy.polyfit(log(specfilter[:,0]),log(specfilter[:,1]),1)
+	area = double(mean([mset.vec(i)[0]*mset.vec(i)[1] for i in mset.surf_index])/mset.lenscale**2)
+	print 'kappa = '+str(1/exp(az)/area)+' kBT'
+	#---calculate kappa assuming correct q4 scaling
+	leftcom = [mean(log(specfilter[:,0])),mean(log(specfilter[:,1]))]
 	az_enforced = leftcom[1]+4.*leftcom[0]
 	kappa_enforced = 1./exp(az_enforced)/area
 	print 'kappa_enforced = '+str(kappa_enforced)
-	#---Fitting
-	ymod=[exp(az)*(i**bz) for i in spectrumf[:,0]]
-	xmod=[i for i in spectrumf[:,0]]
-	ymod2=[exp(az)*(i**bz) for i in spectrumf2[:,0]]
-	xmod2=[i for i in spectrumf2[:,0]]
-	ymod3=[exp(az)*(i**bz) for i in spectrumf2[:,0]]
-	xmod3=[i for i in spectrumf2[:,0]]
-	ymod4=[exp(az_enforced)*(i**-4.) for i in spectrumf2[:,0]]
-	xmod4=[i for i in spectrumf2[:,0]]
-	#---Plot fitted lines
-	ax2.plot(xmod2,ymod2,color='#FF3399',linestyle='-',linewidth=2.5)
-	ax2.plot(xmod4,ymod4,color='#3399FF',linestyle='-',linewidth=2.5)
-	#ax2.plot(xmod,ymod,marker='.',color='w')
-	#---Write bending rigidity on the plot
-	#ax2.text(0.1, 0.2, r'$\kappa_{'+str('%1.2f'%bz)+'} = %3.2f$'%kappa, transform=ax2.transAxes,fontsize=16)
-	ax2.text(0.1, 0.2, r'$\kappa = %3.2f$'%kappa, transform=ax2.transAxes,fontsize=16)
-	#ax2.text(0.1, 0.1, r"$\kappa_{-4} = %3.2f$"%kappa_enforced, transform=ax2.transAxes,fontsize=16)
-	#---Save and show
-	plt.tight_layout()
-	if imagefile != None:
-		plt.savefig(imagefile,dpi=500)
-	if zoom == True:
-		lenscale = mset.lenscale if lenscale == None else lenscale
-		#---Plot the 2D spectrum, zoomed in to the center pattern
-		[Lx,Ly] = [mean(mset.vecs[0])/lenscale,mean(mset.vecs[0])/lenscale]
-		[m,n] = mset.griddims
-		flanking = [int(round(i/2.))-1 for i in mset.griddims]
-		widths = [i/6 for i in mset.griddims]
-		ax3 = plt.subplot2grid((1,3),(0,2))
-		ax3.set_xlabel('x',fontsize=18)
-		ax3.set_ylabel('y',fontsize=18)
-		ax3.set_title('Undulation Spectrum (2D)',fontsize=18)
-		x = [(j-m/2)/Lx*2*pi for j in range(0,n)]
-		y = [(j-n/2)/Ly*2*pi for j in range(0,m)]
-		X,Y = np.meshgrid(x,y)
-		Z = mean(mset.uqcollect,axis=0)[int(flanking[0]-widths[0]):int(flanking[0]+widths[0])+1,
-			int(flanking[1]-widths[1]):int(flanking[1]+widths[1])+1]
-		maxplotval = maxval if maxval != None else max(mset.uqrawmean)
-		minplotval = minval if minval != None else 10**1
-		if max(mset.uqrawmean) > maxplotval:
-			print "Warning: your maximum color is lower than your true maximum! Pattern may be washed-out."
-		plt.imshow(Z,interpolation='nearest', cmap=mpl.cm.get_cmap('RdGy',100),
-			norm=(mpl.colors.LogNorm(vmin=minplotval,vmax=maxplotval) if logcolor == True else None),
-			origin='lower',aspect='equal',extent=[0,shape(Z)[0],0,shape(Z)[1]])
-		plt.xticks(range(shape(Z)[0]),[(i+flanking[0]-1) for i in range(shape(Z)[0])])
-		plt.yticks(range(shape(Z)[1]),[(i+flanking[1]-1) for i in range(shape(Z)[1])])
-	plt.show()
+	#---plot
+	if ax != None:
+		fig = plt.figure(figsize=(6,6))
+		gs = gridspec.GridSpec(1,1,wspace=0.0,hspace=0.0)
+		ax = plt.subplot(gs[0])
+	ax.scatter(spec1d[:,0],spec1d[:,1],marker='o',c='k',s=20)
+	ax.plot(arange(spec1d[:,0].min()/2,spec1d[:,0].max()*4),[exp(az)*(i**bz) 
+		for i in arange(spec1d[:,0].min()/2,spec1d[:,0].max()*4)],linestyle='dotted',c='b',lw=2)
+	ax.plot(specfilter[:,0],[exp(az)*(i**bz) for i in specfilter[:,0]],c='b',lw=2)
+	ax.set_xscale('log')
+	ax.set_yscale('log')
+	ax.set_xlim((spec1d[:,0].min()/2,spec1d[:,0].max()*4))
+	ax.set_ylim((spec1d[:,1].min()/10,spec1d[:,1].max()*10))
+	ax.set_ylabel(r'$\left\langle h_{q}h_{-q}\right\rangle$',fontsize=fsaxlabel)
+	ax.set_xlabel(r'${\left|q_x\right|}(\mathrm{{nm}^{-1}})$',fontsize=fsaxlabel)
+	ax.grid(True,which='major')
+	labels = [item.get_text() for item in ax.get_xticklabels()]
+	plt.tick_params(labelsize=fsaxticks)
+	#---inset
+	if inset2d:
+		axins = mpl_toolkits.axes_grid.inset_locator.inset_axes(ax,width="45%",height="45%",loc=1)
+		plotter_undulate_spec2d(axins,mset)
+		if inset2d2:
+			i2wid = 3
+			axins2 = mpl_toolkits.axes_grid.inset_locator.inset_axes(axins,width="30%",height="30%",loc=1)
+			plotter_undulate_spec2d(axins2,mset,
+				dat=mset.undulate_hqhq2d[cm-i2wid:cm+i2wid+1,cn-i2wid:cn+i2wid+1],
+				silence=True,cmap=mpl.cm.jet)
+	#---report kappa
+	ax.text(0.05,0.05,r'$\boldsymbol{\kappa_{'+str('%1.1f'%bz)+'}} = '+
+		str('%3.1f'%mset.undulate_kappa)+'\:k_BT$'+
+		'\n'+r'$\boldsymbol{\kappa_{-4.0}} = '+str('%3.1f'%kappa_enforced)+'\:k_BT$',
+		transform=ax.transAxes,fontsize=fsaxtext)
+	if ax != None:
+		plt.show()		
 
