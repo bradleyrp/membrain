@@ -23,8 +23,17 @@ elif location == 'light':
 	#---commands for sans-serif fonts on all plots
 	mpl.rc('font',**{'family':'sans-serif','sans-serif':['Helvetica']})
 	mpl.rc('text', usetex=True)
-	mpl.rc('text.latex', preamble='\usepackage{sfmath}')
+	if 0:
+		mpl.rc('text.latex', preamble='\usepackage{sfmath}')
+	else:
+		#---hacks to allow "boldsymbol" on wispy kappas
+		mpl.rcParams['text.latex.preamble'] = [
+			r'\usepackage{sfmath}',r'\usepackage{amsmath}',r'\usepackage{siunitx}',r'\sisetup{detect-all}',
+			r'\usepackage{helvet}',r'\usepackage{sansmath}',r'\sansmath']  
 	erase_when_finished = False
+	fsaxtext = 18
+	fsaxlabel = 18
+	fsaxticks = 18
 #---Set data locations according to system: RPB desktop
 elif location == 'dark':
 	basedir = '/'
