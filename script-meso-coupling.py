@@ -3,13 +3,14 @@
 from membrainrunner import *
 execfile('locations.py')
 
+import scipy.ndimage
+
 #---SETTINGS
 #-------------------------------------------------------------------------------------------------------------
 
 #---settings
 xyzform = 'rect'
 nbase = 22
-#lenscale = 1.0/(1.)
 length = None
 qmagfilter=[10**-10,10**6]
 
@@ -19,12 +20,16 @@ analysis_descriptors = [
 		1500,2000,'v2002-t2-anis-22-run1-rep-0-1500-2000',True,'',False),
 	('/home/rpb/worker/repo-membrane/mesoscale-v2002/t1-bare-22/run1-size-sweep/rep-0/equilibrate/',
 		1500,2000,'v2002-t2-bare-22-run1-rep-0-1500-2000',True,'',True),
-	('',0,0,'v700',False,'pkl.structures.membrane-v700.md.part0009.500000-700000-400.pkl',False)]
-ad = analysis_descriptors[0]
+	('',0,0,'v700',False,'pkl.structures.membrane-v700.md.part0009.500000-700000-400.pkl',False),
+	('/store-delta/compbio/mesoscale-v2002/t3-anis-22-c0-0.05/run1-size-sweep/rep-0/equilibrate/',
+		1500,2000,'v2002-t3-anis-22-run1-rep-0-1500-2000',True,'',False),
+	('/home/rpb/worker/repo-membrane/mesoscale-v2002/t4-bare-22/run1-size-sweep/rep-0/equilibrate/',
+		1500,2000,'v2002-t2-bare-22-run1-rep-0-1500-2000',True,'',True)]
+ad = analysis_descriptors[3]
 vtudir,start,end,testname,ismeso,pklname,isbare = ad
 barecompare = True
-baresys = 1
-removeavg = False
+baresys = 4
+removeavg = True
 fitlims = [4,2]
 forcekappa = True
 mdcompare = True
@@ -36,8 +41,9 @@ mdpkl = 'pkl.structures.membrane-v614.s9-lonestar.120000-220000-200.pkl'
        |||-------plot terms
        ||||------plot compare hqhq
        |||||-----plot compare hqhqq4
-       ||||||----plot spectrum, 1D '''
-seq = '010011'
+       ||||||----plot spectrum, 1D
+       |||||||---plot phase angles '''
+seq = '0000000'
 
 #---settings
 showplots = True
@@ -64,17 +70,76 @@ def autocorr(dat,direct=0,lenscale=None):
 		return 1./lenscale*array(dat)[:,slice((-1 if m%2==1 else None),(0 if m%2==0 else None),-1),
 			slice((-1 if n%2==1 else None),(0 if n%2==0 else None),-1)]
 
+def gauss2d(params,x,y):
+	'''Two-dimensional Gaussian height function with fluid axis of rotation.'''
+	z0,c0,x0,y0,sx,sy,th = params
+	#---fix the height shift
+	z0 = 0
+	return z0+c0*exp(-((x-x0)*cos(th)+(y-y0)*sin(th))**2/2./sx**2)*exp(-(-(x-x0)*sin(th)+
+		(y-y0)*cos(th))**2/2./sy**2)
+
+def calculate_mode_coupling(ms):
+	'''Moved the entire mode-coupling calculation to a single function so it can be repeated easily.'''
+	ms.lenscale = lenscale
+	ms.calculate_undulations(removeavg=removeavg,fitlims=fitlims,forcekappa=forcekappa)
+	grid = ms.griddims
+	m,n = grid[0]-1,grid[1]-1
+	hqs = [fftwrap(ms.surf[i])/double(m*n) for i in range(len(ms.surf))]
+	cqs = [fftwrap(lenscale*array(c0s[i]))/double(m*n) for i in range(len(c0s))]
+	Lx,Ly = mean(ms.vecs,axis=0)[0:2]
+	cm,cn = [int(round(i/2.-1)) for i in shape(hqs[0])]
+	qmags = lenscale*array([[sqrt(((i-cm)/((Lx)/1.)*2*pi)**2+((j-cn)/((Ly)/1.)*2*pi)**2) 
+		for j in range(0,n)] for i in range(0,m)])
+	hqsa = autocorr(hqs,direct=0,lenscale=lenscale)
+	hqsb = autocorr(hqs,direct=1,lenscale=lenscale)
+	center = [cm,cn]
+	cqsa = autocorr(cqs,direct=0,lenscale=lenscale)
+	cqsb = autocorr(cqs,direct=1,lenscale=lenscale)
+	qmagst = qmags[0:(-1 if m%2==0 else None),0:(-1 if n%2==0 else None)]
+	qmagst_err = np.std(qmagst,axis=0)
+	mt,nt = shape(hqsa[0])
+	t0 = mean((abs(array(hqsa)))**2,axis=0)
+	t1 = mean(abs(hqsa)*abs(cqsb),axis=0)
+	t2 = mean(abs(cqsa*hqsb),axis=0)
+	t3 = mean(abs(cqsa*cqsb),axis=0)
+	t0e = std((abs(array(hqsa)))**2,axis=0)
+	t1e = std(abs(hqsa)*abs(cqsb),axis=0)
+	t2e = std(abs(cqsa*hqsb),axis=0)
+	t3e = std(abs(cqsa*cqsb),axis=0)
+	t0spec = array([[qmagst[i,j],t0[i,j]] for j in range(nt) for i in range(mt)])
+	t1spec = array([[qmagst[i,j],t1[i,j]] for j in range(nt) for i in range(mt)])
+	t2spec = array([[qmagst[i,j],t2[i,j]] for j in range(nt) for i in range(mt)])
+	t3spec = array([[qmagst[i,j],t3[i,j]] for j in range(nt) for i in range(mt)])
+	area = double(mean([ms.vec(i)[0]*ms.vec(i)[1] for i in ms.surf_index])/ms.lenscale**2)
+	scalefac = ms.undulate_kappa*area
+	termsum = t0*qmagst**4-t1*qmagst**2-t2*qmagst**2+t3
+	extraterms = -1*t1*qmagst**2-t2*qmagst**2+t3
+	termsumspec = array([[qmagst[i,j],scalefac*termsum[i,j]] for j in range(nt) for i in range(mt)])
+	termsumspec_err = array([[qmagst[i,j],
+		scalefac*sqrt((t0e[i,j]*qmagst[i,j]**4)**2+(2*qmagst[i,j]**2*t1e[i,j])**2+(t3e[i,j])**2)] 
+		for j in range(nt) for i in range(mt)])
+	termsumspec_err[termsumspec_err>=termsumspec] = termsumspec[termsumspec_err>=termsumspec]*.999999
+	t0spec2 = array([[qmagst[i,j],t0[i,j]*qmagst[i,j]**4] for j in range(nt) for i in range(mt)])
+	t1spec2 = array([[qmagst[i,j],t1[i,j]*qmagst[i,j]**2] for j in range(nt) for i in range(mt)])
+	t2spec2 = array([[qmagst[i,j],t2[i,j]*qmagst[i,j]**2] for j in range(nt) for i in range(mt)])
+	t3spec2 = array([[qmagst[i,j],t3[i,j]] for j in range(nt) for i in range(mt)])
+
 #---MAIN
 #-------------------------------------------------------------------------------------------------------------
 
 #---load and interpolate
 if int(seq[0]) or mset.surf == []:
+	lenscale = 1.0
 	if mdcompare:
 		print 'loading md comparison'
 		msetmd = unpickle(pickles+mdpkl)
-		#---infer the a0 factor to match system sizes
-		lenscale = max(mean(mset2.vecs,axis=0))/((mean(msetmd.vecs,axis=0))[0]/msetmd.lenscale)
-		print 'reset lenscale = '+str(lenscale)
+		#---compute hypothetical curvature field for the MD simulation
+		vecs = mean(mset.vecs,axis=0)
+		m,n = msetmd.griddims
+		getgrid = array([[[i,j] for j in linspace(0,vecs[1],n)] for i in linspace(0,vecs[0],m)])
+		params = [0,0.05,vecs[0]/2.,vecs[1]/2.,5,5,0]
+		c0hypo = array([[gauss2d(params,getgrid[i,j,0],getgrid[i,j,1])
+		    for j in range(n)] for i in range(m)])
 	if ismeso:
 		c0sraw = array(mset.load_points_vtu(vtudir,extra_props='induced_cur',
 			start=start,end=end,nbase=nbase,lenscale=lenscale))[:,0]
@@ -88,7 +153,12 @@ if int(seq[0]) or mset.surf == []:
 		mset2 = MembraneSet()
 		mset2.load_points_vtu(vtudirb,start=startb,end=endb,nbase=nbase,lenscale=lenscale)
 		mset2.surfacer()
-		
+	#---infer the a0 factor to match system sizes
+	lenscale = max(mean(mset2.vecs,axis=0))/(max(mean(msetmd.vecs,axis=0))/msetmd.lenscale)
+	print 'reset lenscale = '+str(lenscale)
+	mset.lenscale = lenscale
+	if barecompare:
+		mset2.lenscale = lenscale
 		
 #---calculate mode couplings
 if int(seq[1]):
@@ -150,6 +220,8 @@ if int(seq[1]):
 		specmd = msetmd.undulate_spec1d
 		energy_md = array([[specmd[j,0],specmd[j,0]**4*specmd[j,1]*scalefac] 
 			for j in range(len(specmd))])
+		calculate_mode_coupling(msetmd)
+
 	
 #---view individual contributions to the energy terms in two dimensions
 if int(seq[2]):
@@ -207,8 +279,6 @@ if int(seq[2]):
 		dpi=500,bbox_inches='tight')
 	if showplots:
 		plt.show()
-	plt.cla()
-	plt.clf()
 
 #---plots, compare 2D undulation spectra between bare and protein systems
 if int(seq[3]) and barecompare:
@@ -234,7 +304,7 @@ if int(seq[3]) and barecompare:
 		ax = axes[a]
 		ax.set_xlabel(r'$\left|\mathbf{q_x}\right|(\mathrm{nm^{-1}})$',fontsize=14)
 		if a in [0]:		
-			ax.set_ylabel(r'$\left|\mathbf{q_y}\right|(\mathrm{nm^{-1}})$',fontsize=14)
+			ax.set_ylabel(r'$\left|\mathbf{q}\right|(\mathrm{nm}^{-1})$',fontsize=14)
 		ax.set_xticks(array(list(arange(0,m/2,sskip)*-1)[:0:-1]+list(arange(0,m/2,sskip)))+cm+1)
 		ax.axes.set_xticklabels([int(i) for i in array(list(arange(0,m/2,sskip)*-1)[:0:-1]+
 			list(arange(0,m/2,sskip)))*lenscale])
@@ -245,8 +315,6 @@ if int(seq[3]) and barecompare:
 		dpi=500,bbox_inches='tight')
 	if showplots:
 		plt.show()
-	plt.cla()
-	plt.clf()
 
 #---plots, compare 2D undulation spectra between bare and protein systems scaled by q4
 if int(seq[4]) and barecompare:
@@ -274,9 +342,9 @@ if int(seq[4]) and barecompare:
 		fontsize=18)
 	for a in range(len(axes)):
 		ax = axes[a]
-		ax.set_xlabel(r'$\left|\mathbf{q_x}\right|(\mathrm{nm^{-1}})$',fontsize=14)
+		ax.set_xlabel(r'$\left|\mathbf{q_x}\right|(\mathrm{nm}^{-1})$',fontsize=14)
 		if a in [0]:			
-			ax.set_ylabel(r'$\left|\mathbf{q_y}\right|(\mathrm{nm^{-1}})$',fontsize=14)
+			ax.set_ylabel(r'$\left|\mathbf{q_y}\right|(\mathrm{nm}^{-1})$',fontsize=14)
 		ax.set_xticks(array(list(arange(0,m/2,sskip)*-1)[:0:-1]+list(arange(0,m/2,sskip)))+cm)
 		ax.axes.set_xticklabels([int(i) for i in array(list(arange(0,m/2,sskip)*-1)[:0:-1]+
 			list(arange(0,m/2,sskip)))*lenscale])
@@ -287,8 +355,6 @@ if int(seq[4]) and barecompare:
 		dpi=500,bbox_inches='tight')
 	if showplots:
 		plt.show()
-	plt.cla()
-	plt.clf()
 
 #---summary of 1D spectra
 if int(seq[5]):
@@ -333,7 +399,7 @@ if int(seq[5]):
 		label=r'$\left\langle C_{0,q}h_{-q}\right\rangle$')
 	ax.scatter(t3spec[:,0],t3spec[:,1],color=clrs[3],marker='x',s=20,
 		label=r'$\left\langle C_{0,q}C_{0,-q}\right\rangle$')
-	ax.set_xlabel(r'$\left|q\right|(\mathrm{nm^{-1}})$',fontsize=fsaxlabel)
+	ax.set_xlabel(r'$\left|\mathbf{q}\right|(\mathrm{nm}^{-1})$',fontsize=fsaxlabel)
 	h,l = ax.get_legend_handles_labels()
 	ax.set_title('undulations')
 	if barecompare:
@@ -372,13 +438,13 @@ if int(seq[5]):
 	ax.set_ylabel(\
 		r'$\left\langle \mathscr{H}_{el}\right\rangle \left(\frac{k_{B}T}{2}\right)^{-1}$',
 		fontsize=fsaxlabel)
-	ax.set_xlabel(r'$\left|q\right|(\mathrm{nm^{-1}})$',fontsize=fsaxlabel)
+	ax.set_xlabel(r'$\left|\mathbf{q}\right|(\mathrm{nm}^{-1})$',fontsize=fsaxlabel)
 	ax.yaxis.set_label_position("right")
 	h,l = ax.get_legend_handles_labels()
 	plt.legend(h[::-1],l[::-1],loc='lower right')
 	ax.grid(True,which='both')
 	ax.set_xlim((min([i for i in energy_bare[:,0] if i != 0.])/(3./2),max(energy_bare[:,0])*(3./2)))
-	ax.set_ylim((10**-2,10**1))
+	ax.set_ylim((10**-2,4*10**1))
 	ax.set_title('energy')
 	plt.tick_params(labelsize=fsaxticks)
 	plt.savefig(pickles+'fig-bilayer-couple-view-spectra1d-'+testname+'.png',
@@ -386,3 +452,38 @@ if int(seq[5]):
 	if showplots:
 		plt.show()
 	
+#---phase plots
+if int(seq[6]):
+	#---analyze 2D plots of phase angles between several simulations
+	msetmd2 = unpickle(pickles+'pkl.structures.membrane-v550-stress.md.part0008.shifted.pkl')
+	msetmd2.calculate_undulations()
+	if 1:
+		gs = gridspec.GridSpec(1,4)
+		for m in range(4):
+			ms = [mset,mset2,msetmd,msetmd2][m]
+			ax = plt.subplot(gs[m])
+			angles = mean(array([angle(ms.undulate_raw[i]) for i in range(len(ms.undulate_raw))]),axis=0)
+			anglesfilt = numpy.fft.ifftshift(scipy.ndimage.filters.gaussian_filter(angles,10))
+			anglesfilt = scipy.ndimage.filters.gaussian_filter(angles,2)
+			ax.imshow(anglesfilt.T,interpolation='nearest',origin='lower',norm=mpl.colors.LogNorm(),
+				cmap=mpl.cm.jet,vmax=pi,vmin=10**-10)
+			ax.imshow(-1*anglesfilt.T,interpolation='nearest',origin='lower',norm=mpl.colors.LogNorm(),
+				cmap=mpl.cm.jet_r,vmax=pi,vmin=10**-10)
+		plt.show()
+
+	#---plot phase angle on XY for different wavelengths, or different groups of wavelengths
+	#---Nb this just shows that the DTMC model isn't dynamic, obviously
+	if 0:
+		ind = 0
+		fig = plt.figure()
+		ax = plt.subplot(111,aspect='equal')
+		wid = 5
+		clrs = [(brewer2mpl.get_map('Set1', 'qualitative', 8).mpl_colors)[i] for i in [0,1,2,3]] #---RBG
+		for m in range(4):
+			ms = [msetmd,msetmd2,mset,mset2][m]
+			dat = array([[mean(angle(ms.undulate_raw[i])[cm:cm+wid,cn]),
+				mean(angle(ms.undulate_raw[i])[cm,cn:cn+wid])]
+				for i in range(len(ms.undulate_raw))])
+			plt.scatter(dat[:,0],dat[:,1],c=clrs[m])
+		plt.show()
+

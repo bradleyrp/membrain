@@ -135,3 +135,4 @@ if ('debugmode' in globals() and debugmode) or args.debugmode:
 #---pass arguments and call a function
 if __name__ == "__main__" and args.operation != None:
 	globals()[args.operation](args)
+
