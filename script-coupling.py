@@ -4,59 +4,87 @@ from membrainrunner import *
 execfile('locations.py')
 
 import scipy.ndimage
+from scipy.signal import hilbert
 
 #---SETTINGS
 #-------------------------------------------------------------------------------------------------------------
 
-#---settings
-xyzform = 'rect'
-nbase = 22
-length = None
-qmagfilter=[10**-10,10**6]
+#---possible analyses
+analysis_descriptors = {
+	'v2002-t3':
+		{'simtype':'meso',
+		'shortname':r'meso(iso)',
+		'testname':'v2002-t3',
+		'locate':
+			'/store-delta/compbio/mesoscale-v2002/t3-anis-22-c0-0.05/run1-size-sweep/rep-0/equilibrate/',
+		'start':1500,
+		'end':2000,
+		'nbase':22,
+		'hascurv':True,
+		'hypo':None,
+		'plot_ener_err':True,
+		'plotqe':True,
+		'removeavg':False,
+		'fitlims':[16,4],
+		'forcekappa':True},
+	'v2002-t4':
+		{'simtype':'meso',
+		'shortname':'meso(bare)',
+		'testname':'v2002-t4',
+		'locate':\
+			'/home/rpb/worker/repo-membrane/mesoscale-v2002/t4-bare-22/run1-size-sweep/rep-0/equilibrate/',
+		'start':1500,
+		'end':2000,
+		'nbase':22,
+		'hascurv':False,
+		'hypo':None,
+		'plot_ener_err':True,
+		'plotqe':True,
+		'removeavg':False,
+		'fitlims':[16,4],
+		'forcekappa':True},
+	'v614':
+		{'simtype':'md',
+		'shortname':r'$4\times$ENTH(MD)',
+		'testname':'v614',
+		'locate':'pkl.structures.membrane-v614.s9-lonestar.120000-220000-200.pkl',
+		'start':None,
+		'end':None,
+		'nbase':None,
+		'hascurv':True,
+		'hypo':[0.05,5,5,0],
+		'plot_ener_err':True,
+		'plotqe':True,
+		'removeavg':False,
+		'fitlims':None,
+		'forcekappa':True}
+	}
 
-#---plan
-analysis_descriptors = [
-	('meso','meso-anis','v2002-t2-anis-22-run1-rep-0-1500-2000',
-		'/home/rpb/worker/repo-membrane/mesoscale-v2002/t2-anis-22/run1-size-sweep/rep-0/equilibrate/',
-		1500,2000,22,
-		True,None,True,True,False,[4,2],True),
-	('meso','meso-bare','v2002-t2-bare-22-run1-rep-0-1500-2000',
-		'/home/rpb/worker/repo-membrane/mesoscale-v2002/t1-bare-22/run1-size-sweep/rep-0/equilibrate/',
-		1500,2000,22,
-		False,None,True,True,False,[4,2],True),
-	('md','cgmd-ENTHx4','v614',
-		'pkl.structures.membrane-v614.s9-lonestar.120000-220000-200.pkl',None,None,None,
-		True,[0.05,5,5,0],True,True,False,None,True)]
-analyses_ord = [2,0,1]
-plot_reord = [1,0,2]
+#---analyses
+analyses_names = ['v614','v2002-t4','v2002-t3']
+plot_reord = ['v2002-t4','v2002-t3','v614']
+match_scales = ['v614','v2002-t4']
+analysis_name = 'v2002.t3.t4.v614'
 
-analyses = [analysis_descriptors[i] for i in analyses_ord]
 if 'msets' not in globals(): msets = []
 if 'mscs' not in globals(): mscs = []
 if 'collect_c0s' not in globals(): collect_c0s = []
 
-#---method
-removeavg = False
-fitlims = [4,2]
-forcekappa = True
-match_scales = [2,0]
-
 #---method 
 '''	   |---------load
        ||--------calc
-       |||-------plot terms
-       ||||------plot compare hqhq
-       |||||-----plot compare hqhqq4
-       ||||||----plot spectrum, 1D
+       |||-------plot spectrum, 1D
+       ||||------plot compare hqhqq4
+       |||||-----plot ???
+       ||||||----plot ???
        |||||||---plot phase angles '''
-seq = '0100010'
+seq = '0110000'
 
 #---settings
 #---load colors in the same order as analyses_ord
-clist = [(brewer2mpl.get_map('Set1', 'qualitative', 8).mpl_colors)[i] for i in [0,1,2,3,4,5,6,7,]]
+clist = [(brewer2mpl.get_map('Set1', 'qualitative', 8).mpl_colors)[i] for i in [0,2,1,3,4,5,6,7,]]
 cmap = mpl.cm.jet
 showplots = True
-sskip = 4 #---sets the xy ticks spacing  in units of lenscale on any 2D spectra
 
 #---FUNCTIONS
 #-------------------------------------------------------------------------------------------------------------
@@ -139,8 +167,13 @@ class ModeCouple():
 		self.t1d[2] = array([[qmagst[i,j],self.t2d[2][i,j]] for j in range(nt) for i in range(mt)])
 		self.t1d[3] = array([[qmagst[i,j],self.t2d[3][i,j]] for j in range(nt) for i in range(mt)])
 		#---sum the terms
-		self.tsum2d = self.t2d[0]*qmagst**4-self.t2d[1]*qmagst**2-self.t2d[2]*qmagst**2+self.t2d[3]
-		self.tsum1d = array([[qmagst[i,j],scalefac*self.tsum2d[i,j]] for j in range(nt) for i in range(mt)])
+		self.tsum2d = scalefac*(self.t2d[0]*qmagst**4-self.t2d[1]*qmagst**2-self.t2d[2]*qmagst**2+self.t2d[3])
+		self.tsum1d = array([[qmagst[i,j],self.tsum2d[i,j]] for j in range(nt) for i in range(mt)])
+		self.tsum2de = array([[sqrt((self.t2de[0][i,j]*qmagst[i,j]**4)**2+
+			(qmagst[i,j]**2*self.t2de[1][i,j])**2+
+			(qmagst[i,j]**2*self.t2de[2][i,j])**2+
+			(self.t2de[3][i,j])**2) 
+			for j in range(nt)] for i in range(mt)])
 		self.tsum1de = array([[qmagst[i,j],
 			scalefac*sqrt((self.t2de[0][i,j]*qmagst[i,j]**4)**2+
 			(qmagst[i,j]**2*self.t2de[1][i,j])**2+
@@ -170,9 +203,10 @@ class ModeCouple():
 #---load and interpolate
 if int(seq[0]) or msets == []:
 	lenscale = 1.0
-	for a in analyses_ord:
-		[simtype,shortname,testname,locate,start,end,nbase,hascurv,
-			hypo,plot_ener_err,plotqe,removeavg,fitlims,forcekappa] = analysis_descriptors[a]
+	for a in analyses_names:
+		#[simtype,shortname,testname,locate,start,end,nbase,hascurv,
+		#	hypo,plot_ener_err,plotqe,removeavg,fitlims,forcekappa] = analysis_descriptors[a]
+		for i in analysis_descriptors[a]: vars()[i] = (analysis_descriptors[a])[i]
 		if 'mset' in globals(): del mset
 		mset = MembraneSet()
 		if simtype == 'meso':
@@ -199,57 +233,221 @@ if int(seq[0]) or msets == []:
 			else:
 				collect_c0s.append([])
 
-	'''
-	lenscale = 1.0
-	if mdcompare:
-		print 'loading md comparison'
-		msetmd = unpickle(pickles+mdpkl)
-		#---compute hypothetical curvature field for the MD simulation
-		vecs = mean(mset.vecs,axis=0)
-		m,n = msetmd.griddims
-		getgrid = array([[[i,j] for j in linspace(0,vecs[1],n)] for i in linspace(0,vecs[0],m)])
-		params = [0,0.05,vecs[0]/2.,vecs[1]/2.,5,5,0]
-		c0hypo = array([[gauss2d(params,getgrid[i,j,0],getgrid[i,j,1])
-		    for j in range(n)] for i in range(m)])
-	if ismeso:
-		c0sraw = array(mset.load_points_vtu(vtudir,extra_props='induced_cur',
-			start=start,end=end,nbase=nbase,lenscale=lenscale))[:,0]
-		mset.surfacer()
-		c0s = mset.surfacer_general(c0sraw)
-		#---note that you have to fix the scaling here. lenscale is used in rezipgrid, problem for c0
-	else:
-		mset = unpickle(pickles+pklname)
-	if barecompare:
-		vtudirb,startb,endb,testnameb,ismesob,pklnameb,isbareb = analysis_descriptors[baresys]
-		mset2 = MembraneSet()
-		mset2.load_points_vtu(vtudirb,start=startb,end=endb,nbase=nbase,lenscale=lenscale)
-		mset2.surfacer()
-	#---infer the a0 factor to match system sizes
-	#lenscale = max(mean(mset2.vecs,axis=0))/(max(mean(msetmd.vecs,axis=0))/msetmd.lenscale)
-	#print 'reset lenscale = '+str(lenscale)
-	#mset.lenscale = lenscale
-	#if barecompare:
-	#	mset2.lenscale = lenscale
-	'''
-		
 #---calculate mode couplings
 if int(seq[1]):
 	#---match mesoscale length scales to an MD simulation
 	if match_scales != None:
-		lenscale = max(mean(msets[analyses_ord.index(match_scales[1])].vecs,axis=0))/\
-			(max(mean(msets[analyses_ord.index(match_scales[0])].vecs,axis=0))/msets[analyses_ord.index(match_scales[0])].lenscale)
-		for a in range(len(analyses_ord)):
-			if analysis_descriptors[analyses_ord[a]][0] == 'meso':
-				msets[a].lenscale = lenscale
+		ref_ind = analyses_names.index(match_scales[0])
+		move_ind = analyses_names.index(match_scales[1])
+		lenscale = max(mean(msets[move_ind].vecs,axis=0))/\
+			(max(mean(msets[ref_ind].vecs,axis=0))/msets[ref_ind].lenscale)
+		for a in analyses_names:
+			if (analysis_descriptors[a])['simtype'] == 'meso':
+				msets[analyses_names.index(a)].lenscale = lenscale
 	#---calculate coupled modes
-	for m in range(len(msets)):
+	for a in analyses_names:
+		m = analyses_names.index(a)
 		if 'msc' in globals(): del msc
 		msc = ModeCouple()
 		msc.calculate_mode_coupling(msets[m],collect_c0s[m])
 		mscs.append(msc)
 		
-#---view individual contributions to the energy terms in two dimensions
+#---summary of 1D spectra
 if int(seq[2]):
+	#---prepare figure
+	fig = plt.figure(figsize=(18,8))
+	gs3 = gridspec.GridSpec(1,2,wspace=0.0,hspace=0.0)
+	axl = plt.subplot(gs3[0])
+	axr = plt.subplot(gs3[1])
+	axl_range = [[10**-10,10**10],[10**-10,10**10]]
+	#---plot undulations
+	for m in [analyses_names.index(aname) for aname	in plot_reord]:
+		a = analyses_names[m]
+		for i in analysis_descriptors[a]: vars()[i] = (analysis_descriptors[a])[i]
+		colord = clist[m]
+		mset = msets[m]
+		#---calculate fitted line
+		spec1d = array([i for i in array(mset.undulate_spec1d) if i[0] != 0.])
+		specfilter = array(filter(lambda x: x[0] >= mset.undulate_qmagfilter[0]
+			and x[0] <= mset.undulate_qmagfilter[1],spec1d))
+		[bz,az] = numpy.polyfit(log(specfilter[:,0]),log(specfilter[:,1]),1)
+		area = double(mean([mset.vec(i)[0]*mset.vec(i)[1] for i in mset.surf_index])/mset.lenscale**2)
+		kappa = 1/exp(az)/area
+		leftcom = [mean(log(specfilter[:,0])),mean(log(specfilter[:,1]))]
+		az_enforced = leftcom[1]+4.*leftcom[0]
+		kappa_enforced = 1./exp(az_enforced)/area
+		axl.plot([10**-3,10**3],[exp(az_enforced)*(i**-4) for i in [10**-3,10**3]],c='k',lw=2,alpha=0.5)
+		#---plot the undulations
+		axl.scatter(mscs[m].t1d[0][:,0],mscs[m].t1d[0][:,1],color=colord,marker='o',s=40,
+			label=r'$\left\langle h_{q}h_{-q}\right\rangle$'+', '+shortname+
+			'\n'+r'$\boldsymbol{\kappa} = '+str('%3.1f'%(kappa_enforced))+'\:k_BT$')
+		if axl_range[0][0] > min(mscs[m].t1d[0][:,0]): axl_range[0][0] = min(mscs[m].t1d[0][:,0])
+		if axl_range[0][1] < max(mscs[m].t1d[0][:,0]): axl_range[0][1] = max(mscs[m].t1d[0][:,0])
+		if axl_range[1][0] > min(mscs[m].t1d[0][:,1]): axl_range[1][0] = min(mscs[m].t1d[0][:,1])
+		if axl_range[1][1] < max(mscs[m].t1d[0][:,1]): axl_range[1][0] = max(mscs[m].t1d[0][:,1])
+		#---plotting extra terms
+		if hascurv:
+			axl.scatter(mscs[m].t1d[1][:,0],mscs[m].t1d[1][:,1],color=colord,marker='+',alpha=0.65)
+			label = r'$\left\langle C_{0,q}h_{-q}\right\rangle$'+','+shortname  if 0 else ''
+			axl.scatter(mscs[m].t1d[2][:,0],mscs[m].t1d[2][:,1],color=colord,marker='x',
+				label=label,alpha=0.65)
+			label = r'$\left\langle C_{0,q}C_{0,-q}\right\rangle$'+','+shortname if 0 else ''
+			axl.scatter(mscs[m].t1d[3][:,0],mscs[m].t1d[3][:,1],color=colord,marker='x',s=20,
+				label=label,alpha=0.65)
+		#---plot details
+		axl.set_xlabel(r'$\left|\mathbf{q}\right|(\mathrm{nm}^{-1})$',fontsize=fsaxlabel)
+		h,l = axl.get_legend_handles_labels()
+		h = [h[i] for i in range(len(l)) if l[i] != '']
+		l = [l[i] for i in range(len(l)) if l[i] != '']
+		axl.set_title('undulations')
+		axl.legend(h[::-1],l[::-1],loc='lower left')
+		axl.tick_params(labelsize=fsaxticks)	
+		axl.set_xscale('log')
+		axl.set_yscale('log')
+		axl.grid(True)
+		axl.set_ylabel(\
+			r'$\left\langle h_{\mathbf{q}}h_{\mathbf{-q}}\right\rangle \left(\mathrm{nm}^{2}\right)$',
+			fontsize=fsaxlabel)
+	#---plot energy errors
+	for m in [analyses_names.index(aname) for aname	in plot_reord]:
+		a = analyses_names[m]
+		for i in analysis_descriptors[a]: vars()[i] = (analysis_descriptors[a])[i]
+		colord = clist[m]
+		mset = msets[m]
+		reord0 = np.lexsort((mscs[m].tsum1d[:,1],mscs[m].tsum1d[:,0]))
+		if plot_ener_err:
+			if 0:
+				axr.fill_between(mscs[m].tsum1d[reord0,0],
+					mscs[m].tsum1d[reord0,1]-mscs[m].tsum1de[reord0,1],
+					mscs[m].tsum1d[reord0,1]+mscs[m].tsum1de[reord0,1],color=colord,alpha=0.2)
+			if 1:
+				#---use hilbert to get the analytical signal to plot error bars more intelligently
+				axr.fill_between(mscs[m].tsum1d[reord0[::1],0],
+					real(hilbert(mscs[m].tsum1d[reord0[::-1],1]-mscs[m].tsum1de[reord0[::-1],1])),
+					real(hilbert(mscs[m].tsum1d[reord0[::1],1]+mscs[m].tsum1de[reord0[::1],1])),
+					color=colord,alpha=0.2)
+			if 0:
+				axr.fill_between(mscs[m].tsum1d[reord0[::1],0],
+					-1*real(hilbert(-1*(mscs[m].tsum1d[reord0[::1],1]-mscs[m].tsum1de[reord0[::1],1])))[::1],
+					real(hilbert(1*(mscs[m].tsum1d[reord0[::1],1]+mscs[m].tsum1de[reord0[::1],1]))),
+					color=colord,alpha=0.2)
+	for m in [analyses_names.index(aname) for aname	in plot_reord]:
+		a = analyses_names[m]
+		for i in analysis_descriptors[a]: vars()[i] = (analysis_descriptors[a])[i]
+		colord = clist[m]
+		mset = msets[m]
+		reord0 = np.lexsort((mscs[m].tsum1d[:,1],mscs[m].tsum1d[:,0]))
+		if plotqe:
+			reord0b = np.lexsort((mscs[m].t1denergy[0][:,1],mscs[m].t1denergy[0][:,0]))
+			if 0:
+				axr.plot(mscs[m].t1denergy[0][reord0b,0],mscs[m].t1denergy[0][reord0b,1],'--',
+					color=colord,lw=2,alpha=1.)
+			axr.scatter(mscs[m].t1denergy[0][reord0b,0],mscs[m].t1denergy[0][reord0b,1],
+				marker='o',color=colord,s=40)
+		#---plot the data
+		if 0:
+			axr.plot(mscs[m].tsum1d[reord0,0],mscs[m].tsum1d[reord0,1],'-',color=colord,lw=2,alpha=0.5)
+		axr.scatter(mscs[m].tsum1d[reord0,0],mscs[m].tsum1d[reord0,1],
+			marker='o',color=colord,s=40,label=shortname)
+		#---plot details
+		axr.set_xscale('log')
+		axr.set_yscale('log')
+		axr.yaxis.tick_right()
+		axr.set_ylabel(\
+			r'$\left\langle \mathscr{H}_{el}\right\rangle \left(\frac{k_{B}T}{2}\right)^{-1}$',
+			fontsize=fsaxlabel)
+		axr.set_xlabel(r'$\left|\mathbf{q}\right|(\mathrm{nm}^{-1})$',fontsize=fsaxlabel)
+		axr.yaxis.set_label_position("right")
+		h,l = axr.get_legend_handles_labels()
+		plt.legend(h[::-1],l[::-1],loc='lower right')
+		axr.grid(True,which='both')
+		axr.set_title('energy',fontsize=fsaxlabel)
+		plt.tick_params(labelsize=fsaxticks)
+	#---set final plots limits for the undulations
+	xlims = (1./2*min([min([min([i for i in mscs[analyses_names.index(k)].t1d[t][:,0] if i != 0.]) 
+		for t in ([0,1,2,3] if (analysis_descriptors[k])['hascurv'] else [0])]) for k in analyses_names]),
+		2*max([max([max([i for i in mscs[analyses_names.index(k)].t1d[t][:,0] if i != 0.]) for t in ([0,1,2,3] 
+		if (analysis_descriptors[k])['hascurv'] else [0])]) for k in analyses_names]))
+	axl.set_xlim(xlims)
+	axr.set_xlim(xlims)
+	axr.set_ylim((1./2*10**-1,2*10**1))
+	axl.set_ylim((
+		1./2*min([min([min([i for i in mscs[analyses_names.index(k)].t1d[t][:,1] if i != 0.]) 
+			for t in ([0,1,2,3] 
+			if (analysis_descriptors[k])['hascurv'] else [0])]) for k in analyses_names]),
+		2*max([max([max([i for i in mscs[analyses_names.index(k)].t1d[t][:,1] if i != 0.]) 
+			for t in ([0,1,2,3] 
+			if (analysis_descriptors[k])['hascurv'] else [0])]) for k in analyses_names])))
+	plt.savefig(pickles+'fig-bilayer-couple-'+analysis_name+'-'+'spectrum1d'+'.png',
+		dpi=500,bbox_inches='tight')
+	#plt.show()
+	plt.close(fig)
+	
+#---plots, compare 2D undulation spectra between bare and protein systems alone, or scaled by q4
+if int(seq[3]):
+	insets = True
+	i2wid = 1
+	#---plot these for both the <h_{q}h_{-q}> and <h_{q}h_{-q}>q4
+	for d in ['helastic','hq2','helerr','hq2q4']:
+		fig = plt.figure(figsize=(4*len(analyses_names),6))
+		gs = gridspec.GridSpec(1,len(analyses_names),hspace=0.5,wspace=0.5)
+		for m in [analyses_names.index(aname) for aname in plot_reord[::-1]]:
+			a = analyses_names[m]
+			mset = msets[m]
+			#---note that you can also plot the errors by using mscs[m].tsum2de
+			if d == 'helastic':
+				data = mscs[m].tsum2d
+				if (analysis_descriptors[a])['simtype'] == 'md':
+					cm,cn = [int(i/2)-1 for i in shape(mset.undulate_hqhq2d)]
+					data[cm,cn] = 1.0
+				title = str((analysis_descriptors[a])['shortname'])+'\n'+\
+					r'$\left\langle \mathscr{H}_{el}\right\rangle \left(\frac{k_{B}T}{2}\right)^{-1}$'
+				lims = [1*10**-1,1*10**1]
+				cmap = mpl.cm.RdBu_r
+			elif d == 'hq2': 
+				data = mscs[m].t2d[0]
+				title = str((analysis_descriptors[a])['shortname'])+'\n'+\
+					r'$\mathbf{\left\langle h_{q}h_{-q}\right\rangle}$'
+				lims = None
+				cmap = mpl.cm.jet
+			elif d == 'helerr':
+				data = mscs[m].tsum2de
+				if (analysis_descriptors[a])['simtype'] == 'md':
+					cm,cn = [int(i/2)-1 for i in shape(mset.undulate_hqhq2d)]
+					data[cm,cn] = mean(data)
+				title = str((analysis_descriptors[a])['shortname'])+'\n'+\
+					r'$\mathbf{\delta}(\mathbf{\left\langle h_{\mathbf{q}}'+\
+					r'h_{\mathbf{\mathbf{-q}}}\right\rangle q}^{4})$'
+				lims = None
+				cmap = mpl.cm.jet
+			elif d == 'hq2q4':
+				data = mscs[m].t1denergy[0]
+				data = mscs[m].scalefac*(mscs[m].t2d[0]*mscs[m].qmagst**4)
+				title = str((analysis_descriptors[a])['shortname'])+'\n'+\
+					r'$\mathbf{\left\langle h_{q}h_{-q}\right\rangle {\left|\mathbf{q_y}\right|}^{4}}$'
+				lims = None
+				lims = [1*10**-1,1*10**1]
+				cmap = mpl.cm.RdBu_r
+			ax = plt.subplot(gs[(plot_reord[::-1]).index(a)])
+			plotter_undulate_spec2d(ax,mset,dat=data,cmap=cmap,lims=lims)
+			if insets:
+				cm,cn = [int(i/2)-1 for i in shape(mset.undulate_hqhq2d)]
+				axins = mpl_toolkits.axes_grid.inset_locator.inset_axes(ax,width="30%",height="30%",loc=1)
+				plotter_undulate_spec2d(axins,mset,
+					dat=data[cm-i2wid:cm+i2wid+1,cn-i2wid:cn+i2wid+1],
+					silence=True,cmap=cmap,lims=lims)
+			ax.set_title(title,fontsize=fsaxlabel)
+		plt.savefig(pickles+'fig-bilayer-couple-'+analysis_name+'-'+d+'.png',
+			dpi=500,bbox_inches='tight')
+		plt.close(fig)
+	
+#---OLD
+#-------------------------------------------------------------------------------------------------------------
+
+sskip = 4 #---sets the xy ticks spacing  in units of lenscale on any 2D spectra
+		
+#---view individual contributions to the energy terms in two dimensions
+if 0:
 	islognorm = True
 	vmin = 10**-10
 	vmax = 10**0
@@ -306,7 +504,7 @@ if int(seq[2]):
 		plt.show()
 
 #---plots, compare 2D undulation spectra between bare and protein systems
-if int(seq[3]) and barecompare:
+if int(seq[4]) and barecompare:
 	fig = plt.figure(figsize=(8,8))
 	gs2 = gridspec.GridSpec(1,2,wspace=0.4)
 	axes = []
@@ -342,7 +540,7 @@ if int(seq[3]) and barecompare:
 		plt.show()
 
 #---plots, compare 2D undulation spectra between bare and protein systems scaled by q4
-if int(seq[4]) and barecompare:
+if 0 and barecompare:
 	fig = plt.figure(figsize=(8,8))
 	gs2 = gridspec.GridSpec(1,2,wspace=0.4)
 	axes = []
@@ -381,112 +579,6 @@ if int(seq[4]) and barecompare:
 	if showplots:
 		plt.show()
 
-#---summary of 1D spectra
-if int(seq[5]):
-	#---prepare figure
-	fig = plt.figure(figsize=(12,6))
-	gs3 = gridspec.GridSpec(1,2,wspace=0.0,hspace=0.0)
-	axl = plt.subplot(gs3[0])
-	axr = plt.subplot(gs3[1])
-	axl_range = [[10**-10,10**10],[10**-10,10**10]]
-	for a in [analyses_ord.index(i) for i in plot_reord]:
-		[simtype,shortname,testname,locate,start,end,
-			nbase,hascurv,hypo,plot_ener_err,plotqe,
-			removeavg,fitlims,forcekappa] = analysis_descriptors[analyses_ord[a]]
-		colord = clist[a]
-		mset = msets[a]
-		#---calculate fitted line
-		spec1d = array([i for i in array(mset.undulate_spec1d) if i[0] != 0.])
-		specfilter = array(filter(lambda x: x[0] >= mset.undulate_qmagfilter[0]
-			and x[0] <= mset.undulate_qmagfilter[1],spec1d))
-		[bz,az] = numpy.polyfit(log(specfilter[:,0]),log(specfilter[:,1]),1)
-		area = double(mean([mset.vec(i)[0]*mset.vec(i)[1] for i in mset.surf_index])/mset.lenscale**2)
-		kappa = 1/exp(az)/area
-		leftcom = [mean(log(specfilter[:,0])),mean(log(specfilter[:,1]))]
-		az_enforced = leftcom[1]+4.*leftcom[0]
-		kappa_enforced = 1./exp(az_enforced)/area
-		axl.plot([10**-3,10**3],[exp(az_enforced)*(i**-4) for i in [10**-3,10**3]],c='k',lw=2,alpha=0.5)
-		#---plot the undulations
-		axl.scatter(mscs[a].t1d[0][:,0],mscs[a].t1d[0][:,1],color=colord,marker='o',s=20,
-			label=r'$\left\langle h_{q}h_{-q}\right\rangle$'+', '+shortname+
-			'\n'+r'$\boldsymbol{\kappa} = '+str('%3.1f'%(kappa_enforced))+'\:k_BT$')
-		if axl_range[0][0] > min(mscs[a].t1d[0][:,0]): axl_range[0][0] = min(mscs[a].t1d[0][:,0])
-		if axl_range[0][1] < max(mscs[a].t1d[0][:,0]): axl_range[0][1] = max(mscs[a].t1d[0][:,0])
-		if axl_range[1][0] > min(mscs[a].t1d[0][:,1]): axl_range[1][0] = min(mscs[a].t1d[0][:,1])
-		if axl_range[1][1] < max(mscs[a].t1d[0][:,1]): axl_range[1][0] = max(mscs[a].t1d[0][:,1])
-		#---plotting extra terms
-		if hascurv:
-			axl.scatter(mscs[a].t1d[1][:,0],mscs[a].t1d[1][:,1],color=colord,marker='+',alpha=0.65)
-			label = r'$\left\langle C_{0,q}h_{-q}\right\rangle$'+','+shortname  if 0 else None
-			axl.scatter(mscs[a].t1d[2][:,0],mscs[a].t1d[2][:,1],color=colord,marker='x',
-				label=label,alpha=0.65)
-			label = r'$\left\langle C_{0,q}C_{0,-q}\right\rangle$'+','+shortname if 0 else None
-			axl.scatter(mscs[a].t1d[3][:,0],mscs[a].t1d[3][:,1],color=colord,marker='x',s=20,
-				label=label,alpha=0.65)
-		#---plot details
-		axl.set_xlabel(r'$\left|\mathbf{q}\right|(\mathrm{nm}^{-1})$',fontsize=fsaxlabel)
-		h,l = axl.get_legend_handles_labels()
-		axl.set_title('undulations')
-		axl.legend(h[::-1],l[::-1],loc='lower left')
-		axl.tick_params(labelsize=fsaxticks)	
-		axl.set_xscale('log')
-		axl.set_yscale('log')
-		axl.grid(True)
-		axl.set_ylabel(\
-			r'$\left\langle h_{\mathbf{q}}h_{\mathbf{-q}}\right\rangle \left(\mathrm{nm}^{2}\right)$',
-			fontsize=fsaxlabel)
-		#---plot energies
-		reord0 = np.lexsort((mscs[a].tsum1d[:,1],mscs[a].tsum1d[:,0]))
-		if plot_ener_err:
-			axr.fill_between(mscs[a].tsum1d[reord0,0],mscs[a].tsum1d[reord0,1]-mscs[a].tsum1de[reord0,1],
-				mscs[a].tsum1d[reord0,1]+mscs[a].tsum1de[reord0,1],color=colord,alpha=0.2)
-		#---plot the height-height autocorrelation-equivalent energy function on the right panel
-		if plotqe:
-			reord0b = np.lexsort((mscs[a].t1denergy[0][:,1],mscs[a].t1denergy[0][:,0]))
-			axr.plot(mscs[a].t1denergy[0][reord0b,0],mscs[a].t1denergy[0][reord0b,1],'--',
-				color=colord,lw=2,alpha=1.)
-			axr.scatter(mscs[a].t1denergy[0][reord0b,0],mscs[a].t1denergy[0][reord0b,1],
-				marker='o',color=colord,s=20)
-		#---plot the data
-		axr.plot(mscs[a].tsum1d[reord0,0],mscs[a].tsum1d[reord0,1],'-',color=colord,lw=2,alpha=0.5)
-		axr.scatter(mscs[a].tsum1d[reord0,0],mscs[a].tsum1d[reord0,1],
-			marker='o',color=colord,s=20,label=shortname)
-		#---plot details
-		axr.set_xscale('log')
-		axr.set_yscale('log')
-		axr.yaxis.tick_right()
-		axr.set_ylabel(\
-			r'$\left\langle \mathscr{H}_{el}\right\rangle \left(\frac{k_{B}T}{2}\right)^{-1}$',
-			fontsize=fsaxlabel)
-		axr.set_xlabel(r'$\left|\mathbf{q}\right|(\mathrm{nm}^{-1})$',fontsize=fsaxlabel)
-		axr.yaxis.set_label_position("right")
-		h,l = axr.get_legend_handles_labels()
-		plt.legend(h[::-1],l[::-1],loc='lower right')
-		axr.grid(True,which='both')
-		axr.set_title('energy')
-		plt.tick_params(labelsize=fsaxticks)
-	#---set final plots limits for the undulations
-	xlims = (
-		1./2*min([min([min([i for i in mscs[analyses_ord.index(k)].t1d[t][:,0] if i != 0.]) 
-			for t in ([0,1,2,3] 
-			if analysis_descriptors[k][7] else [0])]) for k in analyses_ord]),
-		2*max([max([max([i for i in mscs[analyses_ord.index(k)].t1d[t][:,0] if i != 0.])
-			for t in ([0,1,2,3] 
-			if analysis_descriptors[k][7] else [0])]) for k in analyses_ord])
-		)
-	axl.set_xlim(xlims)
-	axr.set_xlim(xlims)
-	axr.set_ylim((1./2*10**-1,2*10**1))
-	axl.set_ylim((
-		1./2*min([min([min([i for i in mscs[analyses_ord.index(k)].t1d[t][:,1] if i != 0.]) 
-			for t in ([0,1,2,3] 
-			if analysis_descriptors[k][7] else [0])]) for k in analyses_ord]),
-		2*max([max([max([i for i in mscs[analyses_ord.index(k)].t1d[t][:,1] if i != 0.]) 
-			for t in ([0,1,2,3] 
-			if analysis_descriptors[k][7] else [0])]) for k in analyses_ord]),
-		))
-	plt.show()
-	
 #---phase plots
 if int(seq[6]):
 	#---analyze 2D plots of phase angles between several simulations

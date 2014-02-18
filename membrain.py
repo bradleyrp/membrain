@@ -598,8 +598,11 @@ class MembraneSet:
 #---Undulation spectra functions
 
 	def calculate_undulations(self,removeavg=0,redundant=1,whichframes=None,qmagfilter=None,
-		fitbest=False,fitlims=[32,4],forcekappa=True):
+		fitbest=False,fitlims=None,forcekappa=True):
 		'''Fourier transform surface heights.'''
+		if fitlims == None: 
+			fitbest = False
+			fitlims = [1024,8]
 		if whichframes == None:
 			framerange = range(len(self.surf))
 		else:

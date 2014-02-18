@@ -195,11 +195,13 @@ def checkmesh(data,tri=None,vecs=None,grid=None,tess=1,show='both',wirecolor=Non
 
 #---undulation plots
 
-def plotter_undulate_spec2d(ax,mset,dat=None,nlabels=None,silence=False,cmap=None):
+def plotter_undulate_spec2d(ax,mset,dat=None,nlabels=None,silence=False,cmap=None,lims=None,
+	cmap_washout=None):
 	'''Standard function for plotting 2D spectra from MembraneSet objects.'''
 	if dat == None: dat = mset.undulate_hqhq2d
-	if cmap == None: cmap=mpl.cm.binary; cmap_washout = 1.0
-	else: cmap_washout = 0.65
+	if cmap == None: cmap=mpl.cm.binary; cmap_washout = 0.65;
+	if cmap_washout == None: cmap_washout = 1.0
+	if lims == None: lims = [None,None]
 	m,n = shape(dat)
 	#---follows scipy DFFT convention on even/odd location of Nyquist component
 	cm,cn = [int(i/2) for i in shape(dat)]
@@ -214,7 +216,7 @@ def plotter_undulate_spec2d(ax,mset,dat=None,nlabels=None,silence=False,cmap=Non
 		sskipy = n/nlabels
 	#---plot
 	ax.imshow(array(dat).T,interpolation='nearest',origin='lower',
-		norm=mpl.colors.LogNorm(),cmap=cmap,alpha=cmap_washout)
+		norm=mpl.colors.LogNorm(),cmap=cmap,alpha=cmap_washout,vmin=lims[0],vmax=lims[1])
 	#---set axes labels
 	if not silence:
 		ax.set_xticks(array(list(arange(0,m/2,sskipx)*-1)[:0:-1]+list(arange(0,m/2,sskipx)))+cm)
@@ -223,8 +225,8 @@ def plotter_undulate_spec2d(ax,mset,dat=None,nlabels=None,silence=False,cmap=Non
 		ax.set_yticks(array(list(arange(0,n/2,sskipy)*-1)[:0:-1]+list(arange(0,n/2,sskipy)))+cn)
 		ax.axes.set_yticklabels([int(i) for i in array(list(arange(0,n/2,sskipy)*-1)[:0:-1]+
 			list(arange(0,n/2,sskipy)))*mset.rounder/mset.lenscale])	
-		ax.set_ylabel(r'${\left|q_y\right|}^{-1}(\mathrm{nm})$')
-		ax.set_xlabel(r'${\left|q_x\right|}^{-1}(\mathrm{nm})$')
+		ax.set_ylabel(r'${\pi\left|q_y\right|}^{-1}(\mathrm{nm})$')
+		ax.set_xlabel(r'${\pi\left|q_x\right|}^{-1}(\mathrm{nm})$')
 	else:
 		ax.set_xticklabels([])
 		ax.set_yticklabels([])
