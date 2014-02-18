@@ -89,22 +89,25 @@ analysis_descriptors = {
 		'plotqe':True,
 		'removeavg':False,
 		'fitlims':None,
-		'forcekappa':True}
-	}
+		'forcekappa':True}}
 
 #---analyses
-dotest = 'v2002.t2.t1'
-if dotest = 'v2002.t3.t4.v614'
+dotest = 'v2002.t3.t4.v614'
+if dotest == 'v2002.t3.t4.v614':
 	analyses_names = ['v614','v2002-t4','v2002-t3']
 	#---reverse order of importance for the 1D spectrum plot
 	plot_reord = ['v2002-t4','v2002-t3','v614']
 	match_scales = ['v614','v2002-t4']
 	analysis_name = 'v2002.t3.t4.v614'
-elif dotest = 'v2002.t2.t1'
+	#---load colors in the same order as analyses_names
+	clist = [(brewer2mpl.get_map('Set1', 'qualitative', 8).mpl_colors)[i] for i in [0,2,1,3,4,5,6,7,]]
+elif dotest == 'v2002.t2.t1':
 	analyses_names = ['v2002-t2','v2002-t1']
 	plot_reord = ['v2002-t1','v2002-t2']
 	match_scales = None
 	analysis_name = 'v2002.t2.t1'
+	#---load colors in the same order as analyses_names
+	clist = [(brewer2mpl.get_map('Set1', 'qualitative', 8).mpl_colors)[i] for i in [0,1,2,3,4,5,6,7,]]
 
 if 'msets' not in globals(): msets = []
 if 'mscs' not in globals(): mscs = []
@@ -113,18 +116,12 @@ if 'collect_c0s' not in globals(): collect_c0s = []
 #---method 
 '''	   |---------load
        ||--------calc
-       |||-------plot spectrum, 1D
-       ||||------plot compare hqhqq4
+       |||-------plot spectra, 1D
+       ||||------plot spectra, 2D
        |||||-----plot ???
        ||||||----plot ???
        |||||||---plot phase angles '''
-seq = '0110000'
-
-#---settings
-#---load colors in the same order as analyses_ord
-clist = [(brewer2mpl.get_map('Set1', 'qualitative', 8).mpl_colors)[i] for i in [0,2,1,3,4,5,6,7,]]
-cmap = mpl.cm.jet
-showplots = True
+seq = '0111000'
 
 #---FUNCTIONS
 #-------------------------------------------------------------------------------------------------------------
@@ -420,7 +417,6 @@ if int(seq[2]):
 			if (analysis_descriptors[k])['hascurv'] else [0])]) for k in analyses_names])))
 	plt.savefig(pickles+'fig-bilayer-couple-'+analysis_name+'-'+'spectrum1d'+'.png',
 		dpi=500,bbox_inches='tight')
-	#plt.show()
 	plt.close(fig)
 	
 #---plots, compare 2D undulation spectra between bare and protein systems alone, or scaled by q4
@@ -475,7 +471,8 @@ if int(seq[3]):
 				axins = mpl_toolkits.axes_grid.inset_locator.inset_axes(ax,width="30%",height="30%",loc=1)
 				plotter_undulate_spec2d(axins,mset,
 					dat=data[cm-i2wid:cm+i2wid+1,cn-i2wid:cn+i2wid+1],
-					silence=True,cmap=cmap,lims=lims)
+					silence=True,cmap=cmap,lims=[array([i for i in flatten(data) 
+						if i != 0.]).min(),data.max()])
 			ax.set_title(title,fontsize=fsaxlabel)
 		plt.savefig(pickles+'fig-bilayer-couple-'+analysis_name+'-'+d+'.png',
 			dpi=500,bbox_inches='tight')
