@@ -43,6 +43,38 @@ analysis_descriptors = {
 		'removeavg':False,
 		'fitlims':[16,4],
 		'forcekappa':True},
+	'v2002-t2':
+		{'simtype':'meso',
+		'shortname':r'meso(aniso)',
+		'testname':'v2002-t2',
+		'locate':
+			'/store-delta/compbio/mesoscale-v2002/t2-anis-22/run1-size-sweep/rep-0/equilibrate/',
+		'start':1500,
+		'end':2000,
+		'nbase':22,
+		'hascurv':True,
+		'hypo':None,
+		'plot_ener_err':True,
+		'plotqe':True,
+		'removeavg':False,
+		'fitlims':[16,4],
+		'forcekappa':True},
+	'v2002-t1':
+		{'simtype':'meso',
+		'shortname':'meso(bare)',
+		'testname':'v2002-t1',
+		'locate':\
+			'/store-delta/compbio/mesoscale-v2002/t1-bare-22/run1-size-sweep/rep-0/equilibrate/',
+		'start':1500,
+		'end':2000,
+		'nbase':22,
+		'hascurv':False,
+		'hypo':None,
+		'plot_ener_err':True,
+		'plotqe':True,
+		'removeavg':False,
+		'fitlims':[16,4],
+		'forcekappa':True},
 	'v614':
 		{'simtype':'md',
 		'shortname':r'$4\times$ENTH(MD)',
@@ -61,10 +93,18 @@ analysis_descriptors = {
 	}
 
 #---analyses
-analyses_names = ['v614','v2002-t4','v2002-t3']
-plot_reord = ['v2002-t4','v2002-t3','v614']
-match_scales = ['v614','v2002-t4']
-analysis_name = 'v2002.t3.t4.v614'
+dotest = 'v2002.t2.t1'
+if dotest = 'v2002.t3.t4.v614'
+	analyses_names = ['v614','v2002-t4','v2002-t3']
+	#---reverse order of importance for the 1D spectrum plot
+	plot_reord = ['v2002-t4','v2002-t3','v614']
+	match_scales = ['v614','v2002-t4']
+	analysis_name = 'v2002.t3.t4.v614'
+elif dotest = 'v2002.t2.t1'
+	analyses_names = ['v2002-t2','v2002-t1']
+	plot_reord = ['v2002-t1','v2002-t2']
+	match_scales = None
+	analysis_name = 'v2002.t2.t1'
 
 if 'msets' not in globals(): msets = []
 if 'mscs' not in globals(): mscs = []
