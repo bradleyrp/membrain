@@ -52,6 +52,8 @@ class MembraneSet:
 		self.vecs_index = []
 		self.griddims = []
 		self.universe = []
+		self.unierse_structfile = ''
+		self.universe_trajfile = ''
 		self.monolayer_residues = []
 		self.resnames = []
 		self.resids = []
@@ -107,6 +109,9 @@ class MembraneSet:
 			self.griddims = []
 			self.nframes = 0
 		self.universe = Universe(files[0],files[1])
+		#---Nb added these flags after fixing transpose error, so they are proxy
+		self.universe_structfile = files[0]
+		self.universe_trajfile = files[1]
 		self.nframes = len(self.universe.universe.trajectory)
 		if hasattr(self.universe.trajectory[0],'time'):
 			self.time_start = self.universe.trajectory[0].time
