@@ -28,12 +28,13 @@ analysis_descriptors = {
 		'label':r'$\mathrm{control}$','nprots':0},
 	'v614-120000-220000-200':
 		{'pklfile':'pkl.structures.membrane-v614.s9-lonestar.120000-220000-200.pkl',
-		'label':r'$\mathrm{{ENTH}\ensuremath{\times}4}$','nprots':4}}
+		'label':r'$\mathrm{{ENTH}\ensuremath{\times}4}$','nprots':4,
+		'topogcorr_pkl':'pkl.topogcorr.membrane-v614-s9-lonestar-120000-220000-200.pkl'}}
 analysis_names = ['v700-500000-700000-400','v614-120000-220000-200','v550-300000-400000-200']
 analysis_names = ['v614-120000-220000-200']
 plot_reord = analysis_names
 dolist = ['phase_std_spec2d']
-dolist = ['topogcorr_calc']
+dolist = ['topogcorr_plot']
 
 #---settings
 cmap = mpl.cm.RdBu_r
@@ -106,8 +107,8 @@ if 'phase_std_spec2d' in dolist:
 			#---plot
 			#ax = plt.subplot(gs[calcs.index(calc),(plot_reord).index(a)])
 			ax = gs[calcs.index(calc)][(plot_reord).index(a)]
-			im = plotter_undulate_spec2d(ax,mset,dat=data,cmap=cmap,lognorm=False,lims=[vmin,vmax],
-				ticklabel=[(1 if c == len(calcs)-1 else 0),0],tickshow=True)
+			im = plotter2d(ax,mset,dat=data,cmap=cmap,lognorm=False,lims=[vmin,vmax],
+				ticklabel_show=[(1 if c == len(calcs)-1 else 0),0],tickshow=True,label_style='q')
 			#---plot details
 			if c == 0: ax.set_title(label)
 		#---colorbar for this row
@@ -202,6 +203,56 @@ if 'topogcorr_calc' in dolist and 0:
 			or re.match('[0-9]+\-[0-9]+\-[0-9]',i)])
 		pickledump(tc,'pkl.topogcorr.'+special_name+'.pkl',directory=pickles)
 	
+#---method
+topogcorr_plot_struct = True
+
+#---DO: add wrapper for subplots here?
+axes = []
+
+#---plot the topography correlate curves
+if 'topogcorr_plot' in dolist:
+	#---prepare figure with gridspec
+	fig = plt.figure(figsize=(5*(1+(1 if topogcorr_plot_struct else 0))+3,5))
+	gs = gridspec.GridSpec(1,1+(1 if topogcorr_plot_struct else 0))
+	#---loop over analyses
+	for a in analysis_names:
+		for i in analysis_descriptors[a]: vars()[i] = (analysis_descriptors[a])[i]
+		m = analysis_names.index(a)
+		mset = msets[m]
+		tc = unpickle(pickles+(analysis_descriptors[a])['topogcorr_pkl'])
+		smoothwid = 4
+		ax = fig.add_subplot(gs[0])
+		for h in range(len(tc.hcorr)):
+			#---set labels
+			if h == 0:
+				label = 'all'
+			elif h < tc.nprots+1:
+				label = 'domain '+str(h-1)
+			else:
+				label = None
+			#---calculate
+			#---Nb since we use the argmax to give the mode of a broad distribution, hard to find error bars
+			#---Nb tried taking the second moment relative to the mode but this made no sense
+			histdatnorm = nan_to_num([array(tc.topoghist[h][i]/(tc.topoghist[h][i].sum(axis=0))) 
+				for i in range(len(tc.topoghist[h]))])
+			hcorr = mean(histdatnorm,axis=0)
+			hcorr_smooth = [mean([tc.yedges[hcorr[j].argmax()] for j in range(i+smoothwid)]) 
+				for i in range(len(hcorr)-smoothwid)]
+			ax.plot(tc.xedges[1:-smoothwid],hcorr_smooth,'o-',label=label)
+			ax.legend()
+			ax.grid(True)
+		ax.set_title('Mode(z)',fontsize=fsaxlabel)
+		if struct_inset:
+			ax = fig.add_subplot(gs[1])
+			plotter2d(ax,mset,dat=mean(mset.surf,axis=0),tickshow=True,lognorm=False,cmap=cmap,
+				lims=None,inset=False,cmap_washout=0.8,ticklabel_show=False)
+			ax.set_title('structure',fontsize=fsaxlabel)
+			ax.set_ylabel(r'$y\:(\mathrm{nm})$',fontsize=fsaxlabel)
+			ax.set_xlabel(r'$x\:(\mathrm{nm})$',fontsize=fsaxlabel)
+	plt.show()
+
+#---DEV
+
 #---plot the 2D histogram
 if 0:
 	fig = plt.figure()
@@ -212,22 +263,3 @@ if 0:
 	ax.set_xticklabels(xedges[::4])
 	ax.set_yticklabels(yedges[::4])
 	plt.show()
-#---plot the topography correlate curves
-if 1:
-	smoothwid = 3
-	fig = plt.figure(figsize=(8,8))
-	ax = plt.subplot(111)
-	for h in range(len(tc.hcorr)):
-		hcorr = tc.hcorr[h]
-		if h == 0:
-			label = 'all'
-		elif h < tc.nprots+1:
-			label = 'monomer '+str(h-1)
-		else:
-			label = None
-		ax.plot(tc.xedges[1:-smoothwid],[mean([tc.yedges[hcorr[j].argmax()] for j in range(i+smoothwid)]) 
-			for i in range(len(hcorr)-smoothwid)],'o-',label=label)
-		ax.legend()
-		ax.grid(True)
-	plt.show()
-	

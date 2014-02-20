@@ -465,12 +465,12 @@ if int(seq[3]):
 				lims = [1*10**-1,1*10**1]
 				cmap = mpl.cm.RdBu_r
 			ax = plt.subplot(gs[(plot_reord[::-1]).index(a)])
-			plotter_undulate_spec2d(ax,mset,dat=data,cmap=cmap,lims=lims)
+			plotter2d(ax,mset,dat=data,cmap=cmap,lims=lims)
 			#---Nb you can replace the following block with a single call to recursive function above
 			if insets:
 				cm,cn = [int(i/2)-1 for i in shape(mset.undulate_hqhq2d)]
 				axins = mpl_toolkits.axes_grid.inset_locator.inset_axes(ax,width="30%",height="30%",loc=1)
-				plotter_undulate_spec2d(axins,mset,
+				plotter2d(axins,mset,
 					dat=data[cm-i2wid:cm+i2wid+1,cn-i2wid:cn+i2wid+1],
 					tickshow=False,cmap=cmap,lims=[array([i for i in flatten(data) 
 						if i != 0.]).min(),data.max()])
