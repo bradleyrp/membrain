@@ -25,6 +25,7 @@ selector_aamd_asymmetric = '(name P and not resname CHL1) or (name C3 and resnam
 residues_aamd_symmetric = ['DOPC','DOPS','PI2P']
 residues_aamd_asymmetric = ['DOPC','DOPS','DOPE','POPC','P35P','PI2P']
 sel_aamd_surfacer = ['name P','(name C2 and not resname CHL1)']
+cgmd_protein = 'name BB'
 
 #---possible analyses
 analysis_descriptors = {
@@ -34,9 +35,9 @@ analysis_descriptors = {
 		'trajsel':'s9-lonestar/md.part0004.120000-220000-200.xtc',
 		'timeslice':[120000,220000,200]},
 	'v510-40000-90000-1000':
-		{'sysname':'membrane-v510',
-		'director':director_symmetric,'selector':selector_aamd,'protein_select':None,
-		'trajsel':'u1-lonestar-longrun/md.part0009.500000-700000-200.xtc',
+		{'sysname':'membrane-v510-atomP',
+		'director':director_aamd_symmetric,'selector':selector_aamd_symmetric,'protein_select':None,
+		'trajsel':'s8-kraken-md.part0021.40000-90000-1000.atomP.xtc',
 		'timeslice':[40000,90000,1000]}}
 analysis_names = ['v510-40000-90000-1000']
 

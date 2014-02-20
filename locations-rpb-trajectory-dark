@@ -21,6 +21,10 @@ name=membrane-v701
 struct=/home/rpb/compbio-alt/membrane-v701-exo70-anti-dilute/s7-sim/system-input.resnr.gro
 /home/rpb/compbio-alt/membrane-v701-exo70-anti-dilute/s8-lonestar/md.part0003.60000-160000-200.xtc
 
+name=membrane-v510-atomP
+struct=/home/rpb/compbio-alt/membrane-v510/t1-trajectory/system.atomP.gro
+/home/rpb/compbio-alt/membrane-v510/t1-trajectory/s8-kraken-md.part0021.40000-90000-1000.atomP.xtc
+
 name=membrane-v599-select
 struct=/home/rpb/compbio/membrane-v599-exo70-antiparallel-alt/s1-trajectory-full/md.part0003.select.nosol.gro
 /home/rpb/compbio/membrane-v599-exo70-antiparallel-alt/s1-trajectory-full/md.part0003.select.nosol.xtc
