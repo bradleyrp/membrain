@@ -195,43 +195,63 @@ def checkmesh(data,tri=None,vecs=None,grid=None,tess=1,show='both',wirecolor=Non
 
 #---undulation plots
 
-def plotter_undulate_spec2d(ax,mset,dat=None,nlabels=None,silence=False,cmap=None,lims=None,
-	cmap_washout=None):
+def plotter_undulate_spec2d(ax,mset,dat=None,nlabels=None,tickshow=False,cmap=None,lims=None,
+	cmap_washout=None,lognorm=True,inset=True,i2wid=1,ticklabel=[1,1]):
 	'''Standard function for plotting 2D spectra from MembraneSet objects.'''
 	if dat == None: dat = mset.undulate_hqhq2d
 	if cmap == None: cmap=mpl.cm.binary; cmap_washout = 0.65;
 	if cmap_washout == None: cmap_washout = 1.0
 	if lims == None: lims = [None,None]
+	if nlabels == None: nabels = 3
+	if tickshow == True: tickshow = [1,1]
+	lognorm = mpl.colors.LogNorm() if lognorm == True else None
 	m,n = shape(dat)
 	#---follows scipy DFFT convention on even/odd location of Nyquist component
 	cm,cn = [int(i/2) for i in shape(dat)]
 	#---nlabels sets the number of printed labels
 	if (m < 5 or n < 5): nlabels = 1; sskipx = 1;sskipy =1
 	elif nlabels == None: 
-		nlabels = 6
+		nlabels = 3
 		sskipx = m/nlabels
 		sskipy = n/nlabels
 	else:
 		sskipx = m/nlabels
 		sskipy = n/nlabels
 	#---plot
-	ax.imshow(array(dat).T,interpolation='nearest',origin='lower',
-		norm=mpl.colors.LogNorm(),cmap=cmap,alpha=cmap_washout,vmin=lims[0],vmax=lims[1])
+	im = ax.imshow(array(dat).T,interpolation='nearest',origin='lower',
+		norm=lognorm,cmap=cmap,alpha=cmap_washout,vmin=lims[0],vmax=lims[1])
 	#---set axes labels
-	if not silence:
-		ax.set_xticks(array(list(arange(0,m/2,sskipx)*-1)[:0:-1]+list(arange(0,m/2,sskipx)))+cm)
-		ax.axes.set_xticklabels([int(i) for i in array(list(arange(0,m/2,sskipx)*-1)[:0:-1]+
-			list(arange(0,m/2,sskipx)))*mset.rounder/mset.lenscale])
-		ax.set_yticks(array(list(arange(0,n/2,sskipy)*-1)[:0:-1]+list(arange(0,n/2,sskipy)))+cn)
-		ax.axes.set_yticklabels([int(i) for i in array(list(arange(0,n/2,sskipy)*-1)[:0:-1]+
-			list(arange(0,n/2,sskipy)))*mset.rounder/mset.lenscale])	
-		ax.set_ylabel(r'${\pi\left|q_y\right|}^{-1}(\mathrm{nm})$')
-		ax.set_xlabel(r'${\pi\left|q_x\right|}^{-1}(\mathrm{nm})$')
-	else:
+	print tickshow
+	if tickshow != False:
+		if tickshow[0]:
+			print 'xtick'
+			ax.set_xticks(array(list(arange(0,m/2,sskipx)*-1)[:0:-1]+list(arange(0,m/2,sskipx)))+cm)
+			ax.axes.set_xticklabels([int(i) for i in array(list(arange(0,m/2,sskipx)*-1)[:0:-1]+
+				list(arange(0,m/2,sskipx)))*mset.rounder/mset.lenscale])
+			if ticklabel[1]:
+				ax.set_xlabel(r'${\pi\left|q_x\right|}^{-1}(\mathrm{nm})$')
+		else:
+			ax.set_xticklabels([])
+		if tickshow[1]:
+			print 'ytick'
+			ax.set_yticks(array(list(arange(0,n/2,sskipy)*-1)[:0:-1]+list(arange(0,n/2,sskipy)))+cn)
+			ax.axes.set_yticklabels([int(i) for i in array(list(arange(0,n/2,sskipy)*-1)[:0:-1]+
+				list(arange(0,n/2,sskipy)))*mset.rounder/mset.lenscale])
+			if ticklabel[0]:
+				ax.set_ylabel(r'${\pi\left|q_y\right|}^{-1}(\mathrm{nm})$')
+		else:
+			ax.set_yticklabels([])
+	elif tickshow == False:
 		ax.set_xticklabels([])
 		ax.set_yticklabels([])
 		ax.set_xticks([])
 		ax.set_yticks([])
+	if inset:
+		axins = mpl_toolkits.axes_grid.inset_locator.inset_axes(ax,width="30%",height="30%",loc=1)
+		plotter_undulate_spec2d(axins,mset,
+			dat=data[cm-i2wid:cm+i2wid+1,cn-i2wid:cn+i2wid+1],
+			tickshow=False,lognorm=False,cmap=cmap,lims=lims,inset=False)
+	return im
 
 def plotter_undulate(mset,qmagfilter=None,inset2d=True,inset2d2=True,ax=None):
 	'''Standard function for plotting 1D undulation spectra, with inset options.'''
@@ -284,5 +304,59 @@ def plotter_undulate(mset,qmagfilter=None,inset2d=True,inset2d2=True,ax=None):
 		'\n'+r'$\boldsymbol{\kappa_{-4.0}} = '+str('%3.1f'%kappa_enforced)+'\:k_BT$',
 		transform=ax.transAxes,fontsize=fsaxtext)
 	if ax != None:
-		plt.show()		
+		plt.show()
+
+def plotmov(dat,basename,figsize=None,keep_snapshots=True,cmap=None,lowres=False,smooth=None,
+	xedges=None,yedges=None):
+	'''Generic wrapper for making movies. Animates a 2D plot from a numpy array.'''
+	import scipy.ndimage
+	#---names
+	sysname = 'test'
+	plot_video_filebase = 'tmpdir'
+	if not os.path.isdir(pickles+'/figs-'+basename):
+		os.mkdir(pickles+'/figs-'+basename)
+	plot_video_filebase = '/figs-'+basename+'/'+'snap-'+basename
+	#---settings
+	#---Nb still needs labels and axes
+	if figsize == None: figsize = (5,5)
+	if cmap == None: cmap = mpl.cm.jet
+	if type(dat) != 'numpy.ndarray':
+		dat = array(dat)
+	vmax = dat.max()
+	vmin = dat.min()
+	print [vmin,vmax]
+	#---loop over frames
+	framenums = range(len(dat))
+	for fr in framenums:
+		print 'Plotting frame '+str(fr)
+		fig = plt.figure(figsize=figsize)
+		ax = plt.subplot(111)
+		if smooth != None:
+			ax.imshow((scipy.ndimage.filters.gaussian_filter(dat[fr],smooth)).T,
+				interpolation='nearest',origin='lower',cmap=mpl.cm.jet,vmax=vmax,vmin=vmin)
+		else:
+			ax.imshow((dat[fr]).T,interpolation='nearest',origin='lower',
+				cmap=mpl.cm.jet,vmax=vmax,vmin=vmin)
+		ax.set_xticks(range(len(xedges)))
+		ax.set_yticks(range(len(yedges)))
+		ax.set_xticklabels(xedges)
+		ax.set_yticklabels(yedges)
+		plt.savefig(pickles+plot_video_filebase+'.fr.'+str('%04d'%framenums.index(fr))+'.png',
+			dpi=200,bbox_inches='tight')
+		plt.close(fig)
+	if lowres:
+		subprocess.call(['ffmpeg','-i',pickles+'/'+plot_video_filebase+'.fr.%04d.png',
+			'-vcodec','mpeg2video','-filter:v','setpts=2.0*PTS',
+			pickles+'/'+plot_video_filebase+'.lowres.mpeg'])
+	else:
+		subprocess.call(['ffmpeg','-i',pickles+'/'+plot_video_filebase+'.fr.%04d.png',
+			'-vcodec','mpeg2video','-qscale','0','-filter:v','setpts=2.0*PTS',
+			pickles+'/'+plot_video_filebase+'.mpeg'])
+	if keep_snapshots == False:
+		os.popen('rm -r -f '+pickles+'/figs-'+sysname+'-dimple-view')
+
+
+
+
+
 

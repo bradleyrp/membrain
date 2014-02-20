@@ -12,11 +12,10 @@ from scipy.signal import hilbert
 #---possible analyses
 analysis_descriptors = {
 	'v2002-t3':
-		{'simtype':'meso',
+		{'simtype':'meso_precomp',
 		'shortname':r'meso(iso)',
 		'testname':'v2002-t3',
-		'locate':
-			'/store-delta/compbio/mesoscale-v2002/t3-anis-22-c0-0.05/run1-size-sweep/rep-0/equilibrate/',
+		'locate':'pkl.structures.meso.v2002-t3.pkl',
 		'start':1500,
 		'end':2000,
 		'nbase':22,
@@ -28,11 +27,10 @@ analysis_descriptors = {
 		'fitlims':[16,4],
 		'forcekappa':True},
 	'v2002-t4':
-		{'simtype':'meso',
+		{'simtype':'meso_precomp',
 		'shortname':'meso(bare)',
 		'testname':'v2002-t4',
-		'locate':\
-			'/home/rpb/worker/repo-membrane/mesoscale-v2002/t4-bare-22/run1-size-sweep/rep-0/equilibrate/',
+		'locate':'pkl.structures.meso.v2002-t4.pkl',
 		'start':1500,
 		'end':2000,
 		'nbase':22,
@@ -44,11 +42,10 @@ analysis_descriptors = {
 		'fitlims':[16,4],
 		'forcekappa':True},
 	'v2002-t2':
-		{'simtype':'meso',
+		{'simtype':'meso_precomp',
 		'shortname':r'meso(aniso)',
 		'testname':'v2002-t2',
-		'locate':
-			'/store-delta/compbio/mesoscale-v2002/t2-anis-22/run1-size-sweep/rep-0/equilibrate/',
+		'locate':'pkl.structures.meso.v2002-t2.pkl',
 		'start':1500,
 		'end':2000,
 		'nbase':22,
@@ -60,11 +57,10 @@ analysis_descriptors = {
 		'fitlims':[16,4],
 		'forcekappa':True},
 	'v2002-t1':
-		{'simtype':'meso',
+		{'simtype':'meso_precomp',
 		'shortname':'meso(bare)',
 		'testname':'v2002-t1',
-		'locate':\
-			'/store-delta/compbio/mesoscale-v2002/t1-bare-22/run1-size-sweep/rep-0/equilibrate/',
+		'locate':'pkl.structures.meso.v2002-t1.pkl',
 		'start':1500,
 		'end':2000,
 		'nbase':22,
@@ -241,8 +237,6 @@ class ModeCouple():
 if int(seq[0]) or msets == []:
 	lenscale = 1.0
 	for a in analyses_names:
-		#[simtype,shortname,testname,locate,start,end,nbase,hascurv,
-		#	hypo,plot_ener_err,plotqe,removeavg,fitlims,forcekappa] = analysis_descriptors[a]
 		for i in analysis_descriptors[a]: vars()[i] = (analysis_descriptors[a])[i]
 		if 'mset' in globals(): del mset
 		mset = MembraneSet()
@@ -269,6 +263,11 @@ if int(seq[0]) or msets == []:
 				collect_c0s.append([c0hypo for i in range(len(mset.surf))])
 			else:
 				collect_c0s.append([])
+		elif simtype == 'meso_precomp':
+			if 'mset' in globals(): del mset
+			mset = unpickle(pickles+locate)
+			collect_c0s.append(mset.getdata('c0map').data)
+			msets.append(mset)
 
 #---calculate mode couplings
 if int(seq[1]):
@@ -279,7 +278,8 @@ if int(seq[1]):
 		lenscale = max(mean(msets[move_ind].vecs,axis=0))/\
 			(max(mean(msets[ref_ind].vecs,axis=0))/msets[ref_ind].lenscale)
 		for a in analyses_names:
-			if (analysis_descriptors[a])['simtype'] == 'meso':
+			if (analysis_descriptors[a])['simtype'] == 'meso' or \
+				(analysis_descriptors[a])['simtype'] == 'meso_precomp':
 				msets[analyses_names.index(a)].lenscale = lenscale
 	#---calculate coupled modes
 	for a in analyses_names:
@@ -466,12 +466,13 @@ if int(seq[3]):
 				cmap = mpl.cm.RdBu_r
 			ax = plt.subplot(gs[(plot_reord[::-1]).index(a)])
 			plotter_undulate_spec2d(ax,mset,dat=data,cmap=cmap,lims=lims)
+			#---Nb you can replace the following block with a single call to recursive function above
 			if insets:
 				cm,cn = [int(i/2)-1 for i in shape(mset.undulate_hqhq2d)]
 				axins = mpl_toolkits.axes_grid.inset_locator.inset_axes(ax,width="30%",height="30%",loc=1)
 				plotter_undulate_spec2d(axins,mset,
 					dat=data[cm-i2wid:cm+i2wid+1,cn-i2wid:cn+i2wid+1],
-					silence=True,cmap=cmap,lims=[array([i for i in flatten(data) 
+					tickshow=False,cmap=cmap,lims=[array([i for i in flatten(data) 
 						if i != 0.]).min(),data.max()])
 			ax.set_title(title,fontsize=fsaxlabel)
 		plt.savefig(pickles+'fig-bilayer-couple-'+analysis_name+'-'+d+'.png',
@@ -626,7 +627,7 @@ if int(seq[6]):
 		for m in range(4):
 			ms = [mset,mset2,msetmd,msetmd2][m]
 			ax = plt.subplot(gs[m])
-			angles = mean(array([angle(ms.undulate_raw[i]) for i in range(len(ms.undulate_raw))]),axis=0)
+			 angles = mean(array([angle(ms.undulate_raw[i]) for i in range(len(ms.undulate_raw))]),axis=0)
 			anglesfilt = numpy.fft.ifftshift(scipy.ndimage.filters.gaussian_filter(angles,10))
 			anglesfilt = scipy.ndimage.filters.gaussian_filter(angles,2)
 			ax.imshow(anglesfilt.T,interpolation='nearest',origin='lower',norm=mpl.colors.LogNorm(),

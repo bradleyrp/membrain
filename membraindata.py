@@ -62,6 +62,8 @@ class MembraneData:
 			self.struct = {'frame':0,'monolayer':1,'lipid':2}
 		elif self.calctype == 'xyz_assoc':
 			self.struct = {'frame':0,'monolayer':1,'lipid':2}
+		elif self.calctype == 'c0map':
+			self.struct = {'frame':0}
 		if label != None:
 			self.description = label
 		else:

@@ -20,20 +20,22 @@ director_cgmd = ['name PO4','name C4A','name C4B']
 selector_cgmd = 'name PO4'
 cgmd_protein = 'name BB'
 
-#---analysis plan
-analysis_plan = slice(None,None)
-analysis_descriptors = [
-	('membrane-v614',director_cgmd,selector_cgmd,
-		None,'s9-lonestar/md.part0004.120000-220000-200.xtc',[120000,220000,200])]
-analyses = [analysis_descriptors[i] for i in [0]]
+#---possible analyses
+analysis_descriptors = {
+	'v614-120000-220000-200':
+		{'sysname':'membrane-v614',
+		'director':director_cgmd,'selector':selector_cgmd,'protein_select':cgmd_protein,
+		'trajsel':'s9-lonestar/md.part0004.120000-220000-200.xtc',
+		'timeslice':[120000,220000,200]}}
+analysis_names = ['v614-120000-220000-200']
 
 #---MAIN
 #-------------------------------------------------------------------------------------------------------------
 
 starttime = time.time(); print 'start'
 #---loop over analysis questions
-for ad in analyses:
-	(sysname,director,selector,protein_select,trajsel,timeslice) = ad
+for aname in analysis_names:
+	for i in analysis_descriptors[aname]: vars()[i] = (analysis_descriptors[aname])[i]
 	#---file lookup
 	if type(trajsel) == slice:
 		trajfile = trajectories[systems.index(sysname)][trajsel]
@@ -42,7 +44,7 @@ for ad in analyses:
 		for fname in trajectories[systems.index(sysname)]:
 			if pat.match(fname):
 				trajfile = [fname]
-	elif type(traj) == list:
+	elif type(trajsel) == list:
 		trajfile = []
 		for trajfilename in trajsel:
 			pat = re.compile('(.+)'+re.sub(r"/",r"[/-]",trajfilename))
@@ -70,8 +72,7 @@ for ad in analyses:
 		else:
 			mset.midplaner(selector,skip=skip,rounder=rounder,framecount=framecount,
 				protein_selection=protein_select,timeslice=timeslice)
-		mset.calculate_undulation_spectrum(removeavg=0,redundant=1)
-		mset.analyze_undulations()
+		mset.calculate_undulations()
 		#---Save the data
 		pickledump(mset,'pkl.structures.'+sysname+'.'+basename[:11]+'.'+str(timeslice[0])+'-'+
 			str(timeslice[1])+'-'+str(timeslice[2])+'.pkl',directory=pickles)
