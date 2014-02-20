@@ -195,8 +195,8 @@ def checkmesh(data,tri=None,vecs=None,grid=None,tess=1,show='both',wirecolor=Non
 
 #---undulation plots
 
-def plotter_undulate_spec2d(ax,mset,dat=None,nlabels=None,tickshow=False,cmap=None,lims=None,
-	cmap_washout=None,lognorm=True,inset=True,i2wid=1,ticklabel=[1,1]):
+def plotter2d(ax,mset,dat=None,nlabels=None,tickshow=False,cmap=None,lims=None,
+	cmap_washout=None,lognorm=True,inset=True,i2wid=1,ticklabel_show=[1,1],label_style=None):
 	'''Standard function for plotting 2D spectra from MembraneSet objects.'''
 	if dat == None: dat = mset.undulate_hqhq2d
 	if cmap == None: cmap=mpl.cm.binary; cmap_washout = 0.65;
@@ -204,6 +204,14 @@ def plotter_undulate_spec2d(ax,mset,dat=None,nlabels=None,tickshow=False,cmap=No
 	if lims == None: lims = [None,None]
 	if nlabels == None: nabels = 3
 	if tickshow == True: tickshow = [1,1]
+	if label_style == 'xy':
+		xlabel = r'${x(\mathrm{nm})$'
+		ylabel = r'${y(\mathrm{nm})$'
+	elif label_style == 'q':
+		xlabel = r'${\pi\left|q_x\right|}^{-1}(\mathrm{nm})$'
+		ylabel = r'${\pi\left|q_y\right|}^{-1}(\mathrm{nm})$'
+	else:
+		ticklabel_show = [0,0]		
 	lognorm = mpl.colors.LogNorm() if lognorm == True else None
 	m,n = shape(dat)
 	#---follows scipy DFFT convention on even/odd location of Nyquist component
@@ -221,24 +229,21 @@ def plotter_undulate_spec2d(ax,mset,dat=None,nlabels=None,tickshow=False,cmap=No
 	im = ax.imshow(array(dat).T,interpolation='nearest',origin='lower',
 		norm=lognorm,cmap=cmap,alpha=cmap_washout,vmin=lims[0],vmax=lims[1])
 	#---set axes labels
-	print tickshow
 	if tickshow != False:
 		if tickshow[0]:
-			print 'xtick'
 			ax.set_xticks(array(list(arange(0,m/2,sskipx)*-1)[:0:-1]+list(arange(0,m/2,sskipx)))+cm)
 			ax.axes.set_xticklabels([int(i) for i in array(list(arange(0,m/2,sskipx)*-1)[:0:-1]+
 				list(arange(0,m/2,sskipx)))*mset.rounder/mset.lenscale])
-			if ticklabel[1]:
-				ax.set_xlabel(r'${\pi\left|q_x\right|}^{-1}(\mathrm{nm})$')
+			if ticklabel_show[0]:
+				ax.set_xlabel(xlabel)
 		else:
 			ax.set_xticklabels([])
 		if tickshow[1]:
-			print 'ytick'
 			ax.set_yticks(array(list(arange(0,n/2,sskipy)*-1)[:0:-1]+list(arange(0,n/2,sskipy)))+cn)
 			ax.axes.set_yticklabels([int(i) for i in array(list(arange(0,n/2,sskipy)*-1)[:0:-1]+
 				list(arange(0,n/2,sskipy)))*mset.rounder/mset.lenscale])
-			if ticklabel[0]:
-				ax.set_ylabel(r'${\pi\left|q_y\right|}^{-1}(\mathrm{nm})$')
+			if ticklabel_show[1]:
+				ax.set_ylabel(ylabel)
 		else:
 			ax.set_yticklabels([])
 	elif tickshow == False:
@@ -248,7 +253,7 @@ def plotter_undulate_spec2d(ax,mset,dat=None,nlabels=None,tickshow=False,cmap=No
 		ax.set_yticks([])
 	if inset:
 		axins = mpl_toolkits.axes_grid.inset_locator.inset_axes(ax,width="30%",height="30%",loc=1)
-		plotter_undulate_spec2d(axins,mset,
+		plotter2d(axins,mset,
 			dat=data[cm-i2wid:cm+i2wid+1,cn-i2wid:cn+i2wid+1],
 			tickshow=False,lognorm=False,cmap=cmap,lims=lims,inset=False)
 	return im
@@ -291,11 +296,11 @@ def plotter_undulate(mset,qmagfilter=None,inset2d=True,inset2d2=True,ax=None):
 	#---inset
 	if inset2d:
 		axins = mpl_toolkits.axes_grid.inset_locator.inset_axes(ax,width="45%",height="45%",loc=1)
-		plotter_undulate_spec2d(axins,mset)
+		plotter2d(axins,mset)
 		if inset2d2:
 			i2wid = 3
 			axins2 = mpl_toolkits.axes_grid.inset_locator.inset_axes(axins,width="30%",height="30%",loc=1)
-			plotter_undulate_spec2d(axins2,mset,
+			plotter2d(axins2,mset,
 				dat=mset.undulate_hqhq2d[cm-i2wid:cm+i2wid+1,cn-i2wid:cn+i2wid+1],
 				silence=True,cmap=mpl.cm.jet)
 	#---report kappa
