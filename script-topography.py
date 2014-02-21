@@ -13,15 +13,17 @@ from mpl_toolkits.axes_grid1 import host_subplot
 from mpl_toolkits.axes_grid1 import AxesGrid
 import matplotlib.pyplot as plt
 from scipy.spatial.distance import *
+from mpl_toolkits.axes_grid1 import make_axes_locatable
 
 #---plan
 analysis_descriptors = {
 	'v700-500000-600000-200':
 		{'pklfile':
-		'pkl.structures.membrane-v700.md.part0009.500000-700000-400.pkl',
+		'pkl.structures.membrane-v700.u1-lonestar.500000-600000-200.pkl',
 		'label':r'$\mathrm{{EXO70}\ensuremath{\times}2{\small (parallel)}}$','nprots':2,
-		'custom_topogcorr_specs':[[slice(0,23),'coiled coil'],[slice(1224,1226),
-			'PIP2 (1)'],[slice(571,573),'PIP2 (1)']]},
+		'custom_topogcorr_specs':[[range(0,85)+range(653,653+85),'coiled coil'],[slice(571-1,571-1+2),
+			'PIP2 (1)'],[slice(653+571-1,653+571-1+2),'PIP2 (1)']],
+		'topogcorr_pkl':'pkl.topogcorr.membrane-v700-u1-lonestar-500000-600000-200.pkl'},
 	'v550-300000-400000-200':
 		{'pklfile':
 		'/structures-broken-transposer-error/pkl.structures.membrane-v550.md.part0006.300000-400000-200.pkl',
@@ -29,22 +31,48 @@ analysis_descriptors = {
 	'v614-120000-220000-200':
 		{'pklfile':'pkl.structures.membrane-v614.s9-lonestar.120000-220000-200.pkl',
 		'label':r'$\mathrm{{ENTH}\ensuremath{\times}4}$','nprots':4,
-		'topogcorr_pkl':'pkl.topogcorr.membrane-v614-s9-lonestar-120000-220000-200.pkl'}}
-analysis_names = ['v700-500000-700000-400','v614-120000-220000-200','v550-300000-400000-200']
-analysis_names = ['v614-120000-220000-200']
-plot_reord = analysis_names
-dolist = ['phase_std_spec2d']
-dolist = ['topogcorr_plot']
+		'topogcorr_pkl':'pkl.topogcorr.membrane-v614-s9-lonestar-120000-220000-200.pkl'},
+	'v612-75000-175000-200':
+		{'pklfile':'pkl.structures.membrane-v612.t4-lonestar.75000-175000-200.pkl',
+		'label':r'$\mathrm{{ENTH}\ensuremath{\times}1}$','nprots':1,
+		'topogcorr_pkl':'pkl.topogcorr.membrane-v612-t4-lonestar-75000-175000-200.pkl'}}
+do = 'topography'
+if do == 'phasecomp':
+	analysis_names = ['v700-500000-600000-200','v614-120000-220000-200','v550-300000-400000-200']
+	plot_reord = analysis_names
+	dolist = ['phase_std_spec2d']
+	bigname = '.'.join(analysis_names)
+elif do == 'topography':
+	analysis_names = ['v612-75000-175000-200']
+	plot_reord = analysis_names
+	dolist = ['topogcorr_plot']
+	bigname = analysis_names[0]
 
 #---settings
 cmap = mpl.cm.RdBu_r
+clrs = [brewer2mpl.get_map('Set1','qualitative',9).mpl_colors[i] for i in range(9)]
 
-#---settings, topographic correlate
-makevid = False #---code needs cleaned up if you use this
-nprots = 2
-binw = (10,1)
+#---method, topographic correlate
+topogcorr_plot_struct = True
 
-#---MAIN
+#---MAIN, PHASE PLOTS
+#-------------------------------------------------------------------------------------------------------------
+
+def specialname(basename):
+	'''Standard method for deriving a step/part/timeslice-specific name from the trajectory file.'''
+	special_name = "-".join([i for i in re.match('.+membrane\-.+',basename).string.split('.')
+		if re.match('[a-z][0-9]\-.+',i) 
+		or re.match('membrane-v.+',i) 
+		or re.match('[0-9]+\-[0-9]+\-[0-9]',i)])
+	return special_name
+	
+def torus_metric(x1,x2,vecs,ndims=2):
+	'''The torus metric i.e. how to measure distance in periodic spaces, quickly.'''
+	raw = array([cdist(x1[:,i:i+1],x2[:,i:i+1]) for i in range(ndims)])
+	pbcd = array([raw[i]-(raw[i]>vecs[i]/2)*vecs[i] for i in range(ndims)]).T
+	return sqrt(sum(pbcd**2,axis=-1)).T
+
+#---MAIN, PHASE PLOTS
 #-------------------------------------------------------------------------------------------------------------
 
 #---load
@@ -62,7 +90,7 @@ if 'msets' not in globals():
 if 'phase_std_spec2d' in dolist:
 	calcs = ['mean','var']
 	calcnamesl = ['mean phase','phase variance']
-	calcnamesr = [r'$\mathrm{rad}$',r'$(\mathrm{rad}^{2}$)']
+	calcnamesr = [r'$\mathrm{rad}$',r'$\mathrm{rad}^{2}$']
 	smooth_std = 1
 	smooth_mean = 1
 	#---prepare data	
@@ -108,38 +136,30 @@ if 'phase_std_spec2d' in dolist:
 			#ax = plt.subplot(gs[calcs.index(calc),(plot_reord).index(a)])
 			ax = gs[calcs.index(calc)][(plot_reord).index(a)]
 			im = plotter2d(ax,mset,dat=data,cmap=cmap,lognorm=False,lims=[vmin,vmax],
-				ticklabel_show=[(1 if c == len(calcs)-1 else 0),0],tickshow=True,label_style='q')
+				ticklabel_show=[(1 if c == len(calcs)-1 else 0),0],tickshow=True,label_style='q',
+				centertick=True)
 			#---plot details
 			if c == 0: ax.set_title(label)
 		#---colorbar for this row
 		cbar = gs[c].cbar_axes[0].colorbar(im)
 		gs[c].cbar_axes[0].set_ylabel(calcnamesr[c],fontsize=fsaxlabel)
 		gs[c][0].set_ylabel(calcnamesl[c],fontsize=fsaxlabel)
-	#plt.savefig(pickles+'fig-phases-',dpi=500,bbox_inches='tight')	
+	plt.savefig(pickles+'fig-phases-'+bigname+'.png',dpi=500,bbox_inches='tight')	
 	plt.show()
 
-#---DEV
+#---MAIN, PHASE PLOTS
 #-------------------------------------------------------------------------------------------------------------
-
-makevid = False #---code needs cleaned up if you use this
-nprots = 2
-binw = (10,1)
-
-def torus_metric(x1,x2,vecs,ndims=2):
-	'''The torus metric i.e. how to measure distance in periodic spaces, quickly.'''
-	raw = array([cdist(x1[:,i:i+1],x2[:,i:i+1]) for i in range(ndims)])
-	pbcd = array([raw[i]-(raw[i]>vecs[i]/2)*vecs[i] for i in range(ndims)]).T
-	return sqrt(sum(pbcd**2,axis=-1)).T
 
 class TopographyCorrelate():
 	'''Class object for holding analysis of topography correlation data.'''
-	def __init__(self,mset,nprots):
+	def __init__(self,mset,nprots,label):
 		self.histdat = []
 		self.nprots = nprots
 		self.prots_nres = shape(mset.protein[0])[0]/nprots
 		#---this class is largely just a wrapper for a list of topographic matrices
 		self.prots_refs = [slice(None,None)]+[slice(i*self.prots_nres,(i+1)*self.prots_nres) 
 			for i in range(nprots)]
+		self.prots_names = [label]+['domain '+str(i) for i in range(nprots)]
 		self.cutoff = min(mean(mset.vecs,axis=0)[:2])
 		#---list of matrices of protein-to-surface point distances
 		self.topogmat = []
@@ -158,17 +178,21 @@ class TopographyCorrelate():
 		self.notes.append(notable)
 
 #---topography correlate analysis
-if 'topogcorr_calc' in dolist and 0:
+if 'topogcorr_calc' in dolist:
 	for a in analysis_names:
 		for i in analysis_descriptors[a]: vars()[i] = (analysis_descriptors[a])[i]
 		m = analysis_names.index(a)
 		mset = msets[m]
-		tc = TopographyCorrelate(mset,nprots)
+		tc = TopographyCorrelate(mset,nprots,label)
 		for i in analysis_descriptors[a]: 
 			tc.addnote([i,str((analysis_descriptors[a])[i])])
+		if 'custom_topogcorr_specs' in vars():
+			for item in custom_topogcorr_specs:
+				tc.prots_refs.append(item[0])
+				tc.prots_names.append(item[1])
 		for protsref in tc.prots_refs:
 			hist_ranges = ((0,ceil(tc.cutoff/100)*100),(-40,40))
-			nbins = [(hist_ranges[i][1]-hist_ranges[i][0])/binw[i] for i in range(2)]
+			nbins = [(hist_ranges[i][1]-hist_ranges[i][0])/tc.binw[i] for i in range(2)]
 			topogmat = []
 			topoghist = []
 			for fr in range(len(mset.surf)):
@@ -196,40 +220,27 @@ if 'topogcorr_calc' in dolist and 0:
 		tc.yedges = yedges
 		#---wasteful to save the entire distance matrix, so recompute later if necessary
 		del tc.topogmat
-		special_name = "-".join([i for i in re.match('.+membrane\-.+',
-			(analysis_descriptors[a])['pklfile']).string.split('.') 
-			if re.match('[a-z][0-9]\-.+',i) 
-			or re.match('membrane-v.+',i) 
-			or re.match('[0-9]+\-[0-9]+\-[0-9]',i)])
-		pickledump(tc,'pkl.topogcorr.'+special_name+'.pkl',directory=pickles)
+		pickledump(tc,'pkl.topogcorr.'+specialname((analysis_descriptors[a])['pklfile'])+'.pkl',
+			directory=pickles)
 	
-#---method
-topogcorr_plot_struct = True
-
-#---DO: add wrapper for subplots here?
-axes = []
-
 #---plot the topography correlate curves
 if 'topogcorr_plot' in dolist:
-	#---prepare figure with gridspec
-	fig = plt.figure(figsize=(5*(1+(1 if topogcorr_plot_struct else 0))+3,5))
-	gs = gridspec.GridSpec(1,1+(1 if topogcorr_plot_struct else 0))
 	#---loop over analyses
 	for a in analysis_names:
+		#---prepare figure with gridspec
+		fig = plt.figure(figsize=(5*(1+(1 if topogcorr_plot_struct else 0))+3,5))
+		gs = gridspec.GridSpec(len(analysis_names),1+(1 if topogcorr_plot_struct else 0))
 		for i in analysis_descriptors[a]: vars()[i] = (analysis_descriptors[a])[i]
 		m = analysis_names.index(a)
 		mset = msets[m]
 		tc = unpickle(pickles+(analysis_descriptors[a])['topogcorr_pkl'])
 		smoothwid = 4
 		ax = fig.add_subplot(gs[0])
+		hcorr_smooths = []
 		for h in range(len(tc.hcorr)):
 			#---set labels
-			if h == 0:
-				label = 'all'
-			elif h < tc.nprots+1:
-				label = 'domain '+str(h-1)
-			else:
-				label = None
+			if h == 0: color = 'k'
+			elif h < len(tc.prots_refs): color = clrs[(h-1)%(len(tc.prots_refs)-1)]
 			#---calculate
 			#---Nb since we use the argmax to give the mode of a broad distribution, hard to find error bars
 			#---Nb tried taking the second moment relative to the mode but this made no sense
@@ -238,17 +249,33 @@ if 'topogcorr_plot' in dolist:
 			hcorr = mean(histdatnorm,axis=0)
 			hcorr_smooth = [mean([tc.yedges[hcorr[j].argmax()] for j in range(i+smoothwid)]) 
 				for i in range(len(hcorr)-smoothwid)]
-			ax.plot(tc.xedges[1:-smoothwid],hcorr_smooth,'o-',label=label)
+			hcorr_smooths.append(hcorr_smooth)
+			ax.plot(array(tc.xedges[1:-smoothwid])/10.,array(hcorr_smooth)/10.,'o-',label=tc.prots_names[h],
+				c=color)
 			ax.legend()
 			ax.grid(True)
-		ax.set_title('Mode(z)',fontsize=fsaxlabel)
-		if struct_inset:
+		ax.set_xlabel(r'$\min(\left|\mathbf{r}-\mathbf{r}_{\mathrm{prot}}\right|)\:(\mathrm{nm})$',
+			fontsize=fsaxlabel)
+		ax.set_ylabel(r'$z\:(\mathrm{nm})$',fontsize=fsaxlabel)
+		ax.axhline(y=0,xmin=0.,xmax=max(tc.xedges[1:-smoothwid]),lw=2,color='k')
+		plt.setp(ax.get_xticklabels(),fontsize=fsaxlabel)
+		plt.setp(ax.get_yticklabels(),fontsize=fsaxlabel)
+		if topogcorr_plot_struct:
 			ax = fig.add_subplot(gs[1])
-			plotter2d(ax,mset,dat=mean(mset.surf,axis=0),tickshow=True,lognorm=False,cmap=cmap,
-				lims=None,inset=False,cmap_washout=0.8,ticklabel_show=False)
-			ax.set_title('structure',fontsize=fsaxlabel)
-			ax.set_ylabel(r'$y\:(\mathrm{nm})$',fontsize=fsaxlabel)
-			ax.set_xlabel(r'$x\:(\mathrm{nm})$',fontsize=fsaxlabel)
+			maxval = max(abs(mean(mset.surf,axis=0).min()/10.),abs(mean(mset.surf,axis=0).max()/10.))
+			im = plotter2d(ax,mset,dat=mean(mset.surf,axis=0)/10.,lognorm=False,cmap=cmap,
+				inset=False,cmap_washout=0.8,ticklabel_show=[1,1],tickshow=[1,1],centertick=False,
+				fs=fsaxlabel,label_style='xy',lims=[-maxval,maxval])
+			for s in range(1,len(tc.prots_refs)):
+				plothull(ax,mean(mset.protein,axis=0)[tc.prots_refs[s]],mset=mset,c=clrs[s-1])
+			divider = make_axes_locatable(ax)
+			cax = divider.append_axes("right", size="5%", pad=0.05)
+			fig.colorbar(im,cax=cax)
+		cax.tick_params(labelsize=10) 
+		cax.set_ylabel(r'$\left\langle z(x,y)\right\rangle \:(\mathrm{nm})$',fontsize=fsaxlabel)
+		plt.setp(cax.get_yticklabels(),fontsize=fsaxlabel)
+	plt.savefig(pickles+'fig-topography-'+specialname((analysis_descriptors[a])['pklfile'])+'.png',
+		dpi=500,bbox_inches='tight')	
 	plt.show()
 
 #---DEV

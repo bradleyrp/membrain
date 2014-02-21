@@ -26,7 +26,7 @@ from mayavi import mlab
 
 #---Color definitions
 import brewer2mpl
-clrs = brewer2mpl.get_map('Set1', 'qualitative', 5).mpl_colors
+clrs = brewer2mpl.get_map('Set1', 'qualitative', 8).mpl_colors
 
 #---Use the axesgrid toolkit for insets
 import mpl_toolkits.axes_grid.inset_locator
@@ -159,7 +159,6 @@ def drawbox3d(vecs):
 	for seq in seqs:
 		dat = array([[transpos[s][i]*vecs[i] for i in range(3)] for s in seq])
 		mlab.plot3d(dat[:,0],dat[:,1],dat[:,2],tube_radius=2, colormap='Spectral')
-
 	data = mlab.pipeline.open(filename)
 	surf = mlab.pipeline.surface(data)
 	
@@ -196,7 +195,8 @@ def checkmesh(data,tri=None,vecs=None,grid=None,tess=1,show='both',wirecolor=Non
 #---undulation plots
 
 def plotter2d(ax,mset,dat=None,nlabels=None,tickshow=False,cmap=None,lims=None,
-	cmap_washout=None,lognorm=True,inset=True,i2wid=1,ticklabel_show=[1,1],label_style=None):
+	cmap_washout=None,lognorm=True,inset=True,i2wid=1,ticklabel_show=[1,1],label_style=None,
+	centertick=None,tickskip=None,fs=None):
 	'''Standard function for plotting 2D spectra from MembraneSet objects.'''
 	if dat == None: dat = mset.undulate_hqhq2d
 	if cmap == None: cmap=mpl.cm.binary; cmap_washout = 0.65;
@@ -205,13 +205,15 @@ def plotter2d(ax,mset,dat=None,nlabels=None,tickshow=False,cmap=None,lims=None,
 	if nlabels == None: nabels = 3
 	if tickshow == True: tickshow = [1,1]
 	if label_style == 'xy':
-		xlabel = r'${x(\mathrm{nm})$'
-		ylabel = r'${y(\mathrm{nm})$'
+		xlabel = r'$x\:(\mathrm{nm})$'
+		ylabel = r'$y\:(\mathrm{nm})$'
 	elif label_style == 'q':
 		xlabel = r'${\pi\left|q_x\right|}^{-1}(\mathrm{nm})$'
 		ylabel = r'${\pi\left|q_y\right|}^{-1}(\mathrm{nm})$'
 	else:
 		ticklabel_show = [0,0]		
+	if centertick == None: tickcenter = False
+	if tickskip == None: tickskip = 5
 	lognorm = mpl.colors.LogNorm() if lognorm == True else None
 	m,n = shape(dat)
 	#---follows scipy DFFT convention on even/odd location of Nyquist component
@@ -225,25 +227,36 @@ def plotter2d(ax,mset,dat=None,nlabels=None,tickshow=False,cmap=None,lims=None,
 	else:
 		sskipx = m/nlabels
 		sskipy = n/nlabels
+	#---ticks can be centered or not
+	if centertick:
+		xticks = array(list(arange(0,m/2,sskipx)*-1)[:0:-1]+list(arange(0,m/2,sskipx)))+cm
+		xticklabels = [int(i) for i in array(list(arange(0,m/2,sskipx)*-1)[:0:-1]+\
+			list(arange(0,m/2,sskipx)))*mset.rounder/mset.lenscale]
+		yticks = array(list(arange(0,n/2,sskipy)*-1)[:0:-1]+list(arange(0,n/2,sskipy)))+cn
+		yticklabels = [int(i) for i in array(list(arange(0,n/2,sskipy)*-1)[:0:-1]+\
+			list(arange(0,n/2,sskipy)))*mset.rounder/mset.lenscale]
+	else:
+		xticks = range(0,m,tickskip)
+		yticks = range(0,n,tickskip)
+		xticklabels = xticks
+		yticklabels = yticks
 	#---plot
 	im = ax.imshow(array(dat).T,interpolation='nearest',origin='lower',
 		norm=lognorm,cmap=cmap,alpha=cmap_washout,vmin=lims[0],vmax=lims[1])
 	#---set axes labels
 	if tickshow != False:
 		if tickshow[0]:
-			ax.set_xticks(array(list(arange(0,m/2,sskipx)*-1)[:0:-1]+list(arange(0,m/2,sskipx)))+cm)
-			ax.axes.set_xticklabels([int(i) for i in array(list(arange(0,m/2,sskipx)*-1)[:0:-1]+
-				list(arange(0,m/2,sskipx)))*mset.rounder/mset.lenscale])
+			ax.set_xticks(xticks)
+			ax.axes.set_xticklabels(xticklabels,fontsize=fs)
 			if ticklabel_show[0]:
-				ax.set_xlabel(xlabel)
+				ax.set_xlabel(xlabel,fontsize=fs)
 		else:
 			ax.set_xticklabels([])
 		if tickshow[1]:
-			ax.set_yticks(array(list(arange(0,n/2,sskipy)*-1)[:0:-1]+list(arange(0,n/2,sskipy)))+cn)
-			ax.axes.set_yticklabels([int(i) for i in array(list(arange(0,n/2,sskipy)*-1)[:0:-1]+
-				list(arange(0,n/2,sskipy)))*mset.rounder/mset.lenscale])
+			ax.set_yticks(yticks)
+			ax.axes.set_yticklabels(yticklabels,fontsize=fs)
 			if ticklabel_show[1]:
-				ax.set_ylabel(ylabel)
+				ax.set_ylabel(ylabel,fontsize=fs)
 		else:
 			ax.set_yticklabels([])
 	elif tickshow == False:
@@ -360,7 +373,17 @@ def plotmov(dat,basename,figsize=None,keep_snapshots=True,cmap=None,lowres=False
 	if keep_snapshots == False:
 		os.popen('rm -r -f '+pickles+'/figs-'+sysname+'-dimple-view')
 
-
+def plothull(ax,points,c=None,mset=None):
+	if mset != None: vecs = mean(mset.vecs,axis=0)
+	m,n = mset.griddims
+	pts = array([[i[0]*m/vecs[0],i[1]*n/vecs[1]] for i in points])
+	if len(points) > 2:
+		hull = scipy.spatial.ConvexHull(pts)
+		ax.add_patch(mpl.patches.Polygon(pts[hull.vertices],closed=True,facecolor=c))
+	else:
+		pts = [mean(points,axis=0)[i]/mean(mset.vecs,axis=0)[i]*mset.griddims[i] for i in range(2)]
+		ax.add_patch(mpl.patches.Circle(pts,radius=0.5,color=c))
+	
 
 
 
