@@ -55,9 +55,7 @@ analysis_descriptors = [
 		r'$\textbf{{EXO70}\ensuremath{\times}2{\small (anti)}}$'),
 	('pkl.dimple.v550.md.part0006.300000-400000-200.dummytest.pkl',None,
 		r'$\textbf{control, invert}$')]
-
-analysis_plan = slice(0,1)
-analyses = analysis_descriptors[analysis_plan]
+analyses = [analysis_descriptors[i] for i in [-1]]
 
 show_colorbar = False
 keep_snapshots = True

@@ -1,5 +1,14 @@
 #!/usr/bin/python
 
+# Pseudocode.
+# Needs: surface pickle + ion trajectory
+# 1. For each ion, from start to end by time (triple loop)
+# 		Record the distance from start point by interval length
+#		Record if in the zone in separate array (1 or 0)
+# 2. Filter array (1 or 0) by some % time in the zone
+# 		Only include delta t distances if the mean in the 1/0 array is above some level
+
+interact = True
 from membrainrunner import *
 execfile('locations.py')
 
@@ -34,18 +43,19 @@ analysis_descriptors = {
 		'sysname_lookup':'membrane-v510-atomP',
 		'director':director_aamd_symmetric,'selector':selector_aamd_symmetric,'protein_select':None,
 		'trajsel':'s8-kraken-md.part0021.40000-90000-100.atomP.xtc',
-		'timeslice':[40000,90000,100]}}
+		'timeslice':[40000,90000,100],
+		'ions_struct',
+		'ions_traj'}}
 analysis_names = ['v510-40000-90000-100']
 
-#---MAIN
+#---FUNCTIONS
 #-------------------------------------------------------------------------------------------------------------
 
-starttime = time.time(); print 'start'
-#---loop over analysis questions
-for aname in analysis_names:
+def trajectory_lookup(aname):
+	'''Return the correct trajectory and structure files.'''
 	for i in analysis_descriptors[aname]: vars()[i] = (analysis_descriptors[aname])[i]
-	#---file lookup
 	if 'sysname_lookup' in vars() and sysname_lookup == None: sysname_lookup = sysname
+	grofile = structures[systems.index(sysname_lookup)]
 	if type(trajsel) == slice:
 		trajfile = trajectories[systems.index(sysname_lookup)][trajsel]
 	elif type(trajsel) == str:
@@ -60,32 +70,25 @@ for aname in analysis_names:
 			for fname in trajectories[systems.index(sysname_lookup)]:
 				if pat.match(fname):
 					trajfile.append(fname)
-	print 'trajectories: '+str(trajfile)
+	return grofile,trajfile
+
+#---MAIN
+#-------------------------------------------------------------------------------------------------------------
+
+starttime = time.time(); print 'start'
+#---loop over analysis questions
+for aname in analysis_names:
+	grofile,trajfile
 	#---loop over trajectory files
 	for traj in trajfile:
 		mset = MembraneSet()
 		#---Load the trajectory
-		gro = structures[systems.index(sysname_lookup)]
+
 		basename = traj.split('/')[-1][:-4]
 		#---revised basename to include step-part because sometimes the time gets reset
 		basename = "-".join(re.match('.*/[a-z][0-9]\-.+',traj).string.split('/')[-2:])[:-4]
 		sel_surfacer = sel_aamd_surfacer
-		print 'Accessing '+basename+'.'
+		print 'accessing '+basename+'.'
 		starttime = time.time()
-		mset.load_trajectory((basedir+'/'+gro,basedir+'/'+traj),resolution='aamd')
+		mset.load_trajectory((basedir+'/'+grofile,basedir+'/'+traj),resolution='aamd')
 		print 'time = '+str(1./60*(time.time()-starttime))+' minutes.'
-		#---Average structure calculation
-		mset.identify_monolayers(director,startframeno=0)
-		if protein_select == None:
-			mset.midplaner(selector,skip=skip,rounder=rounder,framecount=framecount,timeslice=timeslice)
-		else:
-			mset.midplaner(selector,skip=skip,rounder=rounder,framecount=framecount,
-				protein_selection=protein_select,timeslice=timeslice)
-		mset.calculate_undulations()
-		#---Save the data
-		pickledump(mset,'pkl.structures.'+sysname+'.'+basename[:11]+'.'+str(timeslice[0])+'-'+
-			str(timeslice[1])+'-'+str(timeslice[2])+'.pkl',directory=pickles)
-		if erase_when_finished:
-			del mset
-		print 'time = '+str(1./60*(time.time()-starttime))+' minutes.'
-

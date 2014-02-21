@@ -19,7 +19,8 @@ mpl.rc('text.latex', preamble='\usepackage{sfmath}')
 mpl.rcParams.update({'font.style':'sans-serif'})
 mpl.rcParams.update({'font.size': 16})
 
-exo70pip2_study = 1
+exo70pip2_study = 0
+exo70pip2_study_v2 = 1
 enth_study = 0
 
 if exo70pip2_study:
@@ -40,6 +41,17 @@ elif enth_study:
 		r'$\textbf{{EXO70}\ensuremath{\times}2{\small (antiparallel)}}$'],
 		['pkl.structures.membrane-v612-stress.md.part0003.pkl',1,
 		'v612.part0003.rerun',
+		r'$\textbf{{EXO70}\ensuremath{\times}2{\small (parallel)}}$'],
+		['pkl.structures.membrane-v550.md.part0006.300000-400000-200.pkl',0,
+		'v550.part0006.300000-400000-200',
+		r'$\textbf{{control}}$']]
+elif exo70pip2_study_v2:
+	analysis_plan = slice(1,2)
+	analysis_descriptors = [['pkl.structures.membrane-v700.md.part0009.500000-700000-400.pkl',2,
+		'v700.part0009.500000-700000-400.pkl',
+		r'$\textbf{{EXO70}\ensuremath{\times}2{\small (parallel)}}$'],
+		['pkl.structures.membrane-v700.md.part0009.500000-700000-400.pkl',2,
+		'v700.part0009.500000-700000-400.pkl',
 		r'$\textbf{{EXO70}\ensuremath{\times}2{\small (parallel)}}$'],
 		['pkl.structures.membrane-v550.md.part0006.300000-400000-200.pkl',0,
 		'v550.part0006.300000-400000-200',

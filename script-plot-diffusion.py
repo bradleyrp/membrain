@@ -55,9 +55,9 @@ ad = analyses[-1]
 mset = MembraneSet()
 
 #---custom
-basedir = '/home/rpb/queue/'
+basedir = '/home/rpb/tmp/'
 gro = 'system-input.pi2p.gro'
-traj = 'md.parts.msd.pi2p.nojump.xtc'
+traj = 'system.pi2p.xtc'
 
 #---prepare
 mset.load_trajectory((basedir+'/'+gro,basedir+'/'+traj),resolution='aamd')
@@ -93,7 +93,7 @@ for frameno in range(start,end,skip):
 #---plot
 c = mcolors.ColorConverter().to_rgb
 vecs=mean(mset.vecs,axis=0)
-plotslice = slice(None,None,100)
+plotslice = slice(None,None,1)
 selected_lipids = [i for i in range(0,40)]
 fig = plt.figure(figsize=(8,8))	
 ax = fig.add_subplot(111,aspect='equal')
@@ -109,8 +109,10 @@ for sel in selected_lipids:
 	cmap._init()
 	cmap._lut[:-3,-1] = alphas
 	col = [cmap(float(i)/(len(lipidpts[0]))) for i in xrange(len(lipidpts[0]))]
-	ax.scatter(array(lipidpts)[plotslice,sel,0],array(lipidpts)[plotslice,sel,1],
-		marker='.',lw = 0,s=20,c=col,edgecolors='none')
+	#ax.scatter(array(lipidpts)[plotslice,sel,0],array(lipidpts)[plotslice,sel,1],
+	#	marker='.',lw = 2,s=20,c=col,edgecolors='none')
+	ax.plot(array(lipidpts)[plotslice,sel,0],array(lipidpts)[plotslice,sel,1],
+		marker='.',lw = 1)
 ax.set_xlim((-0.2*vecs[0],1.2*vecs[0]))
 ax.set_ylim((-0.2*vecs[1],1.2*vecs[1]))
 ax.axvline(x=0,linewidth=2, color='k')

@@ -60,6 +60,52 @@ Summary of recent mayavi dependency debacle.
 	Ran texhash a lot.
 	None of this worked until I installed the texlive font collections and collections-extra.
 	Then it worked. And all was well.
-	
+
+2014.2.13
+	Too many changes to recount here. Here are some brief notes on the overall structure of the analysis system, which is starting to become a bit too complex for my comfort.
+	For now, I (RPB) would like to explain the connections between the scripts and the files they analyzed.
+		Initial design
+			Originally, I started writing all of the codes so that it worked in big batches.
+			For example, if you wanted to do the undulation spectrum, you could call a wrapper function called membrain (a bash script) with certain flags, and it would analyze them.
+			After a while, this became tedious, and I started writing individual scripts for a particular purpose.
+			The idea was that you could have a script that parsed a central list of XTC files organized in locations-rpb-trajectory-dark.
+			If your analysis portion was bigger than an XTC, I always planned on designing a system for stitching together pickles.
+			Ultimately, however, this workflow became technically difficult. Stitching together pickles is hard, and keeping track of timestamps across multiple pickles is also hard, even though they individually carry all of the timestamp information.
+		Alternative
+			After writing stress, dimple, and lipid tilt scripts, a new strategy started to make more sense.
+			Stitch together trajectories directly using gromacs tools, label them by the time that they span, and then analyze them all at once.
+			Since some procedures, like the stress tensor calculation, are complicated, they can operate serially in multiple steps.
+			The final steps can be simple plotting functions.
+			This also solves the problem of having a needlessly complex plotter.py function.
+			To reiterate: the most sensible way to analyze even very large trajectories is to combine them or subset them in gromacs, and then analyze them at once using python.
+			This way, you don't need to combine pickles (though you still could, I suppose), and you don't have any accounting problems.
+			I've already started naming these trajectories with names like md.part0004.500000-700000-200.xtc which indicates the exact time that the trajectory occupies.
+			These time stamps will be retained for all subsequent pickles so that they can be identified from the command prompt, though they also contain time stamps.
+			How to lookup XTC files.
+				Previously, I was just adding folders and XTC files to the trajectory list in locations-rpb-trajectory-dark, then using slice(-1,None) in the scripts to pick up the last one.
+				Since this method was relative to the length of the list, it's a pain to go back and recompute things.
+				Here's how I will fix that.
+					We can't abolish the lookup table without 
+		Overall vision for the scripts, based on what I've learned while coding it.
+			Each analysis is a separate script, or possibly a serial procedure with multiple scripts, subsequent ones acting on pickle files, which tend to be dramatically smaller than the trajectories.
+			All plotting functions are handled by scripts, and we will eventually reduce plotter.py to testing functions like meshplot. I would also like to reduce the number of imported packages there.
+			Importing the system will not involve the command tools in membrain.sh or the functions in membrainrunner.py (which should be in separte scripts).
+			Each self-contained script will have no separate functions, so that it can be debugged without spinning the functions out to the main namespace
+			Each script will loop over a set of analysis_descriptors which specify files and settings. These will have to point to the XTC files using a lookup table for each system.
+			Instead of looking up XTCs by relative position in a list (which is confusing), they will be looked up with a regex that identifies their name.
+			The analysis_descriptors in each script will therefore serve as a record of what was analyzed, and they can be made arbitrarily long.
+			Then, XTC names and hence pickle names contain all the necessary information about the trajectory for subsequent analysis.
+			There will be two naming conventions. The standard will be md.part0004.500000-700000-200.xtc.
+			In developing the time-spider and time-slice bash scripts to analyze long trajectories for MSD with David, I started combining the final names with the step number the trajectory started on, so you get things like s4-kraken-md.part0004.500000-700000-200.xtc.
+			The easiest way to retain the information is to simply grep the trajectory list for the file (or really the end "...md.part0004.500000-700000-200.xtc" so you can handle both conventions described above.
+			Then each self-contained script can refer to an XTC file at large by its written timestamps. We accomodate multiple systems with a nice record of the analyses, an easy way to reanalyze, and a streamlined post-processing scheme.
+		Current changes
+			On script-cgmd-structure.py, make the following changes described in the overall vision.
+				Retain the loop structure where you loop over tests (not used much, but no need to drop it), then trajectory files, then sub-tests, etc.
+				For specifying trajectory, if a slice object is there, use the relative position in a list. If not, then it's a string that you can use to grep the trajectory list, and if it's nothing, then possibly infer the file from the timestamps.
+			Make the following future changes soon
+			Also removing the loop over multiple systems within one analysis_descriptor, since this is clumsy and unnecessary
+		Future steps
+			I would like to remove the command-line interface in membrainrunner.py, rename that module to something more sensible like membrainstudy, and then just write everything in scripts.
 	
 	

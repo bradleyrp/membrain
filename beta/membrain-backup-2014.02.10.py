@@ -4,7 +4,6 @@
 #-------------------------------------------------------------------------------------------------------------
 
 #---Basic libraries
-execfile('/etc/pythonstart')
 import time
 import argparse
 import string
@@ -17,8 +16,6 @@ import collections
 import time
 import random
 import subprocess
-import re
-import code
 
 #---Set up visualization
 os.environ['ETS_TOOLKIT'] = 'qt4'
@@ -52,8 +49,6 @@ class MembraneSet:
 		self.vecs_index = []
 		self.griddims = []
 		self.universe = []
-		self.unierse_structfile = ''
-		self.universe_trajfile = ''
 		self.monolayer_residues = []
 		self.resnames = []
 		self.resids = []
@@ -73,12 +68,12 @@ class MembraneSet:
 		self.surf_position = []
 		self.surf_positioni = []
 		#---Undulation data
-		self.undulate_raw = []
-		self.undulate_hqhq2d = []
-		self.undulate_qmag2d = []
-		self.undulate_spec1d = []
-		self.undulate_qmagfilter = []
-		self.undulate_kappa = 0.0
+		self.uqraw = []
+		self.uqrawmean = []
+		self.uqrawstd = []
+		self.qrawmean = []
+		self.uqcollect = []
+		self.qcollect = []
 		#---Protein data
 		self.protein = []
 		self.protein_index = []
@@ -109,9 +104,6 @@ class MembraneSet:
 			self.griddims = []
 			self.nframes = 0
 		self.universe = Universe(files[0],files[1])
-		#---Nb added these flags after fixing transpose error, so they are proxy
-		self.universe_structfile = files[0]
-		self.universe_trajfile = files[1]
 		self.nframes = len(self.universe.universe.trajectory)
 		if hasattr(self.universe.trajectory[0],'time'):
 			self.time_start = self.universe.trajectory[0].time
@@ -230,7 +222,6 @@ class MembraneSet:
 			whichframes = dirlist[start:end:skip]
 		print 'The trajectory directory has '+str(len(whichframes))+' frames available.'
 		extradat = []
-		boundary_pts = []
 		for index in whichframes:
 			tree = ET.parse(vtudir+'/'+prefix+str(index)+suffix)
 			root = tree.getroot()
@@ -243,11 +234,6 @@ class MembraneSet:
 						extra_item_nums.append([j[1][1] for j in [i.items() 
 							for i in root[0].find('Piece').find('PointData').\
 							getchildren()]].index(propstring))
-				boundsind = [j[1][1] for j in [i.items() for i in root[0].find('Piece').find('PointData').\
-					getchildren()]].index('boundary')
-				nonbounds = list(where(array(map(float,root[0].find('Piece').find('PointData').\
-					getchildren()[boundsind].text.split()))==0.0)[0])
-				print nonbounds
 			print 'reading vtu file number '+str(index)
 			coord = root[0].find('Piece').find('Points').find('DataArray').text.split()
 			coord = map(float,coord)
@@ -257,9 +243,8 @@ class MembraneSet:
 			for itemno in extra_item_nums:
 				somedata.append(map(float,root[0].find('Piece').find('PointData').\
 					getchildren()[itemno].text.split()))
-			if extra_props != None:
-				extradat.append(array(somedata)[:,nonbounds])
-			self.xyzs.append(array(vcoord)[nonbounds])
+			extradat.append(somedata)
+			self.xyzs.append(array(vcoord))
 			self.nframes += 1
 			self.rounder = rounder
 		scalefac = 1.3
@@ -345,43 +330,30 @@ class MembraneSet:
 			
 #---Shape functions
 
-	def surfacer(self,skip=1,interp='best',lenscale=None):
+	def surfacer(self,skip=1,interp='best'):
 		'''Interpolate the mesoscale bilayers.'''
-		for fr in range(0,len(self.xyzs),skip):
-			print 'Interpolating splines, '+str(fr)
-			#---Nb currently set for VTU files from RWT simulations. Needs explained.
-			vecs = self.vecs[fr]
-			grid = self.griddims[0],self.griddims[1]
-			vecs = [vecs[i]-vecs[i]/(grid[i]-1) for i in range(2)]
-			res0 = self.wrappbc(array(self.xyzs[fr]),vecs=vecs,mode='grow')
-			res1 = self.makemesh(res0,vecs,self.griddims,method=interp)
-			rezip = self.rezipgrid(res1,diff=1)
+		for i in range(0,len(self.xyzs),skip):
+			print 'Interpolating splines, '+str(i)
+			res0 = self.wrappbc(self.xyzs[i],vecs=self.vecs[i],mode='grow')
+			res1 = self.makemesh(res0,self.vecs[i],self.griddims,method=interp)
+			rezip = self.rezipgrid(res1)
 			self.surf.append(rezip-mean(rezip))
-			self.surf_index.append(fr)
-		#---scale box vectors by the correct length scale
-		#self.vecs = [[j*self.lenscale for j in i] for i in self.vecs]
-		#self.surf_index = range(0,len(self.xyzs),skip)
 			
 	def surfacer_general(self,surfdata,skip=1,interp='best'):
 		'''Interpolate any quantity, as long as you supply it in the order of the xyz positions.'''
 		interpdata = []
 		for fr in range(0,len(self.xyzs),skip):
 			print 'Interpolating splines, '+str(fr)
-			#---Nb currently set for VTU files from RWT simulations. Needs explained.
-			vecs = self.vecs[fr]
-			grid = self.griddims[0],self.griddims[1]
-			vecs = [vecs[i]-vecs[i]/(grid[i]-1) for i in range(2)]
 			res0 = self.wrappbc(array([[self.xyzs[fr][j][0],self.xyzs[fr][j][1],surfdata[fr][j]] 
-				for j in range(len(surfdata[fr]))]),vecs=vecs,mode='grow')
-			res1 = self.makemesh(res0,vecs,grid,method=interp)
-			rezip = self.rezipgrid(res1,diff=1)
+				for j in range(len(surfdata[fr]))]),vecs=self.vecs[fr],mode='grow')
+			res1 = self.makemesh(res0,self.vecs[fr],self.griddims,method=interp)
+			rezip = self.rezipgrid(res1)
 			interpdata.append(rezip)
 		return interpdata
 			
 	def midplaner(self,selector,rounder=4.0,framecount=None,start=None,end=None,
 		skip=None,interp='best',protein_selection=None,residues=None,timeslice=None):
 		'''Interpolate the molecular dynamics bilayers.'''
-		self.rounder = rounder
 		if timeslice != None:
 			start = int((float(timeslice[0])-self.time_start)/timeslice[2])
 			end = int((float(timeslice[1])-self.time_start+self.time_dt)/self.time_dt)
@@ -405,7 +377,7 @@ class MembraneSet:
 			if protein_selection != None:
 				self.protein.append(self.universe.selectAtoms(protein_selection).coordinates())
 				self.protein_index.append(k)
-			#print 1./60.*(time.time()-starttime)
+			print 1./60.*(time.time()-starttime)
 			
 	def mesher(self,selector,framecount=None,start=None,end=None,skip=None,protein_selection=None):
 		'''Create a standard mesh from the bilayer surface.'''
@@ -430,7 +402,7 @@ class MembraneSet:
 			if protein_selection != None:
 				self.protein.append(self.universe.selectAtoms(protein_selection).coordinates())
 				self.protein_index.append(k)
-			#print 1./60.*(time.time()-starttime)
+			print 1./60.*(time.time()-starttime)
 			
 	def calculate_midplane(self,selector,frameno,pbcadjust=1,rounder=4.0,interp='best',storexyz=True,
 		residues=None):
@@ -461,11 +433,9 @@ class MembraneSet:
 		self.monolayer1.append(topmesh)
 		self.monolayer2.append(botmesh)
 		#---Take the average surface
-		#---Nb this is the location of the infamous transpose errors. Forgot to reverse order of list indices
-		topzip = self.rezipgrid(topmesh,frameno=frameno)
-		botzip = self.rezipgrid(botmesh,frameno=frameno)
-		surfz = [[1./2*(topzip[i][j]+botzip[i][j]) for j in range(self.griddims[1])] 
-			for i in range(self.griddims[0])]
+		surfz = [[1./2*(self.rezipgrid(topmesh,frameno=frameno)[i][j]+\
+			self.rezipgrid(botmesh,frameno=frameno)[i][j]) for i in range(self.griddims[0])] \
+			for j in range(self.griddims[1])]
 		self.surf_position.append(mean(surfz))
 		surfz = surfz - mean(surfz)
 		self.surf.append(surfz)
@@ -602,81 +572,95 @@ class MembraneSet:
 
 #---Undulation spectra functions
 
-	def calculate_undulations(self,removeavg=0,redundant=1,whichframes=None,qmagfilter=None,
-		fitbest=False,fitlims=None,forcekappa=True):
+	def calculate_undulation_spectrum(self,removeavg=0,redundant=1,whichframes=None):
 		'''Fourier transform surface heights.'''
-		if fitlims == None: 
-			fitbest = False
-			fitlims = [1024,8]
 		if whichframes == None:
 			framerange = range(len(self.surf))
 		else:
 			framerange = whichframes
 		lenscale = self.lenscale
-		print 'lenscale = '+str(lenscale)
-		self.undulate_raw = []
+		self.uqraw = []
 		if removeavg == 0:
 			for k in framerange:
 				print 'Fourier transform, frame '+str(k)
 				if redundant == 1:
-					self.undulate_raw.append(fft.fftshift(fft.fft2(array(self.surf[k])[:-1,:-1]/lenscale)))
+					self.uqraw.append(fft.fftshift(fft.fft2(array(self.surf[k])[:-1,:-1]/lenscale)))
 				elif redundant == 2:
-					self.undulate_raw.append(fft.fftshift(fft.fft2(array(self.surf[k])[:-2,:-2]/lenscale)))
+					self.uqraw.append(fft.fftshift(fft.fft2(array(self.surf[k])[:-2,:-2]/lenscale)))
 				else:
-					self.undulate_raw.append(fft.fftshift(fft.fft2(array(self.surf[k])/lenscale)))
+					self.uqraw.append(fft.fftshift(fft.fft2(array(self.surf[k])/lenscale)))
 		else:
 			self.calculate_average_surface()
 			for k in range(len(self.surf)):
 				print 'Fourier transform, frame '+str(k)
 				if redundant == 1:
 					relative = array(self.surf[k])/lenscale-array(self.surf_mean)/lenscale
-					self.undulate_raw.append(fft.fftshift(fft.fft2(relative[:-1,:-1])))
+					self.uqraw.append(fft.fftshift(fft.fft2(relative[:-1,:-1])))
 				elif redundant == 2:
 					relative = array(self.surf[k])/lenscale-array(self.surf_mean)/lenscale
-					self.undulate_raw.append(fft.fftshift(fft.fft2(relative[:-2,:-2])))
+					self.uqraw.append(fft.fftshift(fft.fft2(relative[:-2,:-2])))
 				else:
-					self.undulate_raw.append(fft.fftshift(fft.fft2(array(self.surf[k])/lenscale-
+					self.uqraw.append(fft.fftshift(fft.fft2(array(self.surf[k])/lenscale-
 						array(self.surf_mean)/lenscale)))
-		#---calculate 2D spectrum
-		m,n = shape(self.undulate_raw)[1:]
-		#---follows scipy DFFT convention on even/odd location of Nyquist component
-		spec_center = [int(i/2) for i in shape(self.undulate_raw)[1:]]
-		lxy = array([self.vec(i) for i in self.surf_index])/lenscale
-		yv,xv = meshgrid(range(n),range(m))
-		qs = [(sqrt((2*pi*(array(xv)-spec_center[0])/lxy[f][0])**2+
-			(2*pi*(array(yv)-spec_center[1])/lxy[f][1])**2)) for f in range(len(lxy))]
-		self.undulate_hqhq2d = mean(array(1.*(abs(array(self.undulate_raw))/double(m*n))**2),axis=0)
-		self.undulate_qmag2d = mean(qs,axis=0)
-		self.undulate_spec1d = array([self.undulate_qmag2d,self.undulate_hqhq2d]).T.reshape(m*n,2)
-		spec1d = array([i for i in array(self.undulate_spec1d) if i[0] != 0.])
-		specsort = spec1d[np.lexsort((spec1d[:,1],spec1d[:,0]))]
-		#---fitting the best points based on prescribed limits
-		if fitbest:	
-			best_rmsd,best_endpost = 10**10,0
-			for endpost in range(0,len(specsort)/fitlims[0]):
-				specfilter = specsort[endpost:len(specsort)/fitlims[1]]
-				[bz,az] = numpy.polyfit(log(specfilter[:,0]),log(specfilter[:,1]),1)
-				if sum([(exp(az)*(specfilter[i,0]**bz)-specfilter[i,1])**2 
-					for i in range(len(specfilter))])/len(specfilter[:,0]) < best_rmsd:
-					best_rmsd = sum([(exp(az)*(specfilter[i,0]**bz)-specfilter[i,1])**2 
-						for i in range(len(specfilter))])/len(specfilter[:,0])
-					best_endpost = endpost
-			qmagfilter = [specsort[best_endpost,0],specsort[len(specsort)/fitlims[1],0]]
-		#---otherwise set the qmagfilter based on the number of points according to fitlims
-		else:
-			qmagfilter = [10**-10,specsort[len(specsort)/fitlims[1],0]]
-		specfilter = array(filter(lambda x: x[0] >= qmagfilter[0] 
-			and x[0] <= qmagfilter[1],self.undulate_spec1d))
-		area = double(mean([self.vec(i)[0]*self.vec(i)[1] for i in self.surf_index])/lenscale**2)
-		[bz,az]=numpy.polyfit(log(specfilter[:,0]),log(specfilter[:,1]),1)
-		leftcom = [mean(log(specfilter[:,0])),mean(log(specfilter[:,1]))]
-		az_enforced = leftcom[1]+4.*leftcom[0]
-		self.undulate_qmagfilter = qmagfilter
-		if forcekappa:
-			self.undulate_kappa = 1/exp(az_enforced)/area
-		else:
-			self.undulate_kappa = 1/exp(az)/area
-
+	
+	def analyze_undulations(self,qmagfilter=[10**-6,10**6],subset=0,redundant=1,
+		lenscale=None,imagefile=None,method=None):
+		'''Compute the undulation spectrum.'''
+		if method == 'before':
+			#---Deprecated/incorrect method. All frames are plotted and fitted before the ensemble average.
+			self.qcollect = []
+			self.uqcollect = []
+			nframes = len(self.uqraw)
+			if subset == 0: subset = range(len(self.uqraw))
+			#---Compute, fold, and store the fluctuation magnitudes for each frame
+			lenscale = self.lenscale if lenscale == None else lenscale
+			for fr in subset:
+				[m,n] = shape(self.uqraw[0])
+				[Lx,Ly] = [self.vec(fr)[0]/lenscale,self.vec(fr)[1]/lenscale]
+				flankpos = [[0,0],[0,1],[1,0],[-1,0],[0,-1]]
+				flanking = [[int([round(i/2.) for i in shape(self.uqraw[0])][k]+j[k]) for k in range(2)] \
+					for j in flankpos]
+				flankvals = [linalg.norm(self.uqraw[0][i[0]][i[1]]) for i in flanking]
+				flankvals.index(min(flankvals))
+				flankpos[flankvals.index(min(flankvals))]
+				center = [int(round(shape(self.uqraw[0])[j]/2.))+\
+					flankpos[flankvals.index(min(flankvals))][j] for j in range(2)]
+				qmag = [[sqrt(((i-center[0])/((Lx)/1.)*2*pi)**2+((j-center[1])/((Ly)/1.)*2*pi)**2) \
+					for j in range(0,n)] for i in range(0,m)]
+				qvecs1d = [i for j in qmag for i in j]
+				uqvecs1d = [i for j in 1.*(abs(self.uqraw[fr])/double(m*n))**2 for i in j]
+				self.qcollect.extend(qvecs1d)
+				self.uqcollect.extend(uqvecs1d)
+			uqrawnormed = [[[linalg.norm(self.uqraw[k][m][n]) for n in range(self.griddims[1]-redundant)] \
+				for m in range(self.griddims[0]-redundant)] for k in range(len(self.uqraw))]
+			self.uqrawmean = array(mean(uqrawnormed,axis=0))
+			self.qrawmean = array(self.qcollect)
+		elif method == None:
+			self.qcollect = []
+			self.uqcollect = []
+			nframes = len(self.uqraw)
+			if subset == 0: subset = range(len(self.uqraw))
+			#---Compute, fold, and store the fluctuation magnitudes for each frame
+			lenscale = self.lenscale if lenscale == None else lenscale
+			for fr in subset:
+				[m,n] = shape(self.uqraw[0])
+				#---There might be problems here if you calculate the spectrum from the pickle, and the 
+				#---code tries to look up new frames from the universe.
+				[Lx,Ly] = [self.vec(fr)[0]/lenscale,self.vec(fr)[1]/lenscale]
+				flankpos = [[0,0],[0,1],[1,0],[-1,0],[0,-1]]
+				flanking = [[int([round(i/2.) for i in shape(self.uqraw[0])][k]+j[k]) for k in range(2)] for j in flankpos]
+				flankvals = [linalg.norm(self.uqraw[0][i[0]][i[1]]) for i in flanking]
+				flankvals.index(min(flankvals))
+				flankpos[flankvals.index(min(flankvals))]
+				center = [int(round(shape(self.uqraw[0])[j]/2.))+flankpos[flankvals.index(min(flankvals))][j] for j in range(2)]
+				qmag = [[sqrt(((i-center[0])/((Lx)/1.)*2*pi)**2+((j-center[1])/((Ly)/1.)*2*pi)**2) for j in range(0,n)] for i in range(0,m)]
+				self.qcollect.append(array(qmag)[:-1-redundant,:-1-redundant])
+				self.uqcollect.append(array(1.*(abs(self.uqraw[fr])/double(m*n))**2)[:-1-redundant,:-1-
+					redundant])
+			self.uqrawmean = array([i for j in mean(self.uqcollect,axis=0) for i in j])
+			self.uqrawstd = array([i for j in std(self.uqcollect,axis=0) for i in j])
+			self.qrawmean = array([i for j in mean(self.qcollect,axis=0) for i in j])
+			
 #---Lipid packing and tilt properties
 
 	def tilter(self,selector,director,framecount=None,start=None,end=None,
@@ -1055,20 +1039,14 @@ class MembraneSet:
 		surfreplot = array(surfreplot)
 		return surfreplot
 		
-	def rezipgrid(self,xyz,vecs=None,frameno=0,grid=None,rounder_vecs=[1.0,1.0],
-		reverse=0,diff=False,whichind=2):
+	def rezipgrid(self,xyz,vecs=None,frameno=0,grid=None,rounder_vecs=[1.0,1.0],reverse=0,diff=0,whichind=2):
 		'''Turns a regular set of points in 3-space into a 2D matrix.'''
-		#---Nb this is the source of the transpose error, which needs fixed.
-		#---Modifications in the following section for compatibility with the general interpolation function.
-		#---Nb "diff" describes whether we are handling redundant points. Needs explained.
-		#---Nb I removed all references to diff in the process of fixing script-meso-coupling code.
-		if grid == None and diff != True: grid = self.griddims
-		elif grid == None and diff == True: grid = self.griddims[0],self.griddims[1]
+		if grid == None: grid = self.griddims
 		if vecs == None: vecs = self.vec(frameno)
-		steps = ([vecs[i]/(grid[i]-1) for i in range(2)] 
-			if diff == False else [vecs[i]/(grid[i]) for i in range(2)])
+		steps = [vecs[i]/(grid[i]-1) for i in range(2)] if diff == 0 else [vecs[i]/(grid[i]-1)
+			for i in range(2)]
 		poslookup = [[xyz[i][j]/steps[j] for j in range(2)] for i in range(len(xyz))]
-		surfgrid = [[0. for i in range(grid[1])] for j in range(grid[0])]
+		surfgrid = [[0. for i in range(grid[1]-1*(diff==1))] for j in range(grid[0]-1*(diff==1))]
 		for i in range(len(xyz)): 
 			#---Note: added the round command below changes calculate_midplane time from 0.25 to 0.35!
 			if int(poslookup[i][0]) < grid[0] and int(poslookup[i][1]) < grid[1]:

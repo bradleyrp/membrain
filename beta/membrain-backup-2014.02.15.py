@@ -52,8 +52,6 @@ class MembraneSet:
 		self.vecs_index = []
 		self.griddims = []
 		self.universe = []
-		self.unierse_structfile = ''
-		self.universe_trajfile = ''
 		self.monolayer_residues = []
 		self.resnames = []
 		self.resids = []
@@ -73,12 +71,12 @@ class MembraneSet:
 		self.surf_position = []
 		self.surf_positioni = []
 		#---Undulation data
-		self.undulate_raw = []
-		self.undulate_hqhq2d = []
-		self.undulate_qmag2d = []
-		self.undulate_spec1d = []
-		self.undulate_qmagfilter = []
-		self.undulate_kappa = 0.0
+		self.uqraw = []
+		self.uqrawmean = []
+		self.uqrawstd = []
+		self.qrawmean = []
+		self.uqcollect = []
+		self.qcollect = []
 		#---Protein data
 		self.protein = []
 		self.protein_index = []
@@ -109,9 +107,6 @@ class MembraneSet:
 			self.griddims = []
 			self.nframes = 0
 		self.universe = Universe(files[0],files[1])
-		#---Nb added these flags after fixing transpose error, so they are proxy
-		self.universe_structfile = files[0]
-		self.universe_trajfile = files[1]
 		self.nframes = len(self.universe.universe.trajectory)
 		if hasattr(self.universe.trajectory[0],'time'):
 			self.time_start = self.universe.trajectory[0].time
@@ -355,12 +350,10 @@ class MembraneSet:
 			vecs = [vecs[i]-vecs[i]/(grid[i]-1) for i in range(2)]
 			res0 = self.wrappbc(array(self.xyzs[fr]),vecs=vecs,mode='grow')
 			res1 = self.makemesh(res0,vecs,self.griddims,method=interp)
-			rezip = self.rezipgrid(res1,diff=1)
+			rezip = self.rezipgrid(res1)
 			self.surf.append(rezip-mean(rezip))
-			self.surf_index.append(fr)
 		#---scale box vectors by the correct length scale
-		#self.vecs = [[j*self.lenscale for j in i] for i in self.vecs]
-		#self.surf_index = range(0,len(self.xyzs),skip)
+		self.vecs = [[j*self.lenscale for j in i] for i in self.vecs]
 			
 	def surfacer_general(self,surfdata,skip=1,interp='best'):
 		'''Interpolate any quantity, as long as you supply it in the order of the xyz positions.'''
@@ -374,14 +367,13 @@ class MembraneSet:
 			res0 = self.wrappbc(array([[self.xyzs[fr][j][0],self.xyzs[fr][j][1],surfdata[fr][j]] 
 				for j in range(len(surfdata[fr]))]),vecs=vecs,mode='grow')
 			res1 = self.makemesh(res0,vecs,grid,method=interp)
-			rezip = self.rezipgrid(res1,diff=1)
+			rezip = self.rezipgrid(res1)
 			interpdata.append(rezip)
 		return interpdata
 			
 	def midplaner(self,selector,rounder=4.0,framecount=None,start=None,end=None,
 		skip=None,interp='best',protein_selection=None,residues=None,timeslice=None):
 		'''Interpolate the molecular dynamics bilayers.'''
-		self.rounder = rounder
 		if timeslice != None:
 			start = int((float(timeslice[0])-self.time_start)/timeslice[2])
 			end = int((float(timeslice[1])-self.time_start+self.time_dt)/self.time_dt)
@@ -602,81 +594,67 @@ class MembraneSet:
 
 #---Undulation spectra functions
 
-	def calculate_undulations(self,removeavg=0,redundant=1,whichframes=None,qmagfilter=None,
-		fitbest=False,fitlims=None,forcekappa=True):
+	def calculate_undulation_spectrum(self,removeavg=0,redundant=1,whichframes=None,lenscale=None):
 		'''Fourier transform surface heights.'''
-		if fitlims == None: 
-			fitbest = False
-			fitlims = [1024,8]
 		if whichframes == None:
 			framerange = range(len(self.surf))
 		else:
 			framerange = whichframes
-		lenscale = self.lenscale
+		lenscale = self.lenscale if lenscale == None else lenscale
 		print 'lenscale = '+str(lenscale)
-		self.undulate_raw = []
+		self.uqraw = []
 		if removeavg == 0:
 			for k in framerange:
 				print 'Fourier transform, frame '+str(k)
 				if redundant == 1:
-					self.undulate_raw.append(fft.fftshift(fft.fft2(array(self.surf[k])[:-1,:-1]/lenscale)))
+					self.uqraw.append(fft.fftshift(fft.fft2(array(self.surf[k])[:-1,:-1]/lenscale)))
 				elif redundant == 2:
-					self.undulate_raw.append(fft.fftshift(fft.fft2(array(self.surf[k])[:-2,:-2]/lenscale)))
+					self.uqraw.append(fft.fftshift(fft.fft2(array(self.surf[k])[:-2,:-2]/lenscale)))
 				else:
-					self.undulate_raw.append(fft.fftshift(fft.fft2(array(self.surf[k])/lenscale)))
+					self.uqraw.append(fft.fftshift(fft.fft2(array(self.surf[k])/lenscale)))
 		else:
 			self.calculate_average_surface()
 			for k in range(len(self.surf)):
 				print 'Fourier transform, frame '+str(k)
 				if redundant == 1:
 					relative = array(self.surf[k])/lenscale-array(self.surf_mean)/lenscale
-					self.undulate_raw.append(fft.fftshift(fft.fft2(relative[:-1,:-1])))
+					self.uqraw.append(fft.fftshift(fft.fft2(relative[:-1,:-1])))
 				elif redundant == 2:
 					relative = array(self.surf[k])/lenscale-array(self.surf_mean)/lenscale
-					self.undulate_raw.append(fft.fftshift(fft.fft2(relative[:-2,:-2])))
+					self.uqraw.append(fft.fftshift(fft.fft2(relative[:-2,:-2])))
 				else:
-					self.undulate_raw.append(fft.fftshift(fft.fft2(array(self.surf[k])/lenscale-
+					self.uqraw.append(fft.fftshift(fft.fft2(array(self.surf[k])/lenscale-
 						array(self.surf_mean)/lenscale)))
-		#---calculate 2D spectrum
-		m,n = shape(self.undulate_raw)[1:]
-		#---follows scipy DFFT convention on even/odd location of Nyquist component
-		spec_center = [int(i/2) for i in shape(self.undulate_raw)[1:]]
-		lxy = array([self.vec(i) for i in self.surf_index])/lenscale
-		yv,xv = meshgrid(range(n),range(m))
-		qs = [(sqrt((2*pi*(array(xv)-spec_center[0])/lxy[f][0])**2+
-			(2*pi*(array(yv)-spec_center[1])/lxy[f][1])**2)) for f in range(len(lxy))]
-		self.undulate_hqhq2d = mean(array(1.*(abs(array(self.undulate_raw))/double(m*n))**2),axis=0)
-		self.undulate_qmag2d = mean(qs,axis=0)
-		self.undulate_spec1d = array([self.undulate_qmag2d,self.undulate_hqhq2d]).T.reshape(m*n,2)
-		spec1d = array([i for i in array(self.undulate_spec1d) if i[0] != 0.])
-		specsort = spec1d[np.lexsort((spec1d[:,1],spec1d[:,0]))]
-		#---fitting the best points based on prescribed limits
-		if fitbest:	
-			best_rmsd,best_endpost = 10**10,0
-			for endpost in range(0,len(specsort)/fitlims[0]):
-				specfilter = specsort[endpost:len(specsort)/fitlims[1]]
-				[bz,az] = numpy.polyfit(log(specfilter[:,0]),log(specfilter[:,1]),1)
-				if sum([(exp(az)*(specfilter[i,0]**bz)-specfilter[i,1])**2 
-					for i in range(len(specfilter))])/len(specfilter[:,0]) < best_rmsd:
-					best_rmsd = sum([(exp(az)*(specfilter[i,0]**bz)-specfilter[i,1])**2 
-						for i in range(len(specfilter))])/len(specfilter[:,0])
-					best_endpost = endpost
-			qmagfilter = [specsort[best_endpost,0],specsort[len(specsort)/fitlims[1],0]]
-		#---otherwise set the qmagfilter based on the number of points according to fitlims
-		else:
-			qmagfilter = [10**-10,specsort[len(specsort)/fitlims[1],0]]
-		specfilter = array(filter(lambda x: x[0] >= qmagfilter[0] 
-			and x[0] <= qmagfilter[1],self.undulate_spec1d))
-		area = double(mean([self.vec(i)[0]*self.vec(i)[1] for i in self.surf_index])/lenscale**2)
-		[bz,az]=numpy.polyfit(log(specfilter[:,0]),log(specfilter[:,1]),1)
-		leftcom = [mean(log(specfilter[:,0])),mean(log(specfilter[:,1]))]
-		az_enforced = leftcom[1]+4.*leftcom[0]
-		self.undulate_qmagfilter = qmagfilter
-		if forcekappa:
-			self.undulate_kappa = 1/exp(az_enforced)/area
-		else:
-			self.undulate_kappa = 1/exp(az)/area
-
+	
+	def analyze_undulations(self,qmagfilter=[10**-6,10**6],subset=0,lenscale=None,imagefile=None):
+		'''Compute the undulation spectrum.'''
+		self.qcollect = []
+		self.uqcollect = []
+		nframes = len(self.uqraw)
+		if subset == 0: subset = range(len(self.uqraw))
+		lenscale = self.lenscale if lenscale == None else lenscale
+		print 'lenscale = '+str(lenscale)
+		for fr in subset:
+			[m,n] = shape(self.uqraw[0])
+			[Lx,Ly] = [self.vec(fr)[0]/lenscale,self.vec(fr)[1]/lenscale]
+			flankpos = [[0,0],[0,1],[1,0],[-1,0],[0,-1]]
+			flanking = [[int([round(i/2.) for i in shape(self.uqraw[0])][k]+j[k]) 
+				for k in range(2)] for j in flankpos]
+			flankvals = [linalg.norm(self.uqraw[0][i[0]][i[1]]) for i in flanking]
+			flankvals.index(min(flankvals))
+			flankpos[flankvals.index(min(flankvals))]
+			center = [int(round(shape(self.uqraw[0])[j]/2.))+flankpos[flankvals.index(min(flankvals))][j] 
+				for j in range(2)]
+			print 'center = '+str(center)
+			qmag = [[sqrt(((i-center[0])/((Lx)/1.)*2*pi)**2+((j-center[1])/((Ly)/1.)*2*pi)**2) 
+				for j in range(0,n)] for i in range(0,m)]
+			self.qcollect.append(array(qmag))
+			self.uqcollect.append(array(1.*(abs(self.uqraw[fr])/double(m*n))**2))
+		self.uqrawmean = array([i for j in mean(self.uqcollect,axis=0) for i in j])
+		self.uqrawstd = array([i for j in std(self.uqcollect,axis=0) for i in j])
+		self.qrawmean = array([i for j in mean(self.qcollect,axis=0) for i in j])
+		print 'center = '+str(center)
+			
 #---Lipid packing and tilt properties
 
 	def tilter(self,selector,director,framecount=None,start=None,end=None,

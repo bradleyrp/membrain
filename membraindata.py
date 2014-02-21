@@ -60,6 +60,10 @@ class MembraneData:
 			self.struct_opts = {'type' : {'params':0,'maxhs':1,'maxhxys':2,'target_zones':3,'frameno':4}}
 		elif self.calctype == 'gr2d':
 			self.struct = {'frame':0,'monolayer':1,'lipid':2}
+		elif self.calctype == 'xyz_assoc':
+			self.struct = {'frame':0,'monolayer':1,'lipid':2}
+		elif self.calctype == 'c0map':
+			self.struct = {'frame':0}
 		if label != None:
 			self.description = label
 		else:

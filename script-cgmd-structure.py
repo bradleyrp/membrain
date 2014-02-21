@@ -1,74 +1,102 @@
-#!/usr/bin/python -i
+#!/usr/bin/python
 
+logfile,interact,debugmode = [None,False,None]
 from membrainrunner import *
+execfile('locations.py')
 
 #---Settings
 #-------------------------------------------------------------------------------------------------------------
 
-#---Analysis parameters
+#---method
 skip = None
 framecount = None
-location = ''
-execfile('locations.py')
 
-#---Parameters
+#---parameters
 rounder = 20.0
 
-#---Selections
+#---selections
+sel_cgmd_surfacer = ['name PO4 or name POG','name C2A']
 director_cgmd = ['name PO4','name C4A','name C4B']
 selector_cgmd = 'name PO4'
 cgmd_protein = 'name BB'
 
-#---Analysis plan
-analysis_plan = slice(-1,None)
-analysis_descriptors = [
-	(['membrane-v700'],director_cgmd,selector_cgmd,cgmd_protein,slice(-1,None),[360000,460000,200]),
-	(['membrane-v701'],director_cgmd,selector_cgmd,cgmd_protein,slice(-1,None),[60000,160000,200]),
-	(['membrane-v700'],director_cgmd,selector_cgmd,cgmd_protein,slice(-1,None),[100000,200000,200]),
-	(['membrane-v550'],director_cgmd,selector_cgmd,None,slice(-1,None),[300000,400000,200])]
-	
-#---Functions
-#-------------------------------------------------------------------------------------------------------------
-
-def analyze_structure(testno,traj):
-	'''Compute the average structure and fluctuations of a CGMD bilayer.'''
-	mset = MembraneSet()
-	#---Load the trajectory
-	gro = structures[systems.index(tests[testno])]
-	basename = traj.split('/')[-1][:-4]
-	sel_surfacer = sel_cgmd_surfacer
-	print 'Accessing '+basename+'.'
-	starttime = time.time()
-	mset.load_trajectory((basedir+'/'+gro,basedir+'/'+traj),
-		resolution='cgmd')
-	print 'Load complete and it took '+str(1./60*(time.time()-starttime))+' minutes.'
-	#---Average structure calculation
-	mset.identify_monolayers(director,startframeno=0)
-	if protein_select == None:
-		mset.midplaner(selector,skip=skip,rounder=rounder,framecount=framecount,timeslice=timeslice)
-	else:
-		mset.midplaner(selector,skip=skip,rounder=rounder,framecount=framecount,protein_selection=protein_select,timeslice=timeslice)
-	mset.calculate_undulation_spectrum(removeavg=0,redundant=0)
-	mset.analyze_undulations(redundant=0)
-	#---Save the data
-	pickledump(mset,'pkl.structures.'+tests[testno]+'.'+basename[:11]+'.'+str(timeslice[0])+'-'+
-		str(timeslice[1])+'-'+str(timeslice[2])+'.pkl',directory=pickles)
-	return mset
+#---possible analyses
+analysis_descriptors = {
+	'v614-120000-220000-200':
+		{'sysname':'membrane-v614',
+		'director':director_cgmd,'selector':selector_cgmd,'protein_select':cgmd_protein,
+		'trajsel':'s9-lonestar/md.part0004.120000-220000-200.xtc',
+		'timeslice':[120000,220000,200]},
+	'v700-500000-600000-200':
+		{'sysname':'membrane-v700',
+		'director':director_cgmd,'selector':selector_cgmd,'protein_select':cgmd_protein,
+		'trajsel':'u1-lonestar-longrun/md.part0009.500000-700000-200.xtc',
+		'timeslice':[500000,600000,200]},
+	'v701-60000-160000-200':
+		{'sysname':'membrane-v701',
+		'director':director_cgmd,'selector':selector_cgmd,'protein_select':cgmd_protein,
+		'trajsel':'s8-lonestar/md.part0003.60000-160000-200.xtc',
+		'timeslice':[60000,160000,200]},
+	'v612-75000-175000-200':
+		{'sysname':'membrane-v612',
+		'director':director_cgmd,'selector':selector_cgmd,'protein_select':cgmd_protein,
+		'trajsel':'t4-lonestar/md.part0007.75000-175000-200.xtc',
+		'timeslice':[75000,175000,200]},
+	'v550-4000000-5000000-160':
+		{'sysname':'membrane-v550',
+		'director':director_cgmd,'selector':selector_cgmd,'protein_select':None,
+		'trajsel':'v1-lonestar/md.part0010.400000-500000-160.xtc',
+		'timeslice':[400000,500000,160]}}	
+analysis_names = ['v550-4000000-5000000-160']
 
 #---MAIN
 #-------------------------------------------------------------------------------------------------------------
 
-starttime = time.time()
-print 'Starting analysis job.'
-for ad in analysis_descriptors[analysis_plan]:
-	#---Load global variables with calculation specifications used in analysis functions above.
-	(tests,director,selector,protein_select,trajno,timeslice) = ad
-	for t in range(len(tests)):
-		print 'Running calculation: bilayer structure and undulations '+tests[t]+'.'
-		for traj in trajectories[systems.index(tests[t])][trajno]:
-			#---Run the analysis function on the desired system
-			mset = analyze_structure(t,traj)
-			if erase_when_finished:
-				del mset
-print 'Job complete and it took '+str(1./60*(time.time()-starttime))+' minutes.'
+starttime = time.time(); print 'start'
+#---loop over analysis questions
+for aname in analysis_names:
+	for i in analysis_descriptors[aname]: vars()[i] = (analysis_descriptors[aname])[i]
+	#---file lookup
+	if type(trajsel) == slice:
+		trajfile = trajectories[systems.index(sysname)][trajsel]
+	elif type(trajsel) == str:
+		pat = re.compile('(.+)'+re.sub(r"/",r"[/-]",trajsel))
+		for fname in trajectories[systems.index(sysname)]:
+			if pat.match(fname):
+				trajfile = [fname]
+	elif type(trajsel) == list:
+		trajfile = []
+		for trajfilename in trajsel:
+			pat = re.compile('(.+)'+re.sub(r"/",r"[/-]",trajfilename))
+			for fname in trajectories[systems.index(sysname)]:
+				if pat.match(fname):
+					trajfile.append(fname)
+	print 'trajectories: '+str(trajfile)
+	#---loop over trajectory files
+	for traj in trajfile:
+		mset = MembraneSet()
+		#---Load the trajectory
+		gro = structures[systems.index(sysname)]
+		basename = traj.split('/')[-1][:-4]
+		#---revised basename to include step-part because sometimes the time gets reset
+		basename = "-".join(re.match('.*/[a-z][0-9]\-.+',traj).string.split('/')[-2:])[:-4]
+		sel_surfacer = sel_cgmd_surfacer
+		print 'Accessing '+basename+'.'
+		starttime = time.time()
+		mset.load_trajectory((basedir+'/'+gro,basedir+'/'+traj),resolution='cgmd')
+		print 'time = '+str(1./60*(time.time()-starttime))+' minutes.'
+		#---Average structure calculation
+		mset.identify_monolayers(director,startframeno=0)
+		if protein_select == None:
+			mset.midplaner(selector,skip=skip,rounder=rounder,framecount=framecount,timeslice=timeslice)
+		else:
+			mset.midplaner(selector,skip=skip,rounder=rounder,framecount=framecount,
+				protein_selection=protein_select,timeslice=timeslice)
+		mset.calculate_undulations()
+		#---Save the data
+		pickledump(mset,'pkl.structures.'+sysname+'.'+basename[:11]+'.'+str(timeslice[0])+'-'+
+			str(timeslice[1])+'-'+str(timeslice[2])+'.pkl',directory=pickles)
+		if erase_when_finished:
+			del mset
+		print 'time = '+str(1./60*(time.time()-starttime))+' minutes.'
 

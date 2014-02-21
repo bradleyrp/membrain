@@ -1,0 +1,2 @@
+#!/bin/sh
+nohup ./$1 2> log-backrun & 
