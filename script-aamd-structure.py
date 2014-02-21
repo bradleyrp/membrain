@@ -29,17 +29,13 @@ cgmd_protein = 'name BB'
 
 #---possible analyses
 analysis_descriptors = {
-	'v614-120000-220000-200':
-		{'sysname':'membrane-v614',
-		'director':director_cgmd,'selector':selector_cgmd,'protein_select':cgmd_protein,
-		'trajsel':'s9-lonestar/md.part0004.120000-220000-200.xtc',
-		'timeslice':[120000,220000,200]},
-	'v510-40000-90000-1000':
-		{'sysname':'membrane-v510-atomP',
+	'v510-40000-90000-100':
+		{'sysname':'membrane-v510',
+		'sysname_lookup':'membrane-v510-atomP',
 		'director':director_aamd_symmetric,'selector':selector_aamd_symmetric,'protein_select':None,
-		'trajsel':'s8-kraken-md.part0021.40000-90000-1000.atomP.xtc',
-		'timeslice':[40000,90000,1000]}}
-analysis_names = ['v510-40000-90000-1000']
+		'trajsel':'s8-kraken-md.part0021.40000-90000-100.atomP.xtc',
+		'timeslice':[40000,90000,100]}}
+analysis_names = ['v510-40000-90000-100']
 
 #---MAIN
 #-------------------------------------------------------------------------------------------------------------
@@ -49,18 +45,19 @@ starttime = time.time(); print 'start'
 for aname in analysis_names:
 	for i in analysis_descriptors[aname]: vars()[i] = (analysis_descriptors[aname])[i]
 	#---file lookup
+	if 'sysname_lookup' in vars() and sysname_lookup == None: sysname_lookup = sysname
 	if type(trajsel) == slice:
-		trajfile = trajectories[systems.index(sysname)][trajsel]
+		trajfile = trajectories[systems.index(sysname_lookup)][trajsel]
 	elif type(trajsel) == str:
 		pat = re.compile('(.+)'+re.sub(r"/",r"[/-]",trajsel))
-		for fname in trajectories[systems.index(sysname)]:
+		for fname in trajectories[systems.index(sysname_lookup)]:
 			if pat.match(fname):
 				trajfile = [fname]
 	elif type(trajsel) == list:
 		trajfile = []
 		for trajfilename in trajsel:
 			pat = re.compile('(.+)'+re.sub(r"/",r"[/-]",trajfilename))
-			for fname in trajectories[systems.index(sysname)]:
+			for fname in trajectories[systems.index(sysname_lookup)]:
 				if pat.match(fname):
 					trajfile.append(fname)
 	print 'trajectories: '+str(trajfile)
@@ -68,7 +65,7 @@ for aname in analysis_names:
 	for traj in trajfile:
 		mset = MembraneSet()
 		#---Load the trajectory
-		gro = structures[systems.index(sysname)]
+		gro = structures[systems.index(sysname_lookup)]
 		basename = traj.split('/')[-1][:-4]
 		#---revised basename to include step-part because sometimes the time gets reset
 		basename = "-".join(re.match('.*/[a-z][0-9]\-.+',traj).string.split('/')[-2:])[:-4]

@@ -383,8 +383,4 @@ def plothull(ax,points,c=None,mset=None):
 	else:
 		pts = [mean(points,axis=0)[i]/mean(mset.vecs,axis=0)[i]*mset.griddims[i] for i in range(2)]
 		ax.add_patch(mpl.patches.Circle(pts,radius=0.5,color=c))
-	
-
-
-
 
