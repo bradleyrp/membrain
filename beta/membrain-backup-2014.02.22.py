@@ -43,7 +43,6 @@ class MembraneSet:
 	def __init__(self):
 		#---Raw data
 		self.xyzs = []
-		self.xyzs_time = []
 		self.tri = []
 		self.tri_index = []
 		#---Trajectory descriptors
@@ -67,9 +66,7 @@ class MembraneSet:
 		self.time_dt = 0.0
 		#---Surface heights on a grid
 		self.surf = []
-		self.surf_thick = []
 		self.surf_index = []
-		self.surf_time = []
 		self.monolayer1 = []
 		self.monolayer2 = []
 		self.surf_mean = []
@@ -80,9 +77,6 @@ class MembraneSet:
 		self.undulate_hqhq2d = []
 		self.undulate_qmag2d = []
 		self.undulate_spec1d = []
-		self.undulate_peri_raw = []
-		self.undulate_peri_hqhq2d = []
-		self.undulate_peri_spec1d = []
 		self.undulate_qmagfilter = []
 		self.undulate_kappa = 0.0
 		#---Protein data
@@ -109,7 +103,7 @@ class MembraneSet:
 		if resolution != None:
 			self.resolution = resolution
 		if self.nframes != 0:
-			print 'status: clearing trajectory'
+			print 'Clearing trajectory.'
 			self.vecs = []
 			self.vecs_index = []
 			self.griddims = []
@@ -125,13 +119,13 @@ class MembraneSet:
 			self.time_total = self.universe.trajectory.totaltime
 		if hasattr(self.universe.trajectory,'dt'):
 			self.time_dt = self.universe.trajectory.dt
-		print 'status: the trajectory file has '+str(self.nframes)+' frames'
+		print 'The trajectory file has '+str(self.nframes)+' frames available.'
 
 	def load_points(self,xyzdir,nbase=0,start=None,end=None,
 		prefix='conf-',suffix='.xyz',xyzform='',rounder=1.0,lenscale=None,skip=1,regular=False,shifter=None):
 		'''Load a trajectory of xyz files.'''
 		if self.nframes != 0:
-			print 'starus: clearing trajectory'
+			print 'Clearing trajectory.'
 			self.vecs = []
 			self.vecs_index = []
 			self.griddims = []
@@ -148,7 +142,7 @@ class MembraneSet:
 			whichframes = dirlist[::skip]
 		else:
 			whichframes = dirlist[start:end:skip]
-		print 'status: trajectory directory has '+str(len(whichframes))+' frames'
+		print 'The trajectory directory has '+str(len(whichframes))+' frames available.'
 		dataset = []
 		if regular == True:
 			self.vecs = [[int((nbase-1)*lenscale*rounder),int((nbase-1)*lenscale*rounder)] \
@@ -156,7 +150,7 @@ class MembraneSet:
 			self.vecs_index = range(len(whichframes))
 			self.griddims = [int(nbase),int(nbase)]
 			for index in whichframes:
-				print 'status: loading '+str(index)
+				print 'Loading '+str(index)
 				fp = open(xyzdir+'/'+prefix+str(index)+suffix,'r')
 				frame_temp = []
 				for line in fp:
@@ -217,7 +211,7 @@ class MembraneSet:
 		'''Load points and extra data from paraview-style VTU files.'''
 		import xml.etree.ElementTree as ET
 		if self.nframes != 0:
-			print 'status: clearing trajectory'
+			print 'Clearing trajectory.'
 			self.vecs = []
 			self.vecs_index = []
 			self.griddims = []
@@ -234,7 +228,7 @@ class MembraneSet:
 			whichframes = dirlist[::skip]
 		else:
 			whichframes = dirlist[start:end:skip]
-		print 'status: trajectory directory has '+str(len(whichframes))+' frames'
+		print 'The trajectory directory has '+str(len(whichframes))+' frames available.'
 		extradat = []
 		boundary_pts = []
 		for index in whichframes:
@@ -243,6 +237,7 @@ class MembraneSet:
 			if index == whichframes[0]:
 				extra_item_nums = []
 				if extra_props != None:
+					print root[0].find('Piece').find('PointData').getchildren()
 					if type(extra_props) == str: extra_props = [extra_props]
 					for propstring in extra_props:
 						extra_item_nums.append([j[1][1] for j in [i.items() 
@@ -252,8 +247,8 @@ class MembraneSet:
 					getchildren()]].index('boundary')
 				nonbounds = list(where(array(map(float,root[0].find('Piece').find('PointData').\
 					getchildren()[boundsind].text.split()))==0.0)[0])
-			if index%100 == 0:
-				print 'reading vtu file number '+str(index)
+				print nonbounds
+			print 'reading vtu file number '+str(index)
 			coord = root[0].find('Piece').find('Points').find('DataArray').text.split()
 			coord = map(float,coord)
 			n = coord.__len__()/3
@@ -275,14 +270,16 @@ class MembraneSet:
 	
 	def gotoframe(self,frameno):
 		'''Iterate to another frame, quickly.'''
+		#print 'Moving to frame '+str(frameno)
 		if len(self.universe.trajectory) == 1:
-			print 'warning: only one frame is available'
+			print 'Warning: I only have one frame, so that\'s the one you\'re getting.'
 		elif frameno == 0:
 			frame = self.universe.trajectory[frameno]
 		elif self.universe.trajectory.frame-1 < frameno:
 			[self.universe.trajectory.next() for i in range(frameno-(self.universe.trajectory.frame-1))]
 		elif self.universe.trajectory.frame-1 > frameno:
 			frame = self.universe.trajectory[frameno]
+		#print 'Done moving.'
 
 #---General identification functions
 
@@ -317,7 +314,7 @@ class MembraneSet:
 		monos.append([pointouts.resids()[i]-1 for i in range(len(whichlayer)) if whichlayer[i] == 1])
 		self.monolayer_residues = monos
 		if len(monos[0]) != len(monos[1]):
-			print 'warning: there is a difference in the number of lipids per monolayer'
+			print 'warning: there is a difference in the number of lipids per monolayer!'
 
 	def identify_residues(self,selector):
 		'''General monolayer identifier function. Needs: names of outer, inner atoms on lipids.'''
@@ -383,7 +380,7 @@ class MembraneSet:
 		return interpdata
 			
 	def midplaner(self,selector,rounder=4.0,framecount=None,start=None,end=None,
-		skip=None,interp='best',protein_selection=None,residues=None,timeslice=None,thick=False):
+		skip=None,interp='best',protein_selection=None,residues=None,timeslice=None):
 		'''Interpolate the molecular dynamics bilayers.'''
 		self.rounder = rounder
 		if timeslice != None:
@@ -392,11 +389,6 @@ class MembraneSet:
 			skip = int(float(timeslice[2])/self.time_dt)
 			print 'status: starting midplaner with [start,end,skip] = ['+\
 				str(start)+','+str(end)+','+str(skip)+']'
-			if end > len(self.universe.trajectory):
-				print 'warning: there are fewer frames than you inferred so dt may be inconsistent'
-				end = len(self.universe.trajectory)
-				print 'status: starting midplaner with [start,end,skip] = ['+\
-					str(start)+','+str(end)+','+str(skip)+']'
 		elif framecount == None:
 			if end == None: end = self.nframes
 			if start == None: start = 0
@@ -408,12 +400,13 @@ class MembraneSet:
 			skip = 1 if skip < 1 else skip
 		self.griddims = [int(round(self.vec(1)[0]/rounder)),int(round(self.vec(1)[1]/rounder))]
 		for k in range(start,end,skip):
-			print 'status: calculating midplane for frame: '+str(k)
-			self.calculate_midplane(selector,k,rounder=rounder,interp=interp,residues=residues,
-				thick=thick)
+			print 'status: calculating midplane for frame: '+str(k)+'.'
+			starttime = time.time()
+			self.calculate_midplane(selector,k,rounder=rounder,interp=interp,residues=residues)
 			if protein_selection != None:
 				self.protein.append(self.universe.selectAtoms(protein_selection).coordinates())
 				self.protein_index.append(k)
+			#print 1./60.*(time.time()-starttime)
 			
 	def mesher(self,selector,framecount=None,start=None,end=None,skip=None,protein_selection=None):
 		'''Create a standard mesh from the bilayer surface.'''
@@ -428,7 +421,7 @@ class MembraneSet:
 			skip = int(float(self.nframes)/framecount)
 			skip = 1 if skip < 1 else skip
 		for k in range(start,end,skip):
-			print 'status: calculating mesh for frame: '+str(k)
+			print 'status: Calculating mesh for frame: '+str(k)+'.'
 			starttime = time.time()
 			points = array([mean(self.universe.residues[i].selectAtoms(selector).coordinates(),axis=0) 
 				for i in self.monolayer_residues[0]])
@@ -438,9 +431,10 @@ class MembraneSet:
 			if protein_selection != None:
 				self.protein.append(self.universe.selectAtoms(protein_selection).coordinates())
 				self.protein_index.append(k)
+			#print 1./60.*(time.time()-starttime)
 			
 	def calculate_midplane(self,selector,frameno,pbcadjust=1,rounder=4.0,interp='best',storexyz=True,
-		residues=None,thick=False):
+		residues=None):
 		'''Find the midplane of a molecular dynamics bilayer.'''
 		lenscale = self.lenscale
 		self.gotoframe(frameno)
@@ -473,15 +467,10 @@ class MembraneSet:
 		botzip = self.rezipgrid(botmesh,frameno=frameno)
 		surfz = [[1./2*(topzip[i][j]+botzip[i][j]) for j in range(self.griddims[1])] 
 			for i in range(self.griddims[0])]
-		if thick:
-			surf_thick = [[(topzip[i][j]-botzip[i][j]) for j in range(self.griddims[1])] 
-				for i in range(self.griddims[0])]
-			self.surf_thick.append(surf_thick)
 		self.surf_position.append(mean(surfz))
 		surfz = surfz - mean(surfz)
 		self.surf.append(surfz)
 		self.surf_index.append(frameno)
-		self.surf_time.append(self.universe.trajectory.time)
 			
 	def triangulator(self,selector,start=None,end=None,skip=None,framecount=None,label=None,tesstype=None):
 		'''Triangulate the surface by lipid for the entire trajectory.'''
@@ -499,7 +488,7 @@ class MembraneSet:
 		result_data = MembraneData(
 			('cells' if (tesstype == None or tesstype == 'voronoi') else 'triangles'),label=label)
 		for k in range(start,end,skip):
-			print 'status: calculating triangulation for frame: '+str(k)
+			print 'status: calculating triangulation for frame: '+str(k)+'.'
 			ans = self.calculate_triangulate(selector,k,tesstype=tesstype)
 			result_data.add(ans,[k])
 		self.store.append(result_data)
@@ -615,7 +604,7 @@ class MembraneSet:
 #---Undulation spectra functions
 
 	def calculate_undulations(self,removeavg=0,redundant=1,whichframes=None,qmagfilter=None,
-		fitbest=False,fitlims=None,forcekappa=True,peri=False):
+		fitbest=False,fitlims=None,forcekappa=True):
 		'''Fourier transform surface heights.'''
 		if fitlims == None: 
 			fitbest = False
@@ -626,12 +615,11 @@ class MembraneSet:
 			framerange = whichframes
 		lenscale = self.lenscale
 		print 'property: lenscale = '+str(lenscale)
-		#---undulations
 		self.undulate_raw = []
 		if removeavg == 0:
 			for k in framerange:
 				if k%100 == 0:
-					print 'status: Fourier transform, frame '+str(k)
+					print 'status: Fourier transform, frame '+str(k%100)
 				if redundant == 1:
 					self.undulate_raw.append(fft.fftshift(fft.fft2(array(self.surf[k])[:-1,:-1]/lenscale)))
 				elif redundant == 2:
@@ -642,7 +630,7 @@ class MembraneSet:
 			self.calculate_average_surface()
 			for k in range(len(self.surf)):
 				if k%100 == 0:
-					print 'status: Fourier transform, frame '+str(k)
+					print 'status: Fourier transform, frame '+str(k%100)
 				if redundant == 1:
 					relative = array(self.surf[k])/lenscale-array(self.surf_mean)/lenscale
 					self.undulate_raw.append(fft.fftshift(fft.fft2(relative[:-1,:-1])))
@@ -652,21 +640,6 @@ class MembraneSet:
 				else:
 					self.undulate_raw.append(fft.fftshift(fft.fft2(array(self.surf[k])/lenscale-
 						array(self.surf_mean)/lenscale)))
-		#---peristalsis
-		if peri:
-			self.undulate_peri_raw = []
-			for k in framerange:
-				if k%100 == 0:
-					print 'status: Fourier transform, frame '+str(k)
-				if redundant == 1:
-					self.undulate_peri_raw.append(fft.fftshift(fft.fft2(
-						array(self.surf_thick[k])[:-1,:-1]/lenscale)))
-				elif redundant == 2:
-					self.undulate_peri_raw.append(fft.fftshift(fft.fft2(array(
-						self.surf_thick[k])[:-2,:-2]/lenscale)))
-				else:
-					self.undulate_peri_raw.append(fft.fftshift(fft.fft2(array(
-						self.surf_thick[k])/lenscale)))
 		#---calculate 2D spectrum
 		m,n = shape(self.undulate_raw)[1:]
 		#---follows scipy DFFT convention on even/odd location of Nyquist component
@@ -678,12 +651,6 @@ class MembraneSet:
 		self.undulate_hqhq2d = mean(array(1.*(abs(array(self.undulate_raw))/double(m*n))**2),axis=0)
 		self.undulate_qmag2d = mean(qs,axis=0)
 		self.undulate_spec1d = array([self.undulate_qmag2d,self.undulate_hqhq2d]).T.reshape(m*n,2)
-		if peri:
-			self.undulate_peri_hqhq2d = mean(array(1.*(abs(array(self.undulate_peri_raw))/double(m*n))**2),
-				axis=0)
-			self.undulate_peri_qmag2d = mean(qs,axis=0)
-			self.undulate_peri_spec1d = array([self.undulate_peri_qmag2d,
-				self.undulate_peri_hqhq2d]).T.reshape(m*n,2)
 		spec1d = array([i for i in array(self.undulate_spec1d) if i[0] != 0.])
 		specsort = spec1d[np.lexsort((spec1d[:,1],spec1d[:,0]))]
 		#---fitting the best points based on prescribed limits
@@ -717,7 +684,7 @@ class MembraneSet:
 
 	def tilter(self,selector,director,framecount=None,start=None,end=None,
 		skip=None,protein_selection=None,residues=None):
-		'''UNDER CONSTRUCTION: Lipid tilt calculator.'''
+		''' !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!! '''
 		if framecount == None:
 			if end == None: end = self.nframes
 			if start == None: start = 0
@@ -728,14 +695,15 @@ class MembraneSet:
 			skip = int(float(self.nframes)/framecount)
 			skip = 1 if skip < 1 else skip
 		#self.griddims = [int(round(self.vec(1)[0]/rounder)),int(round(self.vec(1)[1]/rounder))]
+
 		result_data = MembraneData('tilt')
 		result_data_position = MembraneData('lipid_positions')
 		for fr in range(start,end,skip):
-			print 'status: calculating surface normals and tilt for frame: '+str(fr)
+			print 'status: calculating surface normals and tilt for frame: '+str(fr)+'.'
 			starttime = time.time()
 			self.gotoframe(fr)
 			#self.calculate_midplane(selector,k,rounder=rounder,interp=interp,residues=residues)
-			#---start mod
+			#-start mod
 			starttime = time.time()
 			vecnorm = lambda vec: [i/np.linalg.norm(vec) for i in vec]
 			find_neighbors = lambda x,triang: list(set(indx for simplex in triang.simplices 
@@ -788,13 +756,14 @@ class MembraneSet:
 		self.store.append(result_data_position)
 		del result_data
 		del result_data_position
-		#---end mod
+		#-end mod
+		print 1./60.*(time.time()-starttime)
 
 #---Radial distribution functions
 	
 	def batch_gr_lipid_ion(self,selector,start=None,end=None,skip=None,framecount=None,label='',mode=None,
 		monolayer_rep=None,monos=None):
-		'''POSSIBLY DEPRECATED: Calculate the radial distribution function between lipids and ions.'''
+		'''Calculate the radial distribution function between lipids and ions.'''
 		if framecount == None:
 			if end == None: end = self.nframes
 			if start == None: start = 0
@@ -804,7 +773,7 @@ class MembraneSet:
 			end = self.nframes
 			skip = int(float(self.nframes)/framecount)
 			skip = 1 if skip < 1 else skip
-		print 'status: starting g(r) calculation'
+		print 'status: starting g(r) calculation.'
 		if end == 0 or end == None: end = self.nframes
 		#---Identify monolayers
 		if monolayer_rep != None: self.monolayer_rep = monolayer_rep
@@ -827,7 +796,7 @@ class MembraneSet:
 		#---Process the frames
 		result_data = MembraneData('grvoronoi' if mode == 'voronoi_bin' else 'gr',label=label)
 		for k in range(start,end,skip):
-			print 'status: calculating RDF, frame: '+str(k)
+			print '---Calculating RDF, frame: '+str(k)
 			if monos == None:
 				result_data.add([self.calculate_gr_lipid_ion_1d(k,whichmono=0,detectside=1,mode=mode),
 					self.calculate_gr_lipid_ion_1d(k,whichmono=1,detectside=1,mode=mode)],[k])
@@ -841,7 +810,7 @@ class MembraneSet:
 	
 	def calculate_gr_lipid_ion_1d(self,frameno,whichmono=-1,detectside=0,
 		pbcadjust=1,mode=None,duplicate=True):
-		'''POSSIBLY DEPRECATED: Framewise radial distribution calculator.'''
+		'''Framewise radial distribution calculator.'''
 		if (whichmono == 0 and self.selections[0] == 0) or (whichmono == 1 and self.selections[1] == 0):
 			return [[],[]]
 		if detectside != 0:
@@ -882,14 +851,13 @@ class MembraneSet:
 			binned = [[i for i,x in enumerate(tmp) if x == b] for b in range(len(lipids_in))]
 			pdistsz = [[abs(lipids_in[i][2]-ions_in[binned[i][j]][2]) for j in range(len(binned[i]))]
 				for i in range(len(lipids_in)) if len(binned[i]) != 0]
-			pdists2d = [[linalg.norm(lipids_in[i][0:2]-ions_in[binned[i][j]][0:2]) 
-				for j in range(len(binned[i]))]
+			pdists2d = [[linalg.norm(lipids_in[i][0:2]-ions_in[binned[i][j]][0:2]) for j in range(len(binned[i]))]
 				for i in range(len(lipids_in))  if len(binned[i]) != 0]
 			return [pdistsz,pdists2d]
 			
 	def batch_gr_lipid(self,selector,start=None,end=None,skip=None,framecount=None,label='',mode=None,
 		monolayer_rep=None,monos=None):
-		'''POSSIBLY DEPRECATED: Calculate the radial distribution function between lipids in 2D.'''
+		'''Calculate the radial distribution function between lipids in two-dimensions.'''
 		if framecount == None:
 			if end == None: end = self.nframes
 			if start == None: start = 0
@@ -899,7 +867,7 @@ class MembraneSet:
 			end = self.nframes
 			skip = int(float(self.nframes)/framecount)
 			skip = 1 if skip < 1 else skip
-		print 'status: starting g(r) calculation'
+		print 'Starting g(r) calculation.'
 		if end == 0 or end == None: end = self.nframes
 		#---Identify monolayers
 		if monolayer_rep != None: self.monolayer_rep = monolayer_rep
@@ -917,13 +885,16 @@ class MembraneSet:
 			for i in validresids])
 		self.selections.append(sel1)
 		self.selections.append(sel2)
+
 		#---finish code in jot-lipid-gr.py and integrate it here
+
 		allselect_lipids2 = self.universe.selectAtoms(selector[1])
+
 		self.selections.append(allselect_ions)
 		#---Process the frames
 		result_data = MembraneData('grvoronoi' if mode == 'voronoi_bin' else 'gr',label=label)
 		for k in range(start,end,skip):
-			print 'status: calculating RDF, frame: '+str(k)
+			print '---Calculating RDF, frame: '+str(k)
 			if monos == None:
 				result_data.add([self.calculate_gr_lipid_ion_1d(k,whichmono=0,detectside=1,mode=mode),
 					self.calculate_gr_lipid_ion_1d(k,whichmono=1,detectside=1,mode=mode)],[k])
@@ -937,6 +908,24 @@ class MembraneSet:
 
 #---Making regular, triangulated meshes
 
+	def torus_norm(self,x1,x2,vecs=0):
+		'''Provides the norm on a torus, given its dimensions.'''
+		temp = x1-x2
+		if vecs == 0: vecs = self.vecs[0]
+		if len(shape(temp)) == 1:
+			return sqrt(((x1-x2)**2).sum(axis=0)) 
+		elif len(shape(temp)) == 2:
+			filt = array([[min([abs(dimswitch[d]*(temp[d][j]-vecs[d]*i)) for i in [-1,0,1]]) \
+				for j in range(len(temp[d]))] for d in range(len(temp))])
+			return sqrt(((filt)**2).sum(axis=0)) 
+		elif len(shape(temp)) == 3:
+			filt = array([[[min([abs((temp[d][j][k]-vecs[d]*i)) for i in [-1,0,1]]) \
+				for k in range(len(temp[d][j]))] for j in range(len(temp[d]))] for d in range(len(temp))])
+			return sqrt(((filt)**2).sum(axis=0)) 
+		else:
+			print 'error: wrong dimensionality of the inputs to torus_norm.'
+			return 0
+		
 	def wrappbc(self,points,vecs,dims=[0,1],mode=None,growsize=0.2):
 		'''Adjusts input points to wrap or reflect over periodic boundaries in multiple ways.'''
 		#---Takes anything outside the box, and adds it to the other side. Useful for non-rectangular meshes.
@@ -1000,7 +989,7 @@ class MembraneSet:
 			xypts = array([[i,j] for i in linspace(0,vecs[0],grid[0]) for j in linspace(0,vecs[1],grid[1])])
 			results = []
 			for i in range(len(xypts)):
-				print 'status: interpolating point: '+str(i)
+				print 'Interpolating point: '+str(i)
 				dat2 = Delaunay(dat1[:,0:2])
 				mytripts = dat1[dat2.simplices[dat2.find_simplex(xypts[i])]]
 				height = scipy.interpolate.griddata(mytripts[:,0:2],mytripts[:,2],[xypts[i]],method='linear')
@@ -1013,7 +1002,7 @@ class MembraneSet:
 			xypts = array([[i,j] for i in linspace(0,vecs[0],grid[0]) for j in linspace(0,vecs[1],grid[1])])
 			results = []
 			for i in range(len(xypts)):
-				print 'status: interpolating point: '+str(i)
+				print 'Interpolating point: '+str(i)
 				dat2 = Delaunay(dat1[:,0:2])
 				t = dat1[dat2.simplices[dat2.find_simplex(xypts[i])]]
 				det = t[0][0]*t[1][1]-t[1][0]*t[0][1]+t[1][0]*t[2][1]-t[2][0]*t[1][1]+t[2][0]*t[0][1]\
@@ -1029,6 +1018,8 @@ class MembraneSet:
 			starttime = time.time()
 			xypts = array([[i,j] for i in linspace(0,vecs[0],grid[0]) for j in linspace(0,vecs[1],grid[1])])
 			interp = scipy.interpolate.LinearNDInterpolator(data[:,0:2],data[:,2],fill_value=0.0)
+			print 'time: ',
+			print 1./60.*(time.time()-starttime)
 			return array([[i[0],i[1],interp(i[0],i[1])] for i in xypts])
 		if method == 'bilinear_cubic':
 			starttime = time.time()
@@ -1037,14 +1028,15 @@ class MembraneSet:
 			bilinear_pts = array([[i[0],i[1],interp(i[0],i[1])] for i in xypts])
 			result = scipy.interpolate.griddata(bilinear_pts[:,0:2],bilinear_pts[:,2],bilinear_pts[:,0:2],
 				method='cubic')
+			print 1./60.*(time.time()-starttime)
 			return array([[bilinear_pts[i,0],bilinear_pts[i,1],result[i]] for i in range(len(result))])
 		elif method == 'rbf':
 			subj = self.wrappbc(data,vecs,mode='grow')
-			print 'status: generating radial basis function object'
+			print '---Generating radial basis function object.'
 			rbfobj = scipy.interpolate.Rbf(subj[:,0],subj[:,1],subj[:,2],epsilon=1.2,function='gaussian')
 			ti1 = linspace(0,vecs[0],grid[0]);ti2 = linspace(0,vecs[1],grid[1])
 			XI, YI = meshgrid(ti1, ti2)
-			print 'status: surfacing on a regular grid'
+			print '---Surfacing on a regular grid.'
 			ZI = rbfobj(XI,YI)
 			return self.unzipgrid(transpose(ZI),vecs=vecs,reverse=0)
 
@@ -1106,7 +1098,7 @@ def pickledump(obj,filename,directory=''):
 			latestfile = directory+'#'+filename+'.'+('%02d' % i)+'#'
 			if not os.path.isfile(directory+'#'+filename+'.'+('%02d' % i)+'#'):
 				os.rename(directory+filename,latestfile)
-				print 'status: backing up a pre-existing pickle file with the same name to number '+str(i)
+				print 'Backing up a pre-existing pickle file with the same name to number '+str(i)+'.'
 				break
 	if hasattr(obj,'universe') == False: obj.universe = []
 	if hasattr(obj,'xyzs') == False: 

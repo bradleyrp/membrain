@@ -195,11 +195,11 @@ def checkmesh(data,tri=None,vecs=None,grid=None,tess=1,show='both',wirecolor=Non
 #---undulation plots
 
 def plotter2d(ax,mset,dat=None,nlabels=None,tickshow=False,cmap=None,lims=None,
-	cmap_washout=None,lognorm=True,inset=True,i2wid=1,ticklabel_show=[1,1],label_style=None,
+	cmap_washout=None,lognorm=True,inset=False,i2wid=1,ticklabel_show=[1,1],label_style=None,
 	centertick=None,tickskip=None,fs=None):
 	'''Standard function for plotting 2D spectra from MembraneSet objects.'''
 	if dat == None: dat = mset.undulate_hqhq2d
-	if cmap == None: cmap=mpl.cm.binary; cmap_washout = 0.65;
+	if cmap == None: cmap=mpl.cm.binary; cmap_washout = 1.0;
 	if cmap_washout == None: cmap_washout = 1.0
 	if lims == None: lims = [None,None]
 	if nlabels == None: nabels = 3
@@ -210,6 +210,7 @@ def plotter2d(ax,mset,dat=None,nlabels=None,tickshow=False,cmap=None,lims=None,
 	elif label_style == 'q':
 		xlabel = r'${\pi\left|q_x\right|}^{-1}(\mathrm{nm})$'
 		ylabel = r'${\pi\left|q_y\right|}^{-1}(\mathrm{nm})$'
+		centertick = True
 	else:
 		ticklabel_show = [0,0]		
 	if centertick == None: tickcenter = False
@@ -267,62 +268,86 @@ def plotter2d(ax,mset,dat=None,nlabels=None,tickshow=False,cmap=None,lims=None,
 	if inset:
 		axins = mpl_toolkits.axes_grid.inset_locator.inset_axes(ax,width="30%",height="30%",loc=1)
 		plotter2d(axins,mset,
-			dat=data[cm-i2wid:cm+i2wid+1,cn-i2wid:cn+i2wid+1],
+			dat=dat[cm-i2wid:cm+i2wid+1,cn-i2wid:cn+i2wid+1],
 			tickshow=False,lognorm=False,cmap=cmap,lims=lims,inset=False)
 	return im
 
-def plotter_undulate(mset,qmagfilter=None,inset2d=True,inset2d2=True,ax=None):
+def plotter_undulate(mset,qmagfilter=None,inset2d=True,inset2d2=True,ax=None,peri=False):
 	'''Standard function for plotting 1D undulation spectra, with inset options.'''
 	if qmagfilter == None: qmagfilter = mset.undulate_qmagfilter
-	spec1d = array([i for i in array(mset.undulate_spec1d) if i[0] != 0.])
+	if not peri:
+		spec1d = array([i for i in array(mset.undulate_spec1d) if i[0] != 0.])
+	else:
+		spec1d = array([i for i in array(mset.undulate_peri_spec1d) if i[0] != 0.])
 	#---some repeat comands from mset.calculate_undulations here, necessary for plotting
 	m,n = shape(mset.undulate_hqhq2d)
 	cm,cn = [int(i/2) for i in shape(mset.undulate_hqhq2d)]
-	specfilter = array(filter(lambda x: x[0] >= qmagfilter[0] 
-		and x[0] <= qmagfilter[1],mset.undulate_spec1d))
+	if not peri:
+		specfilter = array(filter(lambda x: x[0] >= qmagfilter[0] and x[0] <= qmagfilter[1],
+			mset.undulate_spec1d))
+	else:
+		specfilter = array(filter(lambda x: x[0] >= qmagfilter[0] and x[0] <= qmagfilter[1],
+			mset.undulate_peri_spec1d))
 	[bz,az] = numpy.polyfit(log(specfilter[:,0]),log(specfilter[:,1]),1)
 	area = double(mean([mset.vec(i)[0]*mset.vec(i)[1] for i in mset.surf_index])/mset.lenscale**2)
-	print 'kappa = '+str(1/exp(az)/area)+' kBT'
 	#---calculate kappa assuming correct q4 scaling
 	leftcom = [mean(log(specfilter[:,0])),mean(log(specfilter[:,1]))]
 	az_enforced = leftcom[1]+4.*leftcom[0]
-	kappa_enforced = 1./exp(az_enforced)/area
-	print 'kappa_enforced = '+str(kappa_enforced)
+	kappa = 1./exp(az_enforced)/area
+	print 'kappa = '+str(kappa)
 	#---plot
-	if ax != None:
+	if ax == None:
 		fig = plt.figure(figsize=(6,6))
 		gs = gridspec.GridSpec(1,1,wspace=0.0,hspace=0.0)
 		ax = plt.subplot(gs[0])
 	ax.scatter(spec1d[:,0],spec1d[:,1],marker='o',c='k',s=20)
-	ax.plot(arange(spec1d[:,0].min()/2,spec1d[:,0].max()*4),[exp(az)*(i**bz) 
-		for i in arange(spec1d[:,0].min()/2,spec1d[:,0].max()*4)],linestyle='dotted',c='b',lw=2)
-	ax.plot(specfilter[:,0],[exp(az)*(i**bz) for i in specfilter[:,0]],c='b',lw=2)
+	if not peri:
+		ax.plot(arange(spec1d[:,0].min()/2,spec1d[:,0].max()*4),[exp(az)*(i**bz) 
+			for i in arange(spec1d[:,0].min()/2,spec1d[:,0].max()*4)],linestyle='dotted',c='b',lw=2)
+		ax.plot(specfilter[:,0],[exp(az)*(i**bz) for i in specfilter[:,0]],c='b',lw=2)
 	ax.set_xscale('log')
 	ax.set_yscale('log')
 	ax.set_xlim((spec1d[:,0].min()/2,spec1d[:,0].max()*4))
 	ax.set_ylim((spec1d[:,1].min()/10,spec1d[:,1].max()*10))
-	ax.set_ylabel(r'$\left\langle h_{q}h_{-q}\right\rangle$',fontsize=fsaxlabel)
-	ax.set_xlabel(r'${\left|q_x\right|}(\mathrm{{nm}^{-1}})$',fontsize=fsaxlabel)
+	if not peri:
+		ax.set_ylabel(r'$\left\langle h_{q}h_{-q}\right\rangle \left(\mathrm{nm}^{2}\right)$',
+			fontsize=fsaxlabel)
+	else:
+		ax.set_ylabel(r'$\left\langle d_{q}d_{-q}\right\rangle \left(\mathrm{nm}^{2}\right)$',
+			fontsize=fsaxlabel)
+	ax.set_xlabel(r'${\left|\mathbf{q}\right|}(\mathrm{{nm}^{-1}})$',fontsize=fsaxlabel)
 	ax.grid(True,which='major')
 	labels = [item.get_text() for item in ax.get_xticklabels()]
 	plt.tick_params(labelsize=fsaxticks)
 	#---inset
 	if inset2d:
 		axins = mpl_toolkits.axes_grid.inset_locator.inset_axes(ax,width="45%",height="45%",loc=1)
-		plotter2d(axins,mset)
+		plotter2d(axins,mset,tickshow=True,label_style='q')
 		if inset2d2:
-			i2wid = 3
+			i2wid = 1
 			axins2 = mpl_toolkits.axes_grid.inset_locator.inset_axes(axins,width="30%",height="30%",loc=1)
 			plotter2d(axins2,mset,
 				dat=mset.undulate_hqhq2d[cm-i2wid:cm+i2wid+1,cn-i2wid:cn+i2wid+1],
-				silence=True,cmap=mpl.cm.jet)
+				tickshow=False,cmap=mpl.cm.jet,cmap_washout=0.65)
 	#---report kappa
-	ax.text(0.05,0.05,r'$\boldsymbol{\kappa_{'+str('%1.1f'%bz)+'}} = '+
-		str('%3.1f'%mset.undulate_kappa)+'\:k_BT$'+
-		'\n'+r'$\boldsymbol{\kappa_{-4.0}} = '+str('%3.1f'%kappa_enforced)+'\:k_BT$',
-		transform=ax.transAxes,fontsize=fsaxtext)
-	if ax != None:
+	if not peri:
+		ax.text(0.05,0.05,r'$\boldsymbol{\kappa} = '+str('%3.1f'%kappa)+'\:k_BT$',
+			transform=ax.transAxes,fontsize=fsaxtext)
+	if ax == None:
 		plt.show()
+		
+def plotter_grid_undulations():
+	'''Plot undulations and peristalsis.'''
+	#---Nb, customized for AAMD simulations, with peristalsis
+	fig = plt.figure()
+	gs = gridspec.GridSpec(3,1,hspace=0.0)
+	ax = plt.subplot(gs[:2])
+	plotter_undulate(mset,qmagfilter=[10**-10,1],ax=ax)
+	ax = plt.subplot(gs[2])
+	plotter_undulate(mset,peri=True,ax=ax,inset2d=False)
+	plt.savefig
+	plt.savefig(pickles+'test.png',dpi=300,bbox_inches='tight')
+	plt.show()
 
 def plotmov(dat,basename,figsize=None,keep_snapshots=True,cmap=None,lowres=False,smooth=None,
 	xedges=None,yedges=None):
@@ -379,8 +404,9 @@ def plothull(ax,points,c=None,mset=None):
 	pts = array([[i[0]*m/vecs[0],i[1]*n/vecs[1]] for i in points])
 	if len(points) > 2:
 		hull = scipy.spatial.ConvexHull(pts)
-		ax.add_patch(mpl.patches.Polygon(pts[hull.vertices],closed=True,facecolor=c))
+		ax.add_patch(mpl.patches.Polygon(pts[hull.vertices],closed=True,facecolor=c,
+		lw=2,alpha=0.65,edgecolor=c))
 	else:
 		pts = [mean(points,axis=0)[i]/mean(mset.vecs,axis=0)[i]*mset.griddims[i] for i in range(2)]
-		ax.add_patch(mpl.patches.Circle(pts,radius=0.5,color=c))
+		ax.add_patch(mpl.patches.Circle(pts,radius=0.5,color=c,edgecolor=c,lw=2,alpha=0.65))
 

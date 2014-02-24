@@ -34,6 +34,7 @@ elif location == 'light':
 	fsaxtext = 18
 	fsaxlabel = 18
 	fsaxticks = 18
+	fsaxtitle = 18
 #---Set data locations according to system: RPB desktop
 elif location == 'dark':
 	basedir = '/'
@@ -52,9 +53,11 @@ elif location == 'dark':
 			r'\usepackage{sfmath}',r'\usepackage{amsmath}',r'\usepackage{siunitx}',r'\sisetup{detect-all}',
 			r'\usepackage{helvet}',r'\usepackage{sansmath}',r'\sansmath']  
 	erase_when_finished = False
-	fsaxtext = 18
-	fsaxlabel = 18
-	fsaxticks = 18
+	fsaxtext = 16
+	fsaxlabel = 16
+	fsaxticks = 16
+	fsaxtitle = 20
+	fsaxlegend = 14
 #---Set data locations according to system: DS
 elif location == 'ds':
 	#---Nb: put system-specific commands here. 
@@ -82,7 +85,7 @@ elif location == 'ds':
 if 'interact' in globals() and interact:
 	if 'postmortem' not in [i[0].__name__ for i in atexit._exithandlers]:
 		atexit.register(postmortem,
-			banner='Here is the interactive terminal you wanted.',
+		banner='status: but wait, there\'s more! here\'s a terminal!',
 			scriptglobals=globals())
 
 #---Universal definitions

@@ -1,6 +1,8 @@
 #!/usr/bin/python -i
 
 from membrainrunner import *
+
+location = ''
 execfile('locations.py')
 
 import os
@@ -69,7 +71,7 @@ analysis_descriptors = {
 		'nprots':4,
 		'datdir3dpp':
 			'/home/rpb/compbio/membrane-v614-enthx4-12800/a8-stress-s9-120000-220000/results',
-		'framewise_part':4}}
+		'framewise_part':3}}
 analysis_names = ['v614-120000-220000-200']
 
 #---Type of looping or parameter sweeps to do
@@ -208,5 +210,6 @@ if batch_parameter_sweep_framewise:
 				brokeversion=False)
 			res_collection.append(res)
 			#plot_stressmap(res[0],res[1],nprots,numgridpts,imagefile=None,plotvisible=True)
-		pickledump(res_collection,'pkl.stressdecomp.'+specname_pickle(sysname,trajfile[0])+'.pkl',directory=pickles)
+		pickledump(res_collection,'pkl.stressdecomp.'+specname_pickle(sysname,trajfile[0])+'.pkl',
+			directory=pickles)
 		checktime()

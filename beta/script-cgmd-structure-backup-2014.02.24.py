@@ -25,7 +25,8 @@ analysis_descriptors = {
 	'v614-120000-220000-200':
 		{'sysname':'membrane-v614','sysname_lookup':None,
 		'director':director_cgmd,'selector':selector_cgmd,'protein_select':cgmd_protein,
-		'trajsel':'s9-lonestar/md.part0004.120000-220000-200.xtc'},
+		'trajsel':'s9-lonestar/md.part0004.120000-220000-200.xtc',
+		'timeslice':[120000,220000,200]},
 	'v700-500000-600000-200':
 		{'sysname':'membrane-v700','sysname_lookup':None,
 		'director':director_cgmd,'selector':selector_cgmd,'protein_select':cgmd_protein,
@@ -34,17 +35,19 @@ analysis_descriptors = {
 	'v701-60000-160000-200':
 		{'sysname':'membrane-v701','sysname_lookup':None,
 		'director':director_cgmd,'selector':selector_cgmd,'protein_select':cgmd_protein,
-		'trajsel':'s8-lonestar/md.part0003.60000-160000-200.xtc'},
+		'trajsel':'s8-lonestar/md.part0003.60000-160000-200.xtc',
+		'timeslice':[60000,160000,200]},
 	'v612-75000-175000-200':
 		{'sysname':'membrane-v612','sysname_lookup':None,
 		'director':director_cgmd,'selector':selector_cgmd,'protein_select':cgmd_protein,
-		'trajsel':'t4-lonestar/md.part0007.75000-175000-200.xtc'},
+		'trajsel':'t4-lonestar/md.part0007.75000-175000-200.xtc',
+		'timeslice':[75000,175000,200]},
 	'v550-4000000-5000000-160':
 		{'sysname':'membrane-v550','sysname_lookup':None,
 		'director':director_cgmd,'selector':selector_cgmd,'protein_select':None,
-		'trajsel':'v1-lonestar/md.part0010.400000-500000-160.xtc'}}	
-analysis_names = ['v701-60000-160000-200','v614-120000-220000-200','v700-500000-600000-200',
-	'v612-75000-175000-200','v550-4000000-5000000-160'][1:2]
+		'trajsel':'v1-lonestar/md.part0010.400000-500000-160.xtc',
+		'timeslice':[400000,500000,160]}}	
+analysis_names = ['v701-60000-160000-200']
 
 #---MAIN
 #-------------------------------------------------------------------------------------------------------------
@@ -58,17 +61,16 @@ for aname in analysis_names:
 	for traj in trajfile:
 		mset = MembraneSet()
 		#---load the trajectory
-		print 'status: accessing '+specname_pickle(sysname,traj)
+		basename = traj.split('/')[-1][:-4]
+		#---revised basename to include step-part because sometimes the time gets reset
+		basename = "-".join(re.match('.*/[a-z][0-9]\-.+',traj).string.split('/')[-2:])[:-4]
+		print 'status: accessing '+basename
 		starttime = time.time()
 		mset.load_trajectory((basedir+'/'+grofile,basedir+'/'+traj),resolution='cgmd')
 		checktime()
 		#---average structure calculation
 		mset.identify_monolayers(director)
-		#---infer the timeslice from the XTC name if not specified
-		if 'timeslice' in analysis_descriptors[aname].keys():
-			print 'warning: requested timeslice '+str(timeslice)
-		else:
-			timeslice = [int(i) for i in trajsel.split('.')[-2].split('-')]
+		#---infer the timeslice from the XTC name
 		if protein_select == None:
 			mset.midplaner(selector,skip=skip,rounder=rounder,framecount=framecount,timeslice=timeslice)
 		else:
@@ -76,7 +78,8 @@ for aname in analysis_names:
 				protein_selection=protein_select,timeslice=timeslice)
 		mset.calculate_undulations()
 		#---save the data
-		pickledump(mset,'pkl.structures.'+specname_pickle(sysname,traj)+'.pkl',directory=pickles)
+		pickledump(mset,'pkl.structures.'+sysname+'.'+basename[:11]+'.'+str(timeslice[0])+'-'+
+			str(timeslice[1])+'-'+str(timeslice[2])+'.pkl',directory=pickles)
 		if erase_when_finished:
 			del mset
 		checktime()

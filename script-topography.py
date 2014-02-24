@@ -14,18 +14,30 @@ from mpl_toolkits.axes_grid1 import AxesGrid
 import matplotlib.pyplot as plt
 from scipy.spatial.distance import *
 from mpl_toolkits.axes_grid1 import make_axes_locatable
+from mpl_toolkits.axes_grid import Size
+from mpl_toolkits.axes_grid import Divider
+from mpl_toolkits.axes_grid1.inset_locator import inset_axes
 
 #---plan
 analysis_descriptors = {
 	'v700-500000-600000-200':
 		{'pklfile':'pkl.structures.membrane-v700.u1-lonestar.500000-600000-200.pkl',
-		'label':r'$\mathrm{{EXO70}\ensuremath{\times}2{\small (parallel)}}$',
+		'label':r'$\mathrm{{EXO70}\ensuremath{\times}2{\small{(para)}}}$',
 		'nprots':2,
 		'whichframes':slice(None,None),
 		'protein_pkl':None,
 		'custom_topogcorr_specs':[[range(0,85)+range(653,653+85),'coiled coil'],[slice(571-1,571-1+2),
 			'PIP2 (1)'],[slice(653+571-1,653+571-1+2),'PIP2 (1)']],
 		'topogcorr_pkl':'pkl.topogcorr.membrane-v700-u1-lonestar-500000-600000-200.pkl'},
+	'v701-60000-160000-200':
+		{'pklfile':'pkl.structures.membrane-v701.s8-lonestar.60000-160000-200.pkl',
+		'label':r'$\mathrm{{EXO70}\ensuremath{\times}2{\small{(anti)}}}$',
+		'nprots':2,
+		'whichframes':slice(None,None),
+		'protein_pkl':None,
+		'custom_topogcorr_specs':[[range(0,85)+range(653,653+85),'coiled coil'],[slice(571-1,571-1+2),
+			'PIP2 (1)'],[slice(653+571-1,653+571-1+2),'PIP2 (1)']],
+		'topogcorr_pkl':'pkl.topogcorr.membrane-v701-s8-lonestar-60000-160000-200.pkl'},
 	'v550-400000-500000-160':
 		{'pklfile':'pkl.structures.membrane-v550.v1-lonestar.400000-500000-160.pkl',
 		'label':r'$\mathrm{control}$',
@@ -51,18 +63,24 @@ analysis_descriptors = {
 		'custom_topogcorr_specs':None,
 		'whichframes':slice(None,None),
 		'topogcorr_pkl':'pkl.topogcorr.membrane-v612-t4-lonestar-75000-175000-200.pkl'}}
-do = 'topography'
+do = 'topography_plot'
 if do == 'phasecomp':
 	analysis_names = ['v700-500000-600000-200','v614-120000-220000-200','v550-400000-500000-160']
 	plot_reord = analysis_names
 	dolist = ['phase_std_spec2d']
 	bigname = '.'.join(analysis_names)
-elif do == 'topography':
+elif do == 'topography_calc':
 	analysis_names = ['v614-120000-220000-200','v612-75000-175000-200',
-		'v550-400000-500000-160','v700-500000-600000-200']
+		'v700-500000-600000-200','v701-60000-160000-200'][-1:]
+	plot_reord = analysis_names
+	dolist = ['topogcorr_calc']
+elif do == 'topography_plot':
+	analysis_names = ['v614-120000-220000-200','v612-75000-175000-200',
+		'v700-500000-600000-200','v701-60000-160000-200','v550-400000-500000-160'][:1]
 	plot_reord = analysis_names
 	dolist = ['topogcorr_plot']
-	bigname = 'v614-v612-v550-v700'
+	topogcorr_plot_zrange = (-2.5,2.5)
+	bigname = 'v614-v612-v700-v701-v550'
 
 #---settings
 cmap = mpl.cm.RdBu_r
@@ -163,7 +181,7 @@ if 'phase_std_spec2d' in dolist:
 	plt.savefig(pickles+'fig-phases-'+bigname+'.png',dpi=500,bbox_inches='tight')	
 	plt.show()
 
-#---MAIN, PHASE PLOTS
+#---MAIN, TOPOGRAPHY
 #-------------------------------------------------------------------------------------------------------------
 
 class TopographyCorrelate():
@@ -175,7 +193,7 @@ class TopographyCorrelate():
 		if mset_protein == None: mset_protein = mset
 		self.prots_nres = shape(mset_protein.protein[0])[0]/nprots
 		#---this class is largely just a wrapper for a list of topographic matrices
-		if mset_protein != None:
+		if protein_pkl != None:
 			self.prots_refs = []
 		else:
 			self.prots_refs = ([slice(None,None)] if nprots > 1 else [])+\
@@ -209,7 +227,7 @@ if 'topogcorr_calc' in dolist:
 		if protein_pkl != None:
 			mset_protein = unpickle(pickles+protein_pkl)
 		else:
-			mset_protein = None
+			mset_protein = mset
 		tc = TopographyCorrelate(mset,nprots,label,mset_protein=mset_protein)
 		for i in analysis_descriptors[a]: 
 			tc.addnote([i,str((analysis_descriptors[a])[i])])
@@ -278,83 +296,15 @@ if 'topogcorr_calc' in dolist:
 			directory=pickles)
 
 #---plot the topography correlate curves
-if 'topogcorr_plot_old' in dolist:
-	#---loop over analyses
-	for a in analysis_names:
-		#---prepare figure with gridspec
-		fig = plt.figure(figsize=(5*(1+(1 if topogcorr_plot_struct else 0))+3,5))
-		gs = gridspec.GridSpec(len(analysis_names),1+(1 if topogcorr_plot_struct else 0))
-		for i in analysis_descriptors[a]: vars()[i] = (analysis_descriptors[a])[i]
-		m = analysis_names.index(a)
-		mset = msets[m]
-		if protein_pkl != None:
-			mset_protein = unpickle(pickles+protein_pkl)
-		else:
-			mset_protein = mset
-		tc = unpickle(pickles+(analysis_descriptors[a])['topogcorr_pkl'])
-		smoothwid = 4
-		ax = fig.add_subplot(gs[0])
-		hcorr_smooths = []
-		for h in range(len(tc.hcorr)):
-			#---set labels
-			if h == 0: color = 'k'
-			elif h < len(tc.prots_refs): color = clrs[(h-1)%(len(tc.prots_refs)-1)]
-			#---calculate
-			#---Nb since we use the argmax to give the mode of a broad distribution, hard to find error bars
-			#---Nb tried taking the second moment relative to the mode but this made no sense
-			histdatnorm = nan_to_num([array(tc.topoghist[h][i]/(tc.topoghist[h][i].sum(axis=0))) 
-				for i in range(len(tc.topoghist[h]))])
-			hcorr = mean(histdatnorm,axis=0)
-			hcorr_smooth = [mean([tc.yedges[hcorr[j].argmax()] for j in range(i+smoothwid)]) 
-				for i in range(len(hcorr)-smoothwid)]
-			hcorr_smooths.append(hcorr_smooth)
-			#---override names if you have a separate protein pickle
-			plotlabel = tc.prots_names[(h if protein_pkl == None else h+2)]
-			ax.plot(array(tc.xedges[1:-smoothwid])/10.,array(hcorr_smooth)/10.,'o-',label=plotlabel,
-				c=color)
-			ax.legend()
-			ax.grid(True)
-		ax.set_xlabel(r'$\min(\left|\mathbf{r}-\mathbf{r}_{\mathrm{prot}}\right|)\:(\mathrm{nm})$',
-			fontsize=fsaxlabel)
-		ax.set_ylabel(r'$z\:(\mathrm{nm})$',fontsize=fsaxlabel)
-		ax.axhline(y=0,xmin=0.,xmax=max(tc.xedges[1:-smoothwid]),lw=2,color='k')
-		plt.setp(ax.get_xticklabels(),fontsize=fsaxlabel)
-		plt.setp(ax.get_yticklabels(),fontsize=fsaxlabel)
-		if topogcorr_plot_struct:
-			ax = fig.add_subplot(gs[1])
-			maxval = max(abs(mean(mset.surf,axis=0).min()/10.),abs(mean(mset.surf,axis=0).max()/10.))
-			im = plotter2d(ax,mset,dat=mean(mset.surf,axis=0)/10.,lognorm=False,cmap=cmap,
-				inset=False,cmap_washout=0.8,ticklabel_show=[1,1],tickshow=[1,1],centertick=False,
-				fs=fsaxlabel,label_style='xy',lims=[-maxval,maxval])
-			s0 = 1 if protein_pkl == None else 0
-			for s in range((1 if protein_pkl == None else 0),len(tc.prots_refs)):
-				color = 'k' if s == 0 else clrs[s-s0]
-				for pbcshift in [[0,0],[1,0],[0,1],[1,1],[-1,0],[0,-1],[-1,-1],[-1,1],[1,-1]]:
-					plothull(ax,mean(mset_protein.protein,axis=0)[tc.prots_refs[s],:2]+tc.prots_shifts[s]+\
-						array([mean(mset.vecs,axis=0)[i]*pbcshift[i] for i in range(2)]),
-						mset=mset_protein,c=clrs[s-1])
-			divider = make_axes_locatable(ax)
-			cax = divider.append_axes("right", size="5%", pad=0.05)
-			fig.colorbar(im,cax=cax)
-		cax.tick_params(labelsize=10) 
-		cax.set_ylabel(r'$\left\langle z(x,y)\right\rangle \:(\mathrm{nm})$',fontsize=fsaxlabel)
-		plt.setp(cax.get_yticklabels(),fontsize=fsaxlabel)
-	plt.savefig(pickles+'fig-topography-'+specialname((analysis_descriptors[a])['pklfile'])+'.png',
-		dpi=500,bbox_inches='tight')	
-	plt.show()
-
-'''
-1. plot multiple systems on one plot
-2. plot one plot with multiple structure plots using the right colors
-'''
-
-#---plot the topography correlate curves
 if 'topogcorr_plot' in dolist:
+	zrange = topogcorr_plot_zrange if len(analysis_names) > 1 else None
+	swaprows = True if len(analysis_names) == 1 else False
+	fig = plt.figure()
+	gs = gridspec.GridSpec((len(analysis_names) if swaprows else 2),
+		(2 if swaprows else len(analysis_names)),wspace=0.0,hspace=0.0)
 	#---loop over analyses
 	for a in analysis_names:
 		#---prepare figure with gridspec
-		fig = plt.figure(figsize=(5*(1+(1 if topogcorr_plot_struct else 0))+3,5))
-		gs = gridspec.GridSpec(len(analysis_names),1+(1 if topogcorr_plot_struct else 0))
 		for i in analysis_descriptors[a]: vars()[i] = (analysis_descriptors[a])[i]
 		m = analysis_names.index(a)
 		mset = msets[m]
@@ -364,7 +314,8 @@ if 'topogcorr_plot' in dolist:
 			mset_protein = mset
 		tc = unpickle(pickles+(analysis_descriptors[a])['topogcorr_pkl'])
 		smoothwid = 4
-		ax = fig.add_subplot(gs[0])
+		ax = fig.add_subplot((gs[0] if len(analysis_names) == 1 
+			else gs[(m if swaprows else 0),(0 if swaprows else m)]))
 		hcorr_smooths = []
 		for h in range(len(tc.hcorr)):
 			#---set labels
@@ -380,38 +331,72 @@ if 'topogcorr_plot' in dolist:
 				for i in range(len(hcorr)-smoothwid)]
 			hcorr_smooths.append(hcorr_smooth)
 			#---override names if you have a separate protein pickle
-			plotlabel = tc.prots_names[(h if protein_pkl == None else h+2)]
+			if protein_pkl == None:
+				if h == 0:
+					plotlabel = 'full'
+				else:
+					plotlabel = tc.prots_names[h]
+			else:
+				plotlabel = tc.prots_names[h+2]
+			
 			ax.plot(array(tc.xedges[1:-smoothwid])/10.,array(hcorr_smooth)/10.,'o-',label=plotlabel,
 				c=color)
-			ax.legend()
+			ax.legend(fontsize=fsaxlegend)
 			ax.grid(True)
 		ax.set_xlabel(r'$\min(\left|\mathbf{r}-\mathbf{r}_{\mathrm{prot}}\right|)\:(\mathrm{nm})$',
 			fontsize=fsaxlabel)
 		ax.set_ylabel(r'$z\:(\mathrm{nm})$',fontsize=fsaxlabel)
+		ax.set_title(label,fontsize=fsaxtitle)
 		ax.axhline(y=0,xmin=0.,xmax=max(tc.xedges[1:-smoothwid]),lw=2,color='k')
+		ax.get_xaxis().set_major_locator(mpl.ticker.MaxNLocator(prune='upper'))
 		plt.setp(ax.get_xticklabels(),fontsize=fsaxlabel)
 		plt.setp(ax.get_yticklabels(),fontsize=fsaxlabel)
-		'''
-		if topogcorr_plot_struct:
-			ax = fig.add_subplot(gs[1])
-			maxval = max(abs(mean(mset.surf,axis=0).min()/10.),abs(mean(mset.surf,axis=0).max()/10.))
-			im = plotter2d(ax,mset,dat=mean(mset.surf,axis=0)/10.,lognorm=False,cmap=cmap,
-				inset=False,cmap_washout=0.8,ticklabel_show=[1,1],tickshow=[1,1],centertick=False,
-				fs=fsaxlabel,label_style='xy',lims=[-maxval,maxval])
-			s0 = 1 if protein_pkl == None else 0
-			for s in range((1 if protein_pkl == None else 0),len(tc.prots_refs)):
-				color = 'k' if s == 0 else clrs[s-s0]
-				for pbcshift in [[0,0],[1,0],[0,1],[1,1],[-1,0],[0,-1],[-1,-1],[-1,1],[1,-1]]:
-					plothull(ax,mean(mset_protein.protein,axis=0)[tc.prots_refs[s],:2]+tc.prots_shifts[s]+\
-						array([mean(mset.vecs,axis=0)[i]*pbcshift[i] for i in range(2)]),
-						mset=mset_protein,c=clrs[s-1])
-			divider = make_axes_locatable(ax)
-			cax = divider.append_axes("right", size="5%", pad=0.05)
-			fig.colorbar(im,cax=cax)
-		cax.tick_params(labelsize=10) 
-		cax.set_ylabel(r'$\left\langle z(x,y)\right\rangle \:(\mathrm{nm})$',fontsize=fsaxlabel)
-		plt.setp(cax.get_yticklabels(),fontsize=fsaxlabel)
-		'''
-	plt.savefig(pickles+'fig-topography-'+specialname((analysis_descriptors[a])['pklfile'])+'.png',
-		dpi=500,bbox_inches='tight')	
-	plt.show()
+		ax.set_ylim(zrange)
+		#---clean up
+		if m != 0:
+			ax.set_yticklabels([])
+			ax.set_ylabel('')
+		#---bottom row shows average structures
+		ax = fig.add_subplot((gs[1] if len(analysis_names) == 1 
+			else gs[(m if swaprows else 1),(1 if swaprows else m)]))
+		maxval = max(abs(mean(mset.surf,axis=0).min()/10.),abs(mean(mset.surf,axis=0).max()/10.))
+		im = plotter2d(ax,mset,dat=mean(mset.surf,axis=0)/10.,lognorm=False,cmap=cmap,
+			inset=False,cmap_washout=1.0,ticklabel_show=[1,1],tickshow=[1,1],centertick=False,
+			fs=fsaxlabel,label_style='xy',
+				lims=([-maxval,maxval] if zrange == None else [zrange[0],zrange[1]]))
+		s0 = 1 if protein_pkl == None else 0
+		for s in range(s0,len(tc.prots_refs)):
+			color = 'k' if s == 0 else clrs[s-s0]
+			if not hasattr(tc,'prots_shifts'): shift = array([0.,0.])
+			elif tc.prots_shifts == []: shift = array([0.,0.])
+			else: shift = tc.prots_shifts[s]
+			for pbcshift in [[0,0],[1,0],[0,1],[1,1],[-1,0],[0,-1],[-1,-1],[-1,1],[1,-1]]:
+				plothull(ax,mean(mset_protein.protein,axis=0)[tc.prots_refs[s],:2]+\
+					shift+array([mean(mset.vecs,axis=0)[i]*pbcshift[i] for i in range(2)]),
+					mset=mset_protein,c=clrs[s-1])
+		#---inset axis colorbar
+		if m == len(analysis_names)-1:
+			axins = inset_axes(ax,width="5%",height="100%",loc=3,
+				bbox_to_anchor=(1.,0.,1.,1.),
+				bbox_transform=ax.transAxes,
+				borderpad=0)
+			cbar = plt.colorbar(im,cax=axins,orientation="vertical")
+			plt.setp(axins.get_yticklabels(),fontsize=fsaxlabel)
+			axins.set_ylabel(r'$\left\langle z(x,y)\right\rangle \:(\mathrm{nm})$',
+				fontsize=fsaxlabel,rotation=270)
+		#---clean up
+		if m != 0:
+			ax.set_yticklabels([])
+			ax.set_ylabel('')
+	if len(analysis_names) > 1:
+		fig.set_size_inches(fig.get_size_inches()[0]*2,fig.get_size_inches()[1]*2)
+	else: fig.set_size_inches(fig.get_size_inches()[0],fig.get_size_inches()[1]-2)
+	gs.tight_layout(fig,h_pad=0.,w_pad=0.)
+	if len(analysis_names) == 1:
+		filespec = specialname((analysis_descriptors[a])['pklfile'])
+	else:
+		filespec = bigname
+	plt.savefig(pickles+'fig-topography-'+filespec+'.png',
+		dpi=300,bbox_inches='tight')
+plt.show()
+

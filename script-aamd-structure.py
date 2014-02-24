@@ -29,63 +29,46 @@ cgmd_protein = 'name BB'
 
 #---possible analyses
 analysis_descriptors = {
-	'v510-40000-90000-100':
-		{'sysname':'membrane-v510',
-		'sysname_lookup':'membrane-v510-atomP',
+	'v511-30000-80000-100':
+		{'sysname':'membrane-v511',
+		'sysname_lookup':'membrane-v511-atomP',
 		'director':director_aamd_symmetric,'selector':selector_aamd_symmetric,'protein_select':None,
-		'trajsel':'s8-kraken-md.part0021.40000-90000-100.atomP.xtc',
-		'timeslice':[40000,90000,100]}}
-analysis_names = ['v510-40000-90000-100']
+		'trajsel':'s6-kraken-md.part0009.30000-80000-100.atomP.xtc',
+		'timeslice':[30000,80000,100]}}
+analysis_names = ['v511-30000-80000-100']
 
 #---MAIN
 #-------------------------------------------------------------------------------------------------------------
 
-starttime = time.time(); print 'start'
 #---loop over analysis questions
 for aname in analysis_names:
+	#---details
 	for i in analysis_descriptors[aname]: vars()[i] = (analysis_descriptors[aname])[i]
-	#---file lookup
-	if 'sysname_lookup' in vars() and sysname_lookup == None: sysname_lookup = sysname
-	if type(trajsel) == slice:
-		trajfile = trajectories[systems.index(sysname_lookup)][trajsel]
-	elif type(trajsel) == str:
-		pat = re.compile('(.+)'+re.sub(r"/",r"[/-]",trajsel))
-		for fname in trajectories[systems.index(sysname_lookup)]:
-			if pat.match(fname):
-				trajfile = [fname]
-	elif type(trajsel) == list:
-		trajfile = []
-		for trajfilename in trajsel:
-			pat = re.compile('(.+)'+re.sub(r"/",r"[/-]",trajfilename))
-			for fname in trajectories[systems.index(sysname_lookup)]:
-				if pat.match(fname):
-					trajfile.append(fname)
-	print 'trajectories: '+str(trajfile)
+	grofile,trajfile = trajectory_lookup(analysis_descriptors,aname,globals())
 	#---loop over trajectory files
 	for traj in trajfile:
 		mset = MembraneSet()
-		#---Load the trajectory
-		gro = structures[systems.index(sysname_lookup)]
+		#---load the trajectory
 		basename = traj.split('/')[-1][:-4]
 		#---revised basename to include step-part because sometimes the time gets reset
 		basename = "-".join(re.match('.*/[a-z][0-9]\-.+',traj).string.split('/')[-2:])[:-4]
-		sel_surfacer = sel_aamd_surfacer
-		print 'Accessing '+basename+'.'
+		print 'status: accessing '+basename
 		starttime = time.time()
-		mset.load_trajectory((basedir+'/'+gro,basedir+'/'+traj),resolution='aamd')
-		print 'time = '+str(1./60*(time.time()-starttime))+' minutes.'
-		#---Average structure calculation
-		mset.identify_monolayers(director,startframeno=0)
+		mset.load_trajectory((basedir+'/'+grofile,basedir+'/'+traj),resolution='aamd')
+		checktime()
+		#---average structure calculation
+		mset.identify_monolayers(director)
 		if protein_select == None:
-			mset.midplaner(selector,skip=skip,rounder=rounder,framecount=framecount,timeslice=timeslice)
+			mset.midplaner(selector,skip=skip,rounder=rounder,framecount=framecount,
+				timeslice=timeslice,thick=True)
 		else:
 			mset.midplaner(selector,skip=skip,rounder=rounder,framecount=framecount,
-				protein_selection=protein_select,timeslice=timeslice)
+				protein_selection=protein_select,timeslice=timeslice,thick=True)
 		mset.calculate_undulations()
-		#---Save the data
+		#---save the data
 		pickledump(mset,'pkl.structures.'+sysname+'.'+basename[:11]+'.'+str(timeslice[0])+'-'+
 			str(timeslice[1])+'-'+str(timeslice[2])+'.pkl',directory=pickles)
 		if erase_when_finished:
 			del mset
-		print 'time = '+str(1./60*(time.time()-starttime))+' minutes.'
+		checktime()
 

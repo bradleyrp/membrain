@@ -65,6 +65,38 @@ def parse_locations_file(basedir,locations):
 	fp.close()
 	return [systems,structures,trajectories]
 	
+def trajectory_lookup(analysis_descriptors,aname,globs):
+	'''Return the correct trajectory and structure files, given a dictionary and key.'''
+	#---Since we are in an imported module (membrainrunner.py), we have to get globals for the lookup
+	structures = globs['structures']
+	systems = globs['systems']
+	trajectories = globs['trajectories']
+	#---Also lookup entries from the dictionary
+	if 'sysname_lookup' not in analysis_descriptors[aname].keys(): sysname_lookup = None
+	else: sysname_lookup = (analysis_descriptors[aname])['sysname_lookup']
+	trajsel = (analysis_descriptors[aname])['trajsel']
+	#---If sysname isn't defined, lookup the proper sysname from the dictionary
+	if sysname_lookup == None: sysname_lookup = (analysis_descriptors[aname])['sysname']
+	grofile = structures[systems.index(sysname_lookup)]
+	#---Nb this routine searches the locations file for the right trajectory file.
+	#---Requires analysis descriptors dictionary of dictionaries with the following key variables
+	#--->	1. sysname_lookup : key for the system name, i.e. membrane-v510-atomP
+	#--->	2. trajsel : a variable type which specifies the trajectory file you want (see below)(
+	if type(trajsel) == slice:
+		trajfile = trajectories[systems.index(sysname_lookup)][trajsel]
+	elif type(trajsel) == str:
+		pat = re.compile('(.+)'+re.sub(r"/",r"[/-]",trajsel))
+		for fname in trajectories[systems.index(sysname_lookup)]:
+			if pat.match(fname): trajfile = [fname]
+	elif type(trajsel) == list:
+		trajfile = []
+		for trajfilename in trajsel:
+			pat = re.compile('(.+)'+re.sub(r"/",r"[/-]",trajfilename))
+			for fname in trajectories[systems.index(sysname_lookup)]:
+				if pat.match(fname):
+					trajfile.append(fname)
+	return grofile,trajfile
+	
 def test(args):
 	'''Test function.'''
 	print '\n\nThis is a test! Watch out for occult enemies !!!\n'
@@ -94,7 +126,30 @@ def postmortem(scriptglobals=None,banner=None):
 	#---So instead we just call atexit.register(postmortem,scriptglobals=globals()) from locations.py.
 	#---Which is always called via execfile in the script. This trick works well enough.
     code.interact(local=scriptglobals,banner=banner)
-		
+
+def specname_from_pickle(basename):
+	'''Standard method for deriving a step/part/timeslice-specific name from the trajectory file.'''
+	special_name = ".".join([i for i in re.match('.+membrane\-.+',basename).string.split('.')
+		if re.match('[a-z][0-9]\-.+',i) 
+		or re.match('membrane-v.+',i) 
+		or re.match('md',i)
+		or re.match('part[0-9]{4}',i)
+		or re.match('[0-9]+\-[0-9]+\-[0-9]',i)])
+	return special_name
+
+def specname_from_traj(traj):
+	'''Return basic name from a trajectory file name.'''
+	return ".".join(re.match('.*/[a-z][0-9]\-.+',traj).string.split('/')[-2:])[:-4]
+
+def specname_pickle(sysname,traj,timeslice=None):
+	'''Construct a standard picklename from a systename name and trajectory name.'''
+	if timeslice == None:
+		picklename = sysname+'.'+specname_from_traj(traj)
+	else:
+		picklename = sysname+'.'+('.'.join(specname_from_traj(traj).split('.')[:-1]))+\
+			('-'.join([str(i) for i in timeslice]))
+	return picklename
+
 #---MAIN
 #-------------------------------------------------------------------------------------------------------------
 
@@ -131,6 +186,13 @@ elif 'logfile' in globals():
 #---enable also via setting the debugmode variable to True in the script
 if ('debugmode' in globals() and debugmode) or args.debugmode:
 	sys.excepthook = postmortem_debug
+	
+#---global start time
+global_start_time = time.time()
+
+#---report the current time
+def checktime():
+	print 'status: time = '+str(1./60*(time.time()-global_start_time))+' minutes'
 
 #---pass arguments and call a function
 if __name__ == "__main__" and args.operation != None:
