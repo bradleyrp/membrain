@@ -68,7 +68,11 @@ for aname in analysis_names:
 		if 'timeslice' in analysis_descriptors[aname].keys():
 			print 'warning: requested timeslice '+str(timeslice)
 		else:
-			timeslice = [int(i) for i in trajsel.split('.')[-2].split('-')]
+			if len(trajsel.split('.')[-2].split('-')) == 1:
+				tslicepos = -3
+				subset_name = trajsel.split('.')[-2]
+			else: tslicepos = -2
+			timeslice = [int(i) for i in trajsel.split('.')[tslicepos].split('-')]
 		if protein_select == None:
 			mset.midplaner(selector,skip=skip,rounder=rounder,framecount=framecount,timeslice=timeslice)
 		else:

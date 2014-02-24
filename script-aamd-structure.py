@@ -33,8 +33,7 @@ analysis_descriptors = {
 		{'sysname':'membrane-v511',
 		'sysname_lookup':'membrane-v511-atomP',
 		'director':director_aamd_symmetric,'selector':selector_aamd_symmetric,'protein_select':None,
-		'trajsel':'s6-kraken-md.part0009.30000-80000-100.atomP.xtc',
-		'timeslice':[30000,80000,100]}}
+		'trajsel':'s6-kraken-md.part0009.30000-80000-100.atomP.xtc'}}
 analysis_names = ['v511-30000-80000-100']
 
 #---MAIN
@@ -49,26 +48,29 @@ for aname in analysis_names:
 	for traj in trajfile:
 		mset = MembraneSet()
 		#---load the trajectory
-		basename = traj.split('/')[-1][:-4]
-		#---revised basename to include step-part because sometimes the time gets reset
-		basename = "-".join(re.match('.*/[a-z][0-9]\-.+',traj).string.split('/')[-2:])[:-4]
-		print 'status: accessing '+basename
+		print 'status: accessing '+specname_pickle(sysname,traj)
 		starttime = time.time()
 		mset.load_trajectory((basedir+'/'+grofile,basedir+'/'+traj),resolution='aamd')
 		checktime()
 		#---average structure calculation
 		mset.identify_monolayers(director)
+		#---infer the timeslice from the XTC name if not specified
+		if 'timeslice' in analysis_descriptors[aname].keys():
+			print 'warning: requested timeslice '+str(timeslice)
+		else:
+			if len(trajsel.split('.')[-2].split('-')) == 1:
+				tslicepos = -3
+				subset_name = trajsel.split('.')[-2]
+			else: tslicepos = -2
+			timeslice = [int(i) for i in trajsel.split('.')[tslicepos].split('-')]
 		if protein_select == None:
-			mset.midplaner(selector,skip=skip,rounder=rounder,framecount=framecount,
-				timeslice=timeslice,thick=True)
+			mset.midplaner(selector,skip=skip,rounder=rounder,framecount=framecount,timeslice=timeslice)
 		else:
 			mset.midplaner(selector,skip=skip,rounder=rounder,framecount=framecount,
-				protein_selection=protein_select,timeslice=timeslice,thick=True)
+				protein_selection=protein_select,timeslice=timeslice)
 		mset.calculate_undulations()
 		#---save the data
-		pickledump(mset,'pkl.structures.'+sysname+'.'+basename[:11]+'.'+str(timeslice[0])+'-'+
-			str(timeslice[1])+'-'+str(timeslice[2])+'.pkl',directory=pickles)
+		pickledump(mset,'pkl.structures.'+specname_pickle(sysname,traj)+'.pkl',directory=pickles)
 		if erase_when_finished:
 			del mset
 		checktime()
-

@@ -139,7 +139,10 @@ def specname_from_pickle(basename):
 
 def specname_from_traj(traj):
 	'''Return basic name from a trajectory file name.'''
-	return ".".join(re.match('.*/[a-z][0-9]\-.+',traj).string.split('/')[-2:])[:-4]
+	#---Nb previous version might include subset names (like 'atomP') but now we drop them
+	#return ".".join(re.match('.*/[a-z][0-9]\-.+',traj).string.split('/')[-2:])[:-4]
+	return '.'.join((".".join(re.match('.*/[a-z][0-9]\-.+',traj).string.split('/')[-2:])).split('.')\
+		[:(-2 if len(traj.split('.')[-2].split('-')) == 1 else -1)])
 
 def specname_pickle(sysname,traj,timeslice=None):
 	'''Construct a standard picklename from a systename name and trajectory name.'''
