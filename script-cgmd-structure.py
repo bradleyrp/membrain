@@ -59,7 +59,6 @@ for aname in analysis_names:
 		mset = MembraneSet()
 		#---load the trajectory
 		print 'status: accessing '+specname_pickle(sysname,traj)
-		starttime = time.time()
 		mset.load_trajectory((basedir+'/'+grofile,basedir+'/'+traj),resolution='cgmd')
 		checktime()
 		#---average structure calculation

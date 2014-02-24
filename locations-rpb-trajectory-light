@@ -1,3 +1,11 @@
+name=membrane-v511-ions
+struct=membrane-v511/a3-ions/system.ions.gro
+membrane-v511/a3-ions/s6-kraken-md.part0009.30000-80000-100.ions.xtc
+
+name=membrane-v511-atomP
+struct=membrane-v511/a2-surfacer/system.atomP.gro
+membrane-v511/a2-surfacer/s6-kraken-md.part0009.30000-80000-100.atomP.xtc
+
 name=membrane-v530
 struct=membrane-v530/system-input.gro
 membrane-v530/md.part0004.skip50.xtc
