@@ -1,123 +1,105 @@
 #!/usr/bin/python -i
+if 0:
+	from membrainrunner import *
 
-#---deprecated by script-postproc-stressmaps.py
+	location = ''
+	execfile('locations.py')
+	execfile('plotter.py')
 
-from membrainrunner import *
-execfile('locations.py')
+	import scipy.interpolate
+	import scipy.integrate
+	import subprocess
 
-import scipy.interpolate
-import scipy.integrate
-import subprocess
+	from mpl_toolkits.axes_grid1 import make_axes_locatable
+	from mpl_toolkits.axes_grid1.inset_locator import inset_axes
+	from scipy import ndimage
+	import matplotlib.gridspec as gridspec
 
-from mpl_toolkits.axes_grid1 import make_axes_locatable
-from mpl_toolkits.axes_grid1.inset_locator import inset_axes
-from scipy import ndimage
-import matplotlib.gridspec as gridspec
+	#---PARAMETERS
+	#-------------------------------------------------------------------------------------------------------------
 
-#---PARAMETERS
-#-------------------------------------------------------------------------------------------------------------
-
-#---Nb this script follows script-postproc-stress.py
-
-which_routine = ['exo70pip2_study','exo70pip2_study_v2','enth_study','enth2'][-1]
-
-if which_routine == 'exo70pip2_study':
-	#---Note: this is the set for the Exo70+PIP2 simulations
-	raw_maps_names = [
-			'pkl.stressdecomp.membrane-v701.md.part0003.60000-160000-200.pkl',
-			'pkl.stressdecomp.membrane-v700.md.part0002.100000-200000-200.pkl',
+	exo70pip2_study = 0
+	exo70pip2_study_v2 = 1
+	enth_study = 0
+	#---Pickles containing kC0 plots from script-postproc-stress.py
+	if exo70pip2_study:
+		#---Note: this is the set for the Exo70+PIP2 simulations
+		raw_maps_names = [
+				'pkl.stressdecomp.membrane-v701.md.part0003.60000-160000-200.pkl',
+				'pkl.stressdecomp.membrane-v700.md.part0002.100000-200000-200.pkl',
+				'pkl.stressdecomp.membrane-v550.md.part0006.300000-400000-200.pkl']
+		pickle_structure_names = [
+				'pkl.structures.membrane-v701.md.part0003.60000-160000-200.pkl',
+				'pkl.structures.membrane-v700.md.part0002.100000-200000-200.pkl',
+				'pkl.structures.membrane-v550.md.part0006.300000-400000-200.pkl']
+		#---Master ID string
+		outname = 'v701.v700.v550.ver3'
+		#---Numbers of proteins in each system
+		nprots_list = [2,2,0]
+		#---Maps labels
+		mapslabels = [r'$\textbf{{EXO70}\ensuremath{\times}2{\small (antiparallel)}}$',
+			r'$\textbf{{EXO70}\ensuremath{\times}2{\small (parallel)}}$',
+			r'$\textbf{{control}}$']
+	elif enth_study:        
+		#---Note: this is the set for the ENTH simulations
+		raw_maps_names = [
+			'pkl.stressdecomp.membrane-v614-stress.md.part0002.rerun.pkl',
+			'pkl.stressdecomp.membrane-v612-stress.md.part0002.rerun.pkl',
 			'pkl.stressdecomp.membrane-v550.md.part0006.300000-400000-200.pkl']
-	pickle_structure_names = [
-			'pkl.structures.membrane-v701.md.part0003.60000-160000-200.pkl',
-			'pkl.structures.membrane-v700.md.part0002.100000-200000-200.pkl',
+		pickle_structure_names = [
+			'pkl.structures.membrane-v614-stress.md.part0002.rerun.pkl',
+			'pkl.structures.membrane-v612-stress.md.part0003.pkl',
 			'pkl.structures.membrane-v550.md.part0006.300000-400000-200.pkl']
-	#---Master ID string
-	outname = 'v701.v700.v550.ver3'
-	#---Numbers of proteins in each system
-	nprots_list = [2,2,0]
-	#---Maps labels
-	mapslabels = [r'$\textbf{{EXO70}\ensuremath{\times}2{\small (antiparallel)}}$',
-		r'$\textbf{{EXO70}\ensuremath{\times}2{\small (parallel)}}$',
-		r'$\textbf{{control}}$']
-elif which_routine == 'enth_study':
-	#---Note: this is the set for the ENTH simulations
-	raw_maps_names = [
-		'pkl.stressdecomp.membrane-v614-stress.md.part0002.rerun.pkl',
-		'pkl.stressdecomp.membrane-v612-stress.md.part0002.rerun.pkl',
-		'pkl.stressdecomp.membrane-v550.md.part0006.300000-400000-200.pkl']
-	pickle_structure_names = [
-		'pkl.structures.membrane-v614-stress.md.part0002.rerun.pkl',
-		'pkl.structures.membrane-v612-stress.md.part0003.pkl',
-		'pkl.structures.membrane-v550.md.part0006.300000-400000-200.pkl']
-	outname = 'v614.v612.v550.ver3'	
-	#---Numbers of proteins in each system
-	nprots_list = [4,1,0]
-	#---Maps labels
-	mapslabels = [r'$\textbf{{ENTH}\ensuremath{\times}4}$',
-		r'$\textbf{{ENTH}\ensuremath{\times}1}$',
-		r'$\textbf{{control}}$']
-elif which_routine == 'exo70pip2_study_v2':
-	#---Note: this is the set for the Exo70+PIP2 simulations
-	raw_maps_names = [
-		'pkl.stressdecomp.membrane-v701.md.part0003.60000-160000-200.pkl',
-		'pkl.stressdecomp.membrane-v700.md.part0009.500000-700000-400.pkl',
-		'pkl.stressdecomp.membrane-v550.md.part0006.300000-400000-200.pkl']
-	pickle_structure_names = [
-		'pkl.structures.membrane-v701.md.part0003.60000-160000-200.pkl',
-		'pkl.structures.membrane-v700.md.part0009.500000-700000-400.pkl',
-		'pkl.structures.membrane-v550.md.part0006.300000-400000-200.pkl']
-	#---Master ID string
-	outname = 'v701.v700.v550.ver4'
-	#---Numbers of proteins in each system
-	nprots_list = [2,2,0]
-	#---Maps labels
-	mapslabels = [r'$\textbf{{EXO70}\ensuremath{\times}2{\small (antiparallel)}}$',
-		r'$\textbf{{EXO70}\ensuremath{\times}2{\small (parallel)}}$',
-		r'$\textbf{{control}}$']
-elif which_routine == 'enth2':
-	#---Note: this is the set for the Exo70+PIP2 simulations
-	raw_maps_names = [
-		'pkl.stressdecomp.membrane-v701.md.part0003.60000-160000-200.pkl',
-		'pkl.stressdecomp.membrane-v614.s9-lonestar.md.part0004.120000-220000-200.pkl',
-		'pkl.stressdecomp.membrane-v614.s9-lonestar.md.part0004.120000-220000-200.pkl']
-	pickle_structure_names = [
-		'pkl.structures.membrane-v700.u1-lonestar-longrun.md.part0009.500000-600000-200.pkl',
-		'pkl.structures.membrane-v614.s9-lonestar.md.part0004.120000-220000-200.pkl',
-		'pkl.structures.membrane-v550.s0-trajectory-full.md.part0006.300000-400000-200.pkl']
-	#---Master ID string
-	outname = 'v614.v550'
-	#---Numbers of proteins in each system
-	nprots_list = [2,4,0]
-	#---Maps labels
-	mapslabels = [r'$\textbf{{v701trash}}$',r'$\textbf{{ENTH}\ensuremath{\times}4}$',
-		r'$\textbf{{control}}$']
-	ncols = len(raw_maps_names)
+		outname = 'v614.v612.v550.ver3'	
+		#---Numbers of proteins in each system
+		nprots_list = [4,1,0]
+		#---Maps labels
+		mapslabels = [r'$\textbf{{ENTH}\ensuremath{\times}4}$',
+			r'$\textbf{{ENTH}\ensuremath{\times}1}$',
+			r'$\textbf{{control}}$']
+	elif exo70pip2_study_v2:
+		#---Note: this is the set for the Exo70+PIP2 simulations
+		raw_maps_names = [
+			'pkl.stressdecomp.membrane-v701.md.part0003.60000-160000-200.pkl',
+			'pkl.stressdecomp.membrane-v700.md.part0009.500000-700000-400.pkl',
+			'pkl.stressdecomp.membrane-v550.md.part0006.300000-400000-200.pkl']
+		pickle_structure_names = [
+			'pkl.structures.membrane-v701.md.part0003.60000-160000-200.pkl',
+			'pkl.structures.membrane-v700.md.part0009.500000-700000-400.pkl',
+			'pkl.structures.membrane-v550.md.part0006.300000-400000-200.pkl']
+		#---Master ID string
+		outname = 'v701.v700.v550.ver4'
+		#---Numbers of proteins in each system
+		nprots_list = [2,2,0]
+		#---Maps labels
+		mapslabels = [r'$\textbf{{EXO70}\ensuremath{\times}2{\small (antiparallel)}}$',
+			r'$\textbf{{EXO70}\ensuremath{\times}2{\small (parallel)}}$',
+			r'$\textbf{{control}}$']
 
-#---plots
-plot_maps = 1
-plot_hist = 0 ######## needs centered at 0!?!
-plot_hist_subdivide = 0
-plot_hist_subdivide_mean = 0
+	#---plots
+	plot_maps = 1
+	plot_hist = 0 ######## needs centered at 0!?!
+	plot_hist_subdivide = 0
+	plot_hist_subdivide_mean = 0
 
-#---methods
-smoothmaps = False
-smoothwindow = 2.
+	#---methods
+	smoothmaps = False
+	smoothwindow = 2.
+	
+	#---settings
+	nbins = 31
 
-#---settings
-nbins = 31
+	#---file names
+	plot_maps_file = 'fig-'+outname+'-stress-framewise-maps.png'
+	plot_hist_file = 'fig-'+outname+'-stress-framewise-histograms.png'
 
-#---file names
-plot_maps_file = 'fig-'+outname+'-stress-framewise-maps.png'
-plot_hist_file = 'fig-'+outname+'-stress-framewise-histograms.png'
-
-#---sign change
-signchange = 1
+	#---sign change
+	signchange = 1
 
 #---MAIN
 #-------------------------------------------------------------------------------------------------------------
 
-#---load
-if 'raw_maps' not in globals():
+	#---load
 	raw_maps = []
 	for name in raw_maps_names:
 		print 'Loading maps from '+name
@@ -503,7 +485,7 @@ if plot_hist_subdivide:
 		z = 0
 		zoom = zooms[0]
 		#---top row is full system positive vs negative
-		for col in range(ncols):
+		for col in range(3):
 			dat = raw_maps[col]
 			ax = fig.add_subplot(gs[0,col])
 			pdist = signchange*flatten(mean(array([array(i[0])[zoom[0],zoom[1]] for i in dat]),axis=0))
@@ -518,7 +500,7 @@ if plot_hist_subdivide:
 			ax.set_ylim((0,0.4))		
 		#---middle row is positive curvatures
 		clrsi = 0
-		for col in range(ncols):
+		for col in range(3):
 			dat = raw_maps[col]
 			ax = fig.add_subplot(gs[1,col])
 			for z in range(len(zooms)):
@@ -535,7 +517,7 @@ if plot_hist_subdivide:
 			ax.set_ylim((0,0.4))
 		#---bottom row
 		clrsi = 0
-		for col in range(ncols):
+		for col in range(3):
 			dat = raw_maps[col]
 			ax = fig.add_subplot(gs[2,col])
 			for z in range(len(zooms)):
@@ -574,7 +556,7 @@ if plot_maps:
 	fig = plt.figure()	
 	gs = mpl.gridspec.GridSpec(4,1,width_ratios=[1,1,2,1],height_ratios=[1])
 	plt.rc('font', family='sans-serif')
-	extremum = max([max([max(i) for i in result_stack[j][0]]) for j in range(ncols)])
+	extremum = max([max([max(i) for i in result_stack[j][0]]) for j in range(3)])
 	extremum = 0.05
 	ax0 = plt.subplot2grid((1,4),(0,0))
 	ax0.set_title(mapslabels[0])
@@ -634,7 +616,6 @@ if plot_maps:
 	ax1.imshow(signchange*array(dat).T,interpolation='nearest',origin='LowerLeft',
 		vmax=extremum,vmin=-extremum,
 		cmap='bwr',extent=[0,numgridpts,0,numgridpts])
-	
 	ax2 = plt.subplot2grid((1,4), (0,2),colspan=1)
 	ax2.set_title(mapslabels[2])
 	ax2.set_xticklabels([])

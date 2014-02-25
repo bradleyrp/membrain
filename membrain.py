@@ -1101,6 +1101,8 @@ def pickledump(obj,filename,directory=''):
 	'''Pickles an object to a text file.'''
 	if obj.__class__.__name__ == 'MembraneSet':
 		obj.picklename = filename.strip('pkl.').strip('.pkl')
+		obj.universe = []
+		obj.xyzs = []
 	if os.path.isfile(directory+filename):
 		for i in range(1,100):
 			latestfile = directory+'#'+filename+'.'+('%02d' % i)+'#'
@@ -1108,22 +1110,25 @@ def pickledump(obj,filename,directory=''):
 				os.rename(directory+filename,latestfile)
 				print 'status: backing up a pre-existing pickle file with the same name to number '+str(i)
 				break
-	if hasattr(obj,'universe') == False: obj.universe = []
-	if hasattr(obj,'xyzs') == False: 
-		obj.xyzs = []
+	#if hasattr(obj,'universe') == True: obj.universe = []
+	#if hasattr(obj,'xyzs') == True: obj.xyzs = []
 	fp = open(directory+filename, 'w')
 	pickle.dump(obj,fp)
 	fp.close()
 
 def unpickle(filename):
 	'''Un-pickles an object from a text file.'''
-	fp = open(filename, 'r')
-	x = pickle.load(fp)
-	if hasattr(x,'picklename') == False:
-		x.picklename = filename.strip('pkl.').strip('.pkl')
-	else:
-		if x.picklename == '': 
+	if os.path.isfile(filename):
+		fp = open(filename, 'r')
+		x = pickle.load(fp)
+		if hasattr(x,'picklename') == False:
 			x.picklename = filename.strip('pkl.').strip('.pkl')
-	fp.close()
-	return x
+		else:
+			if x.picklename == '': 
+				x.picklename = filename.strip('pkl.').strip('.pkl')
+		fp.close()
+		return x
+	else:
+		print 'error: file does not exist'
+		return
 	

@@ -1,5 +1,7 @@
 #!/usr/bin/python -i
 
+#---deprecated by script-postproc-stressmaps.py
+
 from membrainrunner import *
 execfile('locations.py')
 
@@ -69,8 +71,16 @@ analysis_descriptors = {
 		'nprots':4,
 		'datdir3dpp':
 			'/home/rpb/compbio/membrane-v614-enthx4-12800/a8-stress-s9-120000-220000/results',
-		'framewise_part':4}}
-analysis_names = ['v614-120000-220000-200']
+		'framewise_part':4},
+	'v550-300000-400000-200': 
+		{'sysname':'membrane-v550',
+		'trajsel':'s0-trajectory-full/md.part0006.300000-400000-200.xtc',
+		'nprots':0,
+		'datdir3dpp':
+			'/home/rpb/compbio-alt/membrane-v550/'+\
+			'a1-stress-1.0-framewise-md.part0006.300000-400000-200/results',
+		'framewise_part':6}}
+analysis_names = ['v614-120000-220000-200','v550-300000-400000-200'][-1:]
 
 #---Type of looping or parameter sweeps to do
 #---Note: that I am temporarily dropping support for everything but batch_parameter_sweep_framewise
