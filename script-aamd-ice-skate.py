@@ -60,7 +60,7 @@ if 0:
 	nions = len(ions_traj)
 
 #---GENERAL METHOD
-if 1:
+if 0:
 	center = mean(mset_surf.surf_position)
 	zones = [[0,10],[10,20],[20,30],[30,40],[40,50],[50,60],[60,70],[70,80],[80,90]]
 	zones = zones + array(center)
