@@ -21,6 +21,7 @@ analysis_names = ['v511-30000-80000-100']
 #---MAIN
 #-------------------------------------------------------------------------------------------------------------
 
+#---load
 if mset.universe == []:
 	print 'loading trajectory'
 	#---loop over analysis questions
@@ -57,8 +58,71 @@ if mset.universe == []:
 	ionstraj=array(ionstraj)
 	nions = len(ionstraj)
 
-#---ORIGINAL METHOD
-if 0:
+#---compute msd
+if 'compute' in routine:
+	starttimeall = time.time()
+	center = mean(mset_surf.surf_position)
+	#---specify zones
+	zones = [[0,10],[10,20],[20,30],[30,40],[40,50],[50,60],[60,70],[70,80],[80,90]]
+	zones = zones + array(center)
+	zones = zones[:3]
+	occupancy = 0.8
+	#---select diffusion direction
+	diffusion_direction = '2d'
+	if diffusion_direction == '2d':
+		dimslice = slice(0,2)
+		msd_factor = 2
+	elif diffusion_direction == 'z':
+		dimslice = slice(2,3)
+		msd_factor = 1
+	else:
+		dimslice = slice(None,None)
+		msd_factor = 3
+	ionsel = range(0,522,2)
+	#---pre-compute a master array of all displacements
+	print 'status: precomputing displacement array'
+	starttime = time.time()
+	dists = [[[norm(ionstraj[k][i+d,dimslice]-ionstraj[k][i,dimslice])**2 for i in 
+		range(len(ionstraj[k])-d)] for d in range(len(ionstraj[k]))] for k in ionsel]
+	print str(time.time()-starttime)
+	#---allocate master msd variable
+	for zone in zones:
+		#---get inzone
+		print 'status: computing array of flags for presence in the zones'
+		inzone = array([[[2==1*(ionstraj[k][i,2]>zone[0])+1*(ionstraj[k][i,2]<zone[1]) 
+			for i in range(len(ionstraj[k]))] for k in range(len(ionsel))] for zone in zones])	
+		#---taking means
+		inzonesliced = array([[[mean(inzone[z][k][j:j+i+1]) for i in range(500-j)] for j in range(500)] 
+			for k in range(len(ionsel))])
+		inzoneslicedocc = array([[[inzonesliced[z][k][j][i]>0.8 for i in range(500-j)] for j in range(500)] 
+			for k in range(len(ionsel))])
+		mastermsd = array([[[dists[k][j][i] for i in range(500-j) if inzonesliced[z][k][j][i]>0.8] 
+			for j in range(500)] for k in range(len(ionsel))])
+	#---package the results
+	
+	#---pickle the results
+	times = [mean([clock[i+d]-clock[i] for i in range(500-d)]) for d in range(500)]
+	pickledump(mastermsd,'mastermsd-v511',directory=pickles)
+
+#---plot
+if 'plot' in routine:
+	fig = plt.figure()
+	for z in range(len(zones)):
+		ax = plt.subplot(2,round(len(zones)/2.),z+1)
+		ax.set_xscale('log')
+		ax.set_yscale('log')
+		for k in range(len(ionsel)):
+			msd = array([[times[j],mean(mastermsd[z][k][j])] for j in range(500) 
+				if not isnan(mean(mastermsd[z][k][j]))])
+			if msd != []:
+				ax.plot(msd[:,0],msd[:,1],'o',c=clrs[z%len(clrs)])
+	plt.show()
+
+#---DEVELOPMENT
+#-------------------------------------------------------------------------------------------------------------
+
+#---original method
+if 'original' in routine:
 	center = mean(mset_surf.surf_position)
 	zones = [[0,10],[10,20],[20,30],[30,40],[40,50],[50,60],[60,70],[70,80],[80,90]]
 	zones = zones + array(center)
@@ -118,10 +182,10 @@ if 0:
 	#---get times from the clock
 	times = [mean([clock[i+d]-clock[i] for i in range(len(test)-d)]) for d in range(len(test))]
 	
-#---plot
-if 0:
+#---original plotting method
+if 'original_plot' in routine:
 	fig = plt.figure()
-#	ax = plt.subplot(121)
+	#ax = plt.subplot(121)
 	zdiffusions = [[] for i in range(len(zones))]
 	for z in range(len(zones)):
 		for l in range(len(alldists_filt_zone[z])):
@@ -136,7 +200,7 @@ if 0:
 				fitpart = where((1*(msd0[:,0]>10)+1*(msd0[:,0]<1000))==2)[0]
 				[bz,az] = numpy.polyfit(msd0[fitpart,0],msd0[fitpart,1],1)
 				zdiffusions[z].append(bz/3/msd_factor)
-#		ax.legend((str(round(zones[z][0]-center))+"-"+str(round(zones[z][1]-center))))
+		#ax.legend((str(round(zones[z][0]-center))+"-"+str(round(zones[z][1]-center))))
 		ax.legend(ax,(str(round(zones[z][0]-center))+"-"+str(round(zones[z][1]-center))))
 		ax.set_xscale('log')
 		ax.set_yscale('log')
@@ -146,17 +210,14 @@ if 0:
 		ax.plot([z for i in range(len(zdiffusions[z]))],zdiffusions[z],'o',c=clrs[z])
 		ax.set_xlim((-1,6))
 	ax = plt.subplot(122)
-#	ax.plot(range(len(zones)),[mean(zdiffusions[z]) for z in range(len(zones))], 'o-', c='k')
+	#ax.plot(range(len(zones)),[mean(zdiffusions[z]) for z in range(len(zones))], 'o-', c='k')
 	ax.boxplot([zdiffusions[z] for z in range(len(zones))])
 	ax.set_xlim((-1,6))
 	# Run show in a separate thread:
 	pylab.ion() 
 	plt.show()
 	
-#---SPEED-UP UNDER CONSTRUCTION
-#-------------------------------------------------------------------------------------------------------------
-
-#---hopefully less dumb way taking est 5.6 hours on full data
+#---vectorized method, but uses too much memory
 if 0:
 	starttimeall = time.time()
 	center = mean(mset_surf.surf_position)
@@ -174,7 +235,7 @@ if 0:
 	else:
 		dimslice = slice(None,None)
 		msd_factor = 3
-	ionsel = range(0,522,10)
+	ionsel = range(0,522,2)
 	#---pre-compute a master array of all displacements
 	print 'status: precomputing displacement array'
 	starttime = time.time()
@@ -190,30 +251,40 @@ if 0:
 	#---taking means
 	print 'status: taking means'
 	starttime = time.time()
-	inzonesliced = array([[[[mean(inzone[z][k][j:j+i+1]) for i in range(500-j)] for j in range(500)] for k in range(len(ionsel))] for z in range(len(zones))])
+	inzonesliced = array([[[[mean(inzone[z][k][j:j+i+1]) for i in range(500-j)] for j in range(500)] 
+		for k in range(len(ionsel))] for z in range(len(zones))])
 	print str(time.time()-starttime)
 	starttime = time.time()
-	inzoneslicedocc = array([[[[inzonesliced[z][k][j][i]>0.8 for i in range(500-j)] for j in range(500)] for k in range(len(ionsel))] for z in range(len(zones))])
+	print 'status: occupancy'
+	inzoneslicedocc = array([[[[inzonesliced[z][k][j][i]>0.8 for i in range(500-j)] for j in range(500)] 
+		for k in range(len(ionsel))] for z in range(len(zones))])
 	print str(time.time()-starttime)
 	starttime = time.time()
-	mastermsd = array([[[[dists[k][j][i] for i in range(500-j) if inzonesliced[z][k][j][i]>0.8] for j in range(500)] for k in range(len(ionsel))] for z in range(len(zones))])
+	print 'status: mastermsd'
+	mastermsd = array([[[[dists[k][j][i] for i in range(500-j) if inzonesliced[z][k][j][i]>0.8] 
+		for j in range(500)] for k in range(len(ionsel))] for z in range(len(zones))])
 	print str(time.time()-starttime)
 	print 'done'+str(time.time()-starttimeall)
 	times = [mean([clock[i+d]-clock[i] for i in range(500-d)]) for d in range(500)]
-if 1:
-	fig = plt.figure()
-	for z in range(len(zones)):
-		ax = plt.subplot(2,round(len(zones)/2.),z+1)
-		ax.set_xscale('log')
-		ax.set_yscale('log')
-		for k in range(len(ionsel)):
-			msd = array([[times[j],mean(mastermsd[z][k][j])] for j in range(500) if not isnan(mean(mastermsd[z][k][j]))])
-			if msd != []:
-				ax.plot(msd[:,0],msd[:,1],'o',c=clrs[z%len(clrs)])
-	plt.show()
+	pickledump(mastermsd,'mastermsd-v511',directory=pickles)
+	#---plot
+	if 0:
+		fig = plt.figure()
+		for z in range(len(zones)):
+			ax = plt.subplot(2,round(len(zones)/2.),z+1)
+			ax.set_xscale('log')
+			ax.set_yscale('log')
+			for k in range(len(ionsel)):
+				msd = array([[times[j],mean(mastermsd[z][k][j])] for j in range(500) 
+					if not isnan(mean(mastermsd[z][k][j]))])
+				if msd != []:
+					ax.plot(msd[:,0],msd[:,1],'o',c=clrs[z%len(clrs)])
+		plt.show()
 
-#---JUNK CODE SNIPPETS
+#---DEVELOPMENT, JUNK
 #-------------------------------------------------------------------------------------------------------------
+
+if 0:
 	#occupied = inzonesliced>0.8
 	#tmp4 = tmp3[0]*dists
 	if 0:
@@ -223,14 +294,23 @@ if 1:
 	#---added if statement
 	if 0:
 		tmp8 = [1*array([(array(inzonesliced[0][k][i])>0.8) for i in range(500)]) for k in range(len(ionsel))]
-		tmp9 = [[[dists[k][d][i]*tmp8[k][d][i]/sum(tmp8[k][d][i]) for i in range(500-d)] for d in range(500)] for k in range(len(ionsel))]
+		tmp9 = [[[dists[k][d][i]*tmp8[k][d][i]/sum(tmp8[k][d][i]) for i in range(500-d)] 
+			for d in range(500)] for k in range(len(ionsel))]
 	
-	#inzone = array([[[2==1*(test[i,2]>zone[0])+1*(test[i,2]<zone[1]) for i in range(len(test))] for test in array(ions_traj)] for zone in zones])
-	#starttime = time.time();inzone = array([[[2==1*(test[i,2]>zone[0])+1*(test[i,2]<zone[1]) for i in range(len(test))] for test in array(ions_traj)] for zone in zones]);print str(time.time()-starttime)
-	#starttime = time.time();tmp = [[[[mean(inzone[z][k][j:j+i+1]) for i in range(500-j)] for j in range(500)] for k in range(10)] for z in range(len(zones))];print str(time.time()-starttime)
-	#z = 0
-	#k = 0
-	#tmp = [[inzone[z][k][j:j+i+1] for i in range(500-j) for j in range(500)]
+	inzone = array([[[2==1*(test[i,2]>zone[0])+1*(test[i,2]<zone[1]) 
+		for i in range(len(test))] for test in array(ions_traj)] for zone in zones])
+	starttime = time.time()
+	inzone = array([[[2==1*(test[i,2]>zone[0])+1*(test[i,2]<zone[1]) 
+		for i in range(len(test))] for test in array(ions_traj)] 
+		for zone in zones])
+	print str(time.time()-starttime)
+	starttime = time.time()
+	tmp = [[[[mean(inzone[z][k][j:j+i+1]) for i in range(500-j)] 
+		for j in range(500)] for k in range(10)] for z in range(len(zones))];
+	print str(time.time()-starttime)
+	z = 0
+	k = 0
+	tmp = [[inzone[z][k][j:j+i+1] for i in range(500-j) for j in range(500)]
 	'''
 	tmp2 = array(tmp)
 	for z in range(3):
@@ -254,7 +334,6 @@ if 1:
 	#	for i in range(len(dists[k]))] 
 	#	for k in range(len(dists))]
 
-if 0:
 	starttime = time.time()
 	dists = [[[norm(test[i+d,dimslice]-test[i,dimslice])**2 
 		for i in range(len(test)-d)] 

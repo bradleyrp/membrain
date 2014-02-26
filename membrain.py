@@ -1121,9 +1121,9 @@ def unpickle(filename):
 	if os.path.isfile(filename):
 		fp = open(filename, 'r')
 		x = pickle.load(fp)
-		if hasattr(x,'picklename') == False:
+		if hasattr(x,'picklename') == False and type(x) != list:
 			x.picklename = filename.strip('pkl.').strip('.pkl')
-		else:
+		elif type(x) != list:
 			if x.picklename == '': 
 				x.picklename = filename.strip('pkl.').strip('.pkl')
 		fp.close()

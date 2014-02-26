@@ -335,7 +335,7 @@ def plotter_undulate(mset,qmagfilter=None,inset2d=True,inset2d2=True,ax=None,per
 			transform=ax.transAxes,fontsize=fsaxtext)
 	if ax == None:
 		plt.show()
-		
+	
 def plotter_grid_undulations():
 	'''Plot undulations and peristalsis.'''
 	#---Nb, customized for AAMD simulations, with peristalsis
@@ -349,9 +349,10 @@ def plotter_grid_undulations():
 	plt.savefig(pickles+'test.png',dpi=300,bbox_inches='tight')
 	plt.show()
 
-def plotmov(dat,basename,figsize=None,keep_snapshots=True,cmap=None,lowres=False,smooth=None,
+def plotmov_panels(dat,basename,panels=1,figsize=None,keep_snapshots=True,cmap=None,lowres=False,smooth=None,
 	xedges=None,yedges=None):
-	'''Generic wrapper for making movies. Animates a 2D plot from a numpy array.'''
+	'''Generic wrapper for making movies from imshow with multiple panels.'''
+	#---Nb input must be a list of numpy arrays
 	import scipy.ndimage
 	#---names
 	sysname = 'test'
@@ -359,54 +360,113 @@ def plotmov(dat,basename,figsize=None,keep_snapshots=True,cmap=None,lowres=False
 	if not os.path.isdir(pickles+'/figs-'+basename):
 		os.mkdir(pickles+'/figs-'+basename)
 	plot_video_filebase = '/figs-'+basename+'/'+'snap-'+basename
+	plot_video_name = '/figs-'+basename+'/'+'vid-'+basename
 	#---settings
 	#---Nb still needs labels and axes
-	if figsize == None: figsize = (5,5)
 	if cmap == None: cmap = mpl.cm.jet
-	if type(dat) != 'numpy.ndarray':
-		dat = array(dat)
-	vmax = dat.max()
-	vmin = dat.min()
+	vmax = array(dat).max()
+	vmin = array(dat).min()
 	print [vmin,vmax]
 	#---loop over frames
-	framenums = range(len(dat))
+	framenums = range(len(dat[0]))
 	for fr in framenums:
 		print 'Plotting frame '+str(fr)
-		fig = plt.figure(figsize=figsize)
-		ax = plt.subplot(111)
-		if smooth != None:
-			ax.imshow((scipy.ndimage.filters.gaussian_filter(dat[fr],smooth)).T,
-				interpolation='nearest',origin='lower',cmap=mpl.cm.jet,vmax=vmax,vmin=vmin)
-		else:
-			ax.imshow((dat[fr]).T,interpolation='nearest',origin='lower',
-				cmap=mpl.cm.jet,vmax=vmax,vmin=vmin)
-		ax.set_xticks(range(len(xedges)))
-		ax.set_yticks(range(len(yedges)))
-		ax.set_xticklabels(xedges)
-		ax.set_yticklabels(yedges)
+		fig = plt.figure()
+		gs = gridspec.GridSpec(1,panels)
+		for p in range(panels):
+			ax = fig.add_subplot(gs[p])
+			if smooth != None:
+				ax.imshow((scipy.ndimage.filters.gaussian_filter(dat[fr],smooth)).T,
+					interpolation='nearest',origin='lower',cmap=cmap,vmax=vmax,vmin=vmin)
+			else:
+				ax.imshow((dat[p][fr]).T,interpolation='nearest',origin='lower',
+					cmap=cmap,vmax=vmax,vmin=vmin)
+			if 0:
+				ax.set_xticks(range(len(xedges)))
+				ax.set_yticks(range(len(yedges)))
+				ax.set_xticklabels(xedges)
+				ax.set_yticklabels(yedges)
 		plt.savefig(pickles+plot_video_filebase+'.fr.'+str('%04d'%framenums.index(fr))+'.png',
 			dpi=200,bbox_inches='tight')
 		plt.close(fig)
 	if lowres:
 		subprocess.call(['ffmpeg','-i',pickles+'/'+plot_video_filebase+'.fr.%04d.png',
 			'-vcodec','mpeg2video','-filter:v','setpts=2.0*PTS',
-			pickles+'/'+plot_video_filebase+'.lowres.mpeg'])
+			pickles+'/'+plot_video_name+'.lowres.mpeg'])
 	else:
 		subprocess.call(['ffmpeg','-i',pickles+'/'+plot_video_filebase+'.fr.%04d.png',
 			'-vcodec','mpeg2video','-qscale','0','-filter:v','setpts=2.0*PTS',
-			pickles+'/'+plot_video_filebase+'.mpeg'])
+			pickles+'/'+plot_video_name+'.mpeg'])
 	if keep_snapshots == False:
 		os.popen('rm -r -f '+pickles+'/figs-'+sysname+'-dimple-view')
 
-def plothull(ax,points,c=None,mset=None):
-	if mset != None: vecs = mean(mset.vecs,axis=0)
-	m,n = mset.griddims
+def plotmov(dat,basename,altdat=None,panels=1,plotfunc=None,figsize=None,keep_snapshots=True,
+	cmap=None,lowres=False,smooth=None,xedges=None,yedges=None,whitezero=False):
+	'''Generic wrapper for making movies.'''
+	import scipy.ndimage
+	#---names
+	sysname = 'test'
+	plot_video_filebase = 'tmpdir'
+	if not os.path.isdir(pickles+'/figs-'+basename):
+		os.mkdir(pickles+'/figs-'+basename)
+	plot_video_filebase = '/figs-'+basename+'/'+'snap-'+basename
+	plot_video_name = '/figs-'+basename+'/'+'vid-'+basename
+	#---settings
+	if cmap == None: cmap = mpl.cm.RdBu_r
+	if panels == 1 and type(dat) != 'numpy.ndarray':
+		dat = [array(dat)]
+	vmax = array(dat).max()
+	vmin = array(dat).min()
+	if whitezero:
+		extrem = max(abs(vmax),abs(vmin))
+		vmax = extrem
+		vmin = -1*extrem
+	print [vmin,vmax]
+	#---loop over frames
+	framenums = range(len(dat[0]))
+	for fr in framenums:
+		print 'Plotting frame '+str(fr)
+		fig = plt.figure()
+		if plotfunc == None:
+			ax = plt.subplot(111)
+			ax.imshow((dat[fr]).T,interpolation='nearest',origin='lower',
+				cmap=cmap,vmax=vmax,vmin=vmin)
+		else:
+			globals()[plotfunc]([dat[i][fr] for i in range(panels)],fig,altdat=altdat,
+				vmin=vmin,vmax=vmax,fr=fr)
+		plt.savefig(pickles+plot_video_filebase+'.fr.'+str('%04d'%framenums.index(fr))+'.png',
+			dpi=200,bbox_inches='tight')
+		plt.close(fig)
+	if lowres:
+		subprocess.call(['ffmpeg','-i',pickles+'/'+plot_video_filebase+'.fr.%04d.png',
+			'-vcodec','mpeg2video','-filter:v','setpts=2.0*PTS',
+			pickles+'/'+plot_video_name+'.lowres.mpeg'])
+	else:
+		subprocess.call(['ffmpeg','-i',pickles+'/'+plot_video_filebase+'.fr.%04d.png',
+			'-vcodec','mpeg2video','-qscale','0','-filter:v','setpts=2.0*PTS',
+			pickles+'/'+plot_video_name+'.mpeg'])
+	if keep_snapshots == False:
+		os.popen('rm -r -f '+pickles+'/figs-'+sysname+'-dimple-view')
+
+def plothull(ax,points,griddims=None,vecs=None,c=None,mset=None,subdivide=None,alpha=None):
+	if alpha == None: alpha = 0.65
+	if vecs == None: vecs = mean(mset.vecs,axis=0)
+	if griddims == None: m,n = mset.griddims
+	else: m,n = griddims
 	pts = array([[i[0]*m/vecs[0],i[1]*n/vecs[1]] for i in points])
 	if len(points) > 2:
-		hull = scipy.spatial.ConvexHull(pts)
-		ax.add_patch(mpl.patches.Polygon(pts[hull.vertices],closed=True,facecolor=c,
-		lw=2,alpha=0.65,edgecolor=c))
+		if subdivide == None:
+			hull = scipy.spatial.ConvexHull(pts)
+			ax.add_patch(mpl.patches.Polygon(pts[hull.vertices],closed=True,facecolor=c,
+				lw=2,alpha=alpha,edgecolor=c))
+		else:
+			slicesize = len(pts)/subdivide
+			for s in range(subdivide):
+				ptssub = pts[s*slicesize:(s+1)*slicesize]
+				hull = scipy.spatial.ConvexHull(ptssub)
+				ax.add_patch(mpl.patches.Polygon(ptssub[hull.vertices],closed=True,facecolor=c,
+					lw=2,alpha=alpha,edgecolor=c))
 	else:
 		pts = [mean(points,axis=0)[i]/mean(mset.vecs,axis=0)[i]*mset.griddims[i] for i in range(2)]
-		ax.add_patch(mpl.patches.Circle(pts,radius=0.5,color=c,edgecolor=c,lw=2,alpha=0.65))
+		ax.add_patch(mpl.patches.Circle(pts,radius=0.5,color=c,edgecolor=c,lw=2,alpha=alpha))
 
