@@ -26,36 +26,24 @@ cgmd_protein = 'name BB'
 analysis_plan = slice(None,None)
 analysis_descriptors = {
 	'v530-5000-5500-2':
-		{'sysname':'membrane-v530-apl',
-		'sysname_lookup':'membrane-v530',
+		{'sysname':'membrane-v530',
+		'sysname_lookup':'membrane-v530-apl',
 		'director':director_aamd_symmetric,'selector':selector_aamd_symmetric,'protein_select':None,
 		'trajsel':'u4-reboot-sim-compbio-md.part0002.5000-5500-2.xtc'},
 	'v530-20000-20500-2':
-		{'sysname':'membrane-v530-apl',
-		'sysname_lookup':'membrane-v530',
+		{'sysname':'membrane-v530',
+		'sysname_lookup':'membrane-v530-apl',
 		'director':director_aamd_symmetric,'selector':selector_aamd_symmetric,'protein_select':None,
-		'trajsel':'u4-reboot-sim-compbio-md.part0005.20000-20500-2.xtc'},
+		'trajsel':'u5-sim-trestles-md.part0005.20000-20500-2.xtc'},
 	'v530-80000-80500-2':
-		{'sysname':'membrane-v530-apl',
-		'sysname_lookup':'membrane-v530',
+		{'sysname':'membrane-v530',
+		'sysname_lookup':'membrane-v530-apl',
 		'director':director_aamd_symmetric,'selector':selector_aamd_symmetric,'protein_select':None,
-		'trajsel':'u4-reboot-sim-compbio-md.part0005.80000-80500-2.xtc'}}
+		'trajsel':'u5-sim-trestles-md.part0012.80000-80500-2.xtc'}}
 analysis_names = ['v530-5000-5500-2', 'v530-20000-20500-2', 'v530-80000-80500-2']
 
 #---MAIN
 #-------------------------------------------------------------------------------------------------------------
-
-#---Compute lipid areas via Vornoi cells method
-if do_compute_area_cells:
-	starttime = time.time()
-	#---loop over analysis descriptors
-	for ad in analysis_descriptors[analysis_plan]:
-		(tests,ionnames,residues,selector,director,trajno) = ad
-		#---loop over tests within the descriptor
-		for testno in range(len(tests)):
-			#---loop over specified trajectories
-			for traj in trajectories[systems.index(tests[testno])][trajno]:
-
 
 #---loop over analysis questions
 for aname in analysis_names:
@@ -65,13 +53,11 @@ for aname in analysis_names:
 	#---loop over trajectory files
 	for traj in trajfile:
 		mset = MembraneSet()
-		gro = structures[systems.index(tests[testno])]
-		basename = traj.split('/')[-1][:-4]
-		print 'Accessing '+basename+'.'
-		mset.load_trajectory((basedir+'/'+gro,basedir+'/'+traj),resolution='aamd')
+		mset.load_trajectory((basedir+'/'+grofile,basedir+'/'+traj),resolution='aamd')
 		mset.identify_monolayers(director,startframeno=0)
-		mset.identify_residues(residues)
+#		mset.identify_residues(residues)
 		result_data = MembraneData('cells')
+		'''
 		#---frame selection header
 		end = None
 		start = None
@@ -111,7 +97,7 @@ for aname in analysis_names:
 					areas.append(abs(sum(x1*y2-y1*x2 for (x1, y1), (x2, y2) in pairs)/2))
 				results.append([points,vmap,areas])
 			result_data.add(results,[frameno])
+			'''
 		mset.store.append(result_data)
 		#---Save the data
 		pickledump(mset,'pkl.lipidarea.'+specname_pickle(sysname,traj)+'.pkl',directory=pickles)
-
