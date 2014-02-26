@@ -16,11 +16,26 @@ selector = '(name P and not resname CHL1) or (name C3 and resname CHL1)'
 
 #---Analysis plan
 analysis_plan = slice(None,None)
-analysis_descriptors = [
-	(['membrane-v534'],['Cal'],['POPC','CHL1','DOPE','DOPS','P35P'],
-		'all',director_asymmetric,slice(-1,None)),
-	(['membrane-v533'],['Mg'],['POPC','CHL1','DOPE','DOPS','P35P'],
-		'all',director_asymmetric,slice(-1,None))]
+analysis_descriptors = {
+	'v530-5000-5500-2':
+		{'sysname':'membrane-v530-apl',
+		'sysname_lookup':'membrane-v530',
+		'director':director_aamd_symmetric,'selector':selector_aamd_symmetric,'protein_select':None,
+		'trajsel':'u4-reboot-sim-compbio-md.part0002.5000-5500-2.xtc'},
+	'v530-20000-20500-2':
+		{'sysname':'membrane-v530-apl',
+		'sysname_lookup':'membrane-v530',
+		'director':director_aamd_symmetric,'selector':selector_aamd_symmetric,'protein_select':None,
+		'trajsel':'u4-reboot-sim-compbio-md.part0005.20000-20500-2.xtc'},
+	'v530-80000-80500-2':
+		{'sysname':'membrane-v530-apl',
+		'sysname_lookup':'membrane-v530',
+		'director':director_aamd_symmetric,'selector':selector_aamd_symmetric,'protein_select':None,
+		'trajsel':'u4-reboot-sim-compbio-md.part0005.80000-80500-2.xtc'}
+		
+		}
+analysis_names = ['v530-5000-5500-2', 'v530-20000-20500-2', 'v530-80000-80500-2']
+
 
 #---Methods
 do_compute_area_cells = 1
