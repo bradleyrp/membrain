@@ -63,10 +63,12 @@ for aname in analysis_names:
 			else: tslicepos = -2
 			timeslice = [int(i) for i in trajsel.split('.')[tslicepos].split('-')]
 		if protein_select == None:
-			mset.midplaner(selector,skip=skip,rounder=rounder,framecount=framecount,timeslice=timeslice)
+			mset.midplaner(selector,skip=skip,rounder=rounder,framecount=framecount,timeslice=timeslice,
+				thick=True)
 		else:
 			mset.midplaner(selector,skip=skip,rounder=rounder,framecount=framecount,
-				protein_selection=protein_select,timeslice=timeslice)
+				protein_selection=protein_select,timeslice=timeslice,
+				thick=True)
 		mset.calculate_undulations()
 		#---save the data
 		pickledump(mset,'pkl.structures.'+specname_pickle(sysname,traj)+'.pkl',directory=pickles)

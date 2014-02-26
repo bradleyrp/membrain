@@ -62,10 +62,15 @@ class MembraneData:
 			self.struct = {'frame':0,'monolayer':1,'lipid':2}
 		elif self.calctype == 'xyz_assoc':
 			self.struct = {'frame':0,'monolayer':1,'lipid':2}
+		#---type: c0map holds data in stressmap pickles after integrating the voxel-wise stress tensors
 		elif self.calctype == 'c0map':
 			self.struct = {'frame':0}
-		elif self.calctype == 'dat3dpp':
-			self.struct = {'frame':0}
+		#---type: ionskate for storing ice-skating ion MSD decompositions
+		#---Nb the mastermsd_zones array is very jagged so easy lookups might not work
+		elif self.calctype == 'ionskate':
+			self.struct = {'type':0,'zone':1,'ion':2,'deltat':3,'start_frame':4}
+			self.struct_opts = {'type': {'mastermsd_zones':0,'distsxy':1,'distsz':2}}
+		#---default values for label if no extra descriptors
 		if label != None:
 			self.description = label
 		else:

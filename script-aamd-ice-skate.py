@@ -15,94 +15,130 @@ analysis_descriptors = {
 		'sysname_lookup':'membrane-v511-ions',
 		'trajsel':'s6-kraken-md.part0009.30000-80000-100.ions.xtc',
 		'structure_pkl':
-			'pkl.structures.membrane-v511.a2-surfacer.s6-kraken-md.part0009.30000-80000-100.pkl'}}
+			'pkl.structures.membrane-v511.a2-surfacer.s6-kraken-md.part0009.30000-80000-100.pkl',
+		'ionname':'Cal'}}
 analysis_names = ['v511-30000-80000-100']
+routine = ['compute','postproc'][-1:]
+
+#---method
+zones = [[0,10],[10,20],[20,30],[30,40],[40,50],[50,60],[60,70],[70,80],[80,90]]
+occupancy = 0.8
 
 #---MAIN
 #-------------------------------------------------------------------------------------------------------------
 
-#---load
-if mset.universe == []:
-	print 'loading trajectory'
-	#---loop over analysis questions
+if 'compute' in routine:
 	for aname in analysis_names:
-		#---details
 		for i in analysis_descriptors[aname]: vars()[i] = (analysis_descriptors[aname])[i]
+		#---load
+		print 'loading trajectory'
 		grofile,trajfile = trajectory_lookup(analysis_descriptors,aname,globals())
 		mset_surf = unpickle(pickles+structure_pkl)
+		#---no looping over trajfile names, so only specify one in the analysis_descriptors
 		traj = trajfile[0]
 		mset.load_trajectory((basedir+'/'+grofile,basedir+'/'+traj),resolution='cgmd')
 		checktime()
-	#---get ion positions and times
-	print 'getting ions'
-	clock = []
-	ionspos = []
-	ion_select = mset.universe.selectAtoms('name Cal')
-	whichframes = range(len(mset.universe.trajectory))
-	for fr in whichframes:
-		print fr
-		mset.gotoframe(fr)
-		ionspos.append(ion_select.coordinates())
-		clock.append(mset.universe.trajectory[fr].time)
-	vecs=mean(mset_surf.vecs,axis=0)
-	ionspos = array(ionspos)[:-1]
-	ionstraj = []
-	for ind in range(shape(ionspos)[1]):
-		print ind
-		course = array(ionspos)[:,ind]
-		#---three-line handling PBCs
-		hoplistp = (course[1:]-course[:-1])>array(mset_surf.vecs)[1:]/2.
-		hoplistn = (course[:-1]-course[1:])>array(mset_surf.vecs)[1:]/2.
-		course_nojump = course[1:]-(cumsum(1*hoplistp-1*hoplistn,axis=0))*array(mset_surf.vecs)[1:]
-		ionstraj.append(course_nojump)
-	ionstraj=array(ionstraj)
-	nions = len(ionstraj)
-
-#---compute msd
-if 'compute' in routine:
-	starttimeall = time.time()
-	center = mean(mset_surf.surf_position)
-	#---specify zones
-	zones = [[0,10],[10,20],[20,30],[30,40],[40,50],[50,60],[60,70],[70,80],[80,90]]
-	zones = zones + array(center)
-	zones = zones[:3]
-	occupancy = 0.8
-	#---select diffusion direction
-	diffusion_direction = '2d'
-	if diffusion_direction == '2d':
+		#---check for pre-existing pickle
+		resultpkl = 'pkl.ionskate.'+specname_pickle(sysname,trajfile[0])+'.pkl'
+		mdionskate = unpickle(pickles+resultpkl)
+		if mdionskate != None:
+			raise Exception('except: pkl already exists so figure out your naming problems')
+		#---get ion positions and times
+		print 'getting ions'
+		clock = []
+		ionspos = []
+		ion_select = mset.universe.selectAtoms('name '+ionname)
+		whichframes = range(len(mset.universe.trajectory))
+		for fr in whichframes:
+			mset.gotoframe(fr)
+			ionspos.append(ion_select.coordinates())
+			clock.append(mset.universe.trajectory[fr].time)
+		vecs=mean(mset_surf.vecs,axis=0)
+		ionspos = array(ionspos)[:-1]
+		ionstraj = []
+		for ind in range(shape(ionspos)[1]):
+			course = array(ionspos)[:,ind]
+			#---three-line handling PBCs
+			hoplistp = (course[1:]-course[:-1])>array(mset_surf.vecs)[1:]/2.
+			hoplistn = (course[:-1]-course[1:])>array(mset_surf.vecs)[1:]/2.
+			course_nojump = course[1:]-(cumsum(1*hoplistp-1*hoplistn,axis=0))*\
+				array(mset_surf.vecs)[1:]
+			ionstraj.append(course_nojump)
+		ionstraj=array(ionstraj)
+		nions = len(ionstraj)
+		nframes = len(ionstraj[0])
+		center = mean(mset_surf.surf_position)
+		thick = mean(mset_surf.surf_thick)
+		#---specify zones
+		zones = zones + array(center) + thick
+		zones = list(-1*array(zones)+array(center)-thick)+list(zones+array(center)+thick)
+		print 'zones'
+		print zones
+		#---select subset of ions if desired
+		ionsel = range(0,nions,50)
+		#---pre-compute a master array of all displacements
+		print 'status: precomputing displacement array, xy'
 		dimslice = slice(0,2)
-		msd_factor = 2
-	elif diffusion_direction == 'z':
+		distsxy = [[[norm(ionstraj[k][i+d,dimslice]-ionstraj[k][i,dimslice])**2 for i in 
+			range(len(ionstraj[k])-d)] for d in range(len(ionstraj[k]))] for k in ionsel]
+		print 'status: precomputing displacement array, z'
 		dimslice = slice(2,3)
-		msd_factor = 1
-	else:
-		dimslice = slice(None,None)
-		msd_factor = 3
-	ionsel = range(0,522,2)
-	#---pre-compute a master array of all displacements
-	print 'status: precomputing displacement array'
-	starttime = time.time()
-	dists = [[[norm(ionstraj[k][i+d,dimslice]-ionstraj[k][i,dimslice])**2 for i in 
-		range(len(ionstraj[k])-d)] for d in range(len(ionstraj[k]))] for k in ionsel]
-	print str(time.time()-starttime)
-	#---allocate master msd variable
-	for zone in zones:
-		#---get inzone
-		print 'status: computing array of flags for presence in the zones'
-		inzone = array([[[2==1*(ionstraj[k][i,2]>zone[0])+1*(ionstraj[k][i,2]<zone[1]) 
-			for i in range(len(ionstraj[k]))] for k in range(len(ionsel))] for zone in zones])	
-		#---taking means
-		inzonesliced = array([[[mean(inzone[z][k][j:j+i+1]) for i in range(500-j)] for j in range(500)] 
-			for k in range(len(ionsel))])
-		inzoneslicedocc = array([[[inzonesliced[z][k][j][i]>0.8 for i in range(500-j)] for j in range(500)] 
-			for k in range(len(ionsel))])
-		mastermsd = array([[[dists[k][j][i] for i in range(500-j) if inzonesliced[z][k][j][i]>0.8] 
-			for j in range(500)] for k in range(len(ionsel))])
-	#---package the results
-	
-	#---pickle the results
-	times = [mean([clock[i+d]-clock[i] for i in range(500-d)]) for d in range(500)]
-	pickledump(mastermsd,'mastermsd-v511',directory=pickles)
+		distsz = [[[norm(ionstraj[k][i+d,dimslice]-ionstraj[k][i,dimslice])**2 for i in 
+			range(len(ionstraj[k])-d)] for d in range(len(ionstraj[k]))] for k in ionsel]
+		#---allocate master msd variable
+		mastermsd_zones = []
+		#---loop over zones
+		for z in range(len(zones)):
+			zone = zones[z]
+			print 'status: computing array of flags for presence in the zones'
+			inzone = array([[2==1*(ionstraj[k][i,2]>zone[0])+1*(ionstraj[k][i,2]<zone[1]) 
+				for i in range(len(ionstraj[k]))] 
+				for k in range(len(ionsel))])	
+			print 'status: taking mean occupancy by slicing the zone presence array'
+			inzonesliced = array([[[mean(inzone[k][j:j+i+1]) 
+				for i in range(nframes-j)] 
+				for j in range(nframes)] 
+				for k in range(len(ionsel))])
+			#print 'status: filtering by occupancy'
+			#inzoneslicedocc = array([[[inzonesliced[z][k][j][i]>occupancy 
+			#	for i in range(500-j)] 
+			#	for j in range(500)] 
+			#	for k in range(len(ionsel))])
+			#print 'status: applying filter'
+			mastermsd = array([[[(distsxy[k][j][i],distsz[k][j][i])
+				for i in range(nframes-j) 
+				if inzonesliced[k][j][i]>occupancy] 
+				for j in range(nframes)] 
+				for k in range(len(ionsel))])
+			mastermsd_zones.append(mastermsd)
+		#---record times
+		times = [mean([clock[i+d]-clock[i] for i in range(nframes-d)]) for d in range(nframes)]
+		#---package the results	
+		result_data = MembraneData('ionskate')
+		#---Nb data are packaged as type (distsxy,distsz,mastermsdzones)
+		#---Nb the mastermsd_zones type goes by zone, ion, delta-t, start frame
+		result_data.data = [mastermsd_zones,distsxy,distsz]
+		result_data.addnote(['times',times])
+		result_data.addnote(['occupancy',occupancy])
+		result_data.addnote(['zones',zones])
+		result_data.addnote(['ionsel',ionsel])
+		#---pickle the results
+		pickledump(result_data,resultpkl,directory=pickles)
+
+#---loading and computing have analysis_names on the outside loop to consider each system individually
+
+#---postprocess and plot
+if 'postproc' in routine:
+	skates = []
+	for aname in analysis_names:
+		for i in analysis_descriptors[aname]: vars()[i] = (analysis_descriptors[aname])[i]
+		grofile,trajfile = trajectory_lookup(analysis_descriptors,aname,globals())
+		resultpkl = 'pkl.ionskate.'+specname_pickle(sysname,trajfile[0])+'.pkl'
+		skate = unpickle(pickles+resultpkl)
+		skates.append(skate)
+
+#---DEVELOPMENT
+#-------------------------------------------------------------------------------------------------------------
 
 #---plot
 if 'plot' in routine:
@@ -117,9 +153,6 @@ if 'plot' in routine:
 			if msd != []:
 				ax.plot(msd[:,0],msd[:,1],'o',c=clrs[z%len(clrs)])
 	plt.show()
-
-#---DEVELOPMENT
-#-------------------------------------------------------------------------------------------------------------
 
 #---original method
 if 'original' in routine:
@@ -310,8 +343,7 @@ if 0:
 	print str(time.time()-starttime)
 	z = 0
 	k = 0
-	tmp = [[inzone[z][k][j:j+i+1] for i in range(500-j) for j in range(500)]
-	'''
+	tmp = [[inzone[z][k][j:j+i+1] for i in range(500-j) for j in range(500)]]
 	tmp2 = array(tmp)
 	for z in range(3):
 		tmp4 = tmp3[z]*dists
@@ -319,7 +351,6 @@ if 0:
 		for pd in plotdat:
 			plt.plot(times,pd,c=clrs[z])
 	plt.show()
-	'''
 	#filt = [[0.5*(1*(test[i:i+d+1,2]>zone[0])+1*(test[i:i+d+1,2]<zone[1])) 
 	#			for i in range(len(test)-d)] for d in range(len(test))]	
 
