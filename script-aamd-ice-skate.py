@@ -75,7 +75,7 @@ if 'compute' in routine:
 		print 'zones'
 		print zones
 		#---select subset of ions if desired
-		ionsel = range(0,nions,50)
+		ionsel = range(0,nions)
 		#---pre-compute a master array of all displacements
 		print 'status: precomputing displacement array, xy'
 		dimslice = slice(0,2)
