@@ -21,13 +21,187 @@ analysis_names = ['v511-30000-80000-100']
 routine = ['compute','postproc'][-1:]
 
 #---method
-zones = [[0,10],[10,20],[20,30],[30,40],[40,50],[50,60],[60,70],[70,80],[80,90]]
+zones = [[0,10],[10,20],[20,30],[30,40],[40,50],[50,60],[60,70]]
 occupancy = 0.8
 
 #---MAIN
 #-------------------------------------------------------------------------------------------------------------
 
+#---white whale attempt
 if 'compute' in routine:
+	for aname in analysis_names:
+		for i in analysis_descriptors[aname]: vars()[i] = (analysis_descriptors[aname])[i]
+		#---load
+		print 'status: loading trajectory'
+		grofile,trajfile = trajectory_lookup(analysis_descriptors,aname,globals())
+		mset_surf = unpickle(pickles+structure_pkl)
+		#---no looping over trajfile names, so only specify one in the analysis_descriptors
+		traj = trajfile[0]
+		mset.load_trajectory((basedir+'/'+grofile,basedir+'/'+traj),resolution='aamd')
+		checktime()
+		#---check for pre-existing pickle
+		resultpkl = 'pkl.ionskate.'+specname_pickle(sysname,trajfile[0])+'.pkl'
+		mdionskate = unpickle(pickles+resultpkl)
+		#if mdionskate != None:
+		#	raise Exception('except: pkl already exists so figure out your naming problems')
+		#---get ion positions and times
+		print 'getting ions'
+		clock = []
+		ionspos = []
+		ion_select = mset.universe.selectAtoms('name '+ionname)
+		whichframes = range(len(mset.universe.trajectory))
+		for fr in whichframes:
+			mset.gotoframe(fr)
+			ionspos.append(ion_select.coordinates())
+			clock.append(mset.universe.trajectory[fr].time)
+		vecs=mean(mset_surf.vecs,axis=0)
+		ionspos = array(ionspos)[:-1]
+		ionstraj = []
+		for ind in range(shape(ionspos)[1]):
+			course = array(ionspos)[:,ind]
+			#---three-line handling PBCs
+			hoplistp = (course[1:]-course[:-1])>array(mset_surf.vecs)[1:]/2.
+			hoplistn = (course[:-1]-course[1:])>array(mset_surf.vecs)[1:]/2.
+			course_nojump = course[1:]-(cumsum(1*hoplistp-1*hoplistn,axis=0))*array(mset_surf.vecs)[1:]
+			ionstraj.append(course_nojump)
+		ionstraj=array(ionstraj)
+		nions = len(ionstraj)
+		nframes = len(ionstraj[0])
+		center = mean(mset_surf.surf_position)
+		thick = mean(mset_surf.surf_thick)
+		#---specify zones
+		#zones = zones + array(center) + thick
+		#zones = list(-1*array(zones)+array(center)-thick)+list(zones+array(center)+thick)
+		zones_up = list(zones + array(center) + thick)
+		zones_down = list((array(zones)*-1).T[::-1].T + array(center) - thick)
+		zones = zones_up + zones_down
+		print 'zones'
+		print zones
+		print vecs
+		#---select subset of ions if desired
+		ionsel = slice(0,nions,10)
+		nions = len(range(nions)[ionsel])
+		#---pre-compute a master array of all displacements
+		print 'status: precomputing displacement array, xy'
+		dimslice = slice(0,2)
+		distsxy = [[norm(ionstraj[ionsel,i+d,dimslice]-ionstraj[ionsel,i,dimslice],axis=1)**2 
+			for i in range(nframes-d)] 
+			for d in range(nframes)]
+		checktime()
+		print 'status: precomputing displacement array, z'
+		dimslice = slice(2,3)
+		distsz = [[norm(ionstraj[ionsel,i+d,dimslice]-ionstraj[ionsel,i,dimslice],axis=1)**2 
+			for i in range(nframes-d)] 
+			for d in range(nframes)]
+		checktime()
+		#---loop over zones
+		mastermsd_zones = []
+		for z in range(len(zones)):
+			print 'status: zone = '+str(z)
+			zone = zones[z]
+			inzone = array([2==(1*(ionstraj[ionsel][:,i,2]>zone[0])+1*(ionstraj[ionsel][:,i,2]<zone[1])) for i in range(nframes)])
+			inzonesliced = [[mean(inzone[i:i+d+1],axis=0) for i in range(nframes-d)] for d in range(nframes)]
+			#---scratchwork
+			#mask = [np.ma.masked_greater_equal(inzonesliced[d],occupancy) for d in range(nframes)]
+			#tmp3 = numpy.ma.masked_greater_equal(inzonesliced[10],0.1)
+			#tmp4 = numpy.ma.mask_rowcols(tmp3,axis=1)
+			#---scratchwork
+			#tmp3 = numpy.ma.masked_greater_equal(inzonesliced[10],0.5)
+			#tmp3r = numpy.ma.mask_rows(tmp3)
+			#tmp3c = numpy.ma.mask_cols(tmp3)
+			#filt = (1*tmp3r.mask+1*tmp3c.mask)
+			bigmask = [numpy.ma.masked_greater_equal(inzonesliced[i],occupancy) for i in range(nframes)]
+			#filt = [array((1*numpy.ma.mask_rows(bigmask[i]).mask+1*numpy.ma.mask_cols(bigmask[i]).mask)) for i in range(nframes)]
+			mastermsd = [array((1*numpy.ma.mask_rows(bigmask[i]).mask+1*numpy.ma.mask_cols(bigmask[i]).mask)) for i in range(nframes)]
+			mastermsd_zones.append(mastermsd)
+			checktime()
+		#---record times
+		times = [mean([clock[i+d]-clock[i] for i in range(nframes-d)]) for d in range(nframes)]
+		#---package the results	
+		result_data = MembraneData('ionskate')
+		#---Nb data are packaged as type (distsxy,distsz,mastermsdzones)
+		#---Nb the mastermsd_zones type goes by zone, ion, delta-t, start frame
+		result_data.data = [mastermsd_zones,distsxy,distsz]
+		result_data.addnote(['times',times])
+		result_data.addnote(['occupancy',occupancy])
+		result_data.addnote(['zones',zones])
+		result_data.addnote(['ionsel',ionsel])
+		#---pickle the results
+		pickledump(result_data,resultpkl,directory=pickles)
+
+#---postprocess and plot
+if 'postproc' in routine:
+	if 0:
+		skates = []
+		for aname in analysis_names:
+			for i in analysis_descriptors[aname]: vars()[i] = (analysis_descriptors[aname])[i]
+			grofile,trajfile = trajectory_lookup(analysis_descriptors,aname,globals())
+			resultpkl = 'pkl.ionskate.'+specname_pickle(sysname,trajfile[0])+'.pkl'
+			skate = unpickle(pickles+resultpkl)
+			skates.append(skate)
+		nframes = 500
+		times = array(skate.getnote('times'))
+		distsxy = skates[0].get(['type','distsxy'])
+		distsz = skates[0].get(['type','distsz'])
+	if 1:
+		zones_ind = [0,1,2,3,4,5]
+		times = array(skate.getnote('times'))[:20]
+		fig = plt.figure()
+		gs = gridspec.GridSpec(2,len(zones_ind))
+		#ax = plt.subplot(121)
+		for z in zones_ind:
+			print 'zone = '+str(z)
+			z0 = skates[0].get(['type','mastermsd_zones'])[z]
+			#perion = (z0[1]*distsxy[1]).T	
+			#mean(ma.masked_values(perion,0.).data,axis=1)
+			ax = fig.add_subplot(gs[0,z])
+			allcurves = array([mean(ma.masked_values((1*(z0[i]==2)*distsxy[i]).T,0.).data,axis=1) for i in range(20)]).T
+			for curv in allcurves[::1]:
+				valids = curv != 0.
+				curvfilt = array([times,curv]).T[valids]
+				ax.plot(curvfilt[:,0],curvfilt[:,1],'-',c=clrs[z],alpha=0.2)
+			ax.set_xscale('log')
+			ax.set_yscale('log')
+		#ax = plt.subplot(122)
+		for z in zones_ind:
+			print 'zone = '+str(z)
+			z0 = skates[0].get(['type','mastermsd_zones'])[z]
+			#perion = (z0[1]*distsxy[1]).T	
+			#mean(ma.masked_values(perion,0.).data,axis=1)
+			ax = fig.add_subplot(gs[1,z])
+			allcurves = array([mean(ma.masked_values((1*(z0[i]==2)*distsz[i]).T,0.).data,axis=1) for i in range(20)]).T
+			for curv in allcurves[::1]:
+				valids = curv != 0.
+				curvfilt = array([times,curv]).T[valids]
+				ax.plot(curvfilt[:,0],curvfilt[:,1],'-',c=clrs[z],alpha=0.2)
+			ax.set_xscale('log')
+			ax.set_yscale('log')
+		plt.show()
+	if 0:
+		diffusexy = []
+		for z in [0,1,2,3,4,5]:
+			print z
+			z0 = skates[0].get(['type','mastermsd_zones'])[z]
+			allcurves = array([mean(ma.masked_values((z0[i]*distsxy[i]).T,0.).data,axis=1) for i in range(nframes)]).T
+			dconsts = []
+			for curv in allcurves[::5]:
+				curvfilt = array([times,curv]).T[curv!=0.]
+				fitlims = curvfilt[:,0]<1*10**3
+				[bz,az] = numpy.polyfit(curvfilt[fitlims,0],curvfilt[fitlims,1],1)
+				dconsts.append(bz/3/2)
+			diffusexy.append(dconsts)
+	if 0:
+		fig = plt.figure()
+		ax = plt.subplot(111)
+		zone_inds = [0,1,2,3,4]
+		ax.boxplot([diffusexy[z] for z in zone_inds])
+		plt.show()
+
+#---DEVELOPMENT
+#-------------------------------------------------------------------------------------------------------------
+
+#---method which loops over zones, but requires too much memory
+if 'compute_v2' in routine:
 	for aname in analysis_names:
 		for i in analysis_descriptors[aname]: vars()[i] = (analysis_descriptors[aname])[i]
 		#---load
@@ -36,7 +210,7 @@ if 'compute' in routine:
 		mset_surf = unpickle(pickles+structure_pkl)
 		#---no looping over trajfile names, so only specify one in the analysis_descriptors
 		traj = trajfile[0]
-		mset.load_trajectory((basedir+'/'+grofile,basedir+'/'+traj),resolution='cgmd')
+		mset.load_trajectory((basedir+'/'+grofile,basedir+'/'+traj),resolution='aamd')
 		checktime()
 		#---check for pre-existing pickle
 		resultpkl = 'pkl.ionskate.'+specname_pickle(sysname,trajfile[0])+'.pkl'
@@ -125,22 +299,7 @@ if 'compute' in routine:
 		#---pickle the results
 		pickledump(result_data,resultpkl,directory=pickles)
 
-#---loading and computing have analysis_names on the outside loop to consider each system individually
-
-#---postprocess and plot
-if 'postproc' in routine:
-	skates = []
-	for aname in analysis_names:
-		for i in analysis_descriptors[aname]: vars()[i] = (analysis_descriptors[aname])[i]
-		grofile,trajfile = trajectory_lookup(analysis_descriptors,aname,globals())
-		resultpkl = 'pkl.ionskate.'+specname_pickle(sysname,trajfile[0])+'.pkl'
-		skate = unpickle(pickles+resultpkl)
-		skates.append(skate)
-
-#---DEVELOPMENT
-#-------------------------------------------------------------------------------------------------------------
-
-#---plot
+#---basic plotting outline
 if 'plot' in routine:
 	fig = plt.figure()
 	for z in range(len(zones)):
@@ -154,7 +313,7 @@ if 'plot' in routine:
 				ax.plot(msd[:,0],msd[:,1],'o',c=clrs[z%len(clrs)])
 	plt.show()
 
-#---original method
+#---original method works well enough
 if 'original' in routine:
 	center = mean(mset_surf.surf_position)
 	zones = [[0,10],[10,20],[20,30],[30,40],[40,50],[50,60],[60,70],[70,80],[80,90]]
