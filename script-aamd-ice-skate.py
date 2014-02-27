@@ -18,7 +18,7 @@ analysis_descriptors = {
 			'pkl.structures.membrane-v511.a2-surfacer.s6-kraken-md.part0009.30000-80000-100.pkl',
 		'ionname':'Cal'}}
 analysis_names = ['v511-30000-80000-100']
-routine = ['compute','postproc'][-1:]
+routine = ['compute','postproc'][:1]
 
 #---method
 zones = [[0,10],[10,20],[20,30],[30,40],[40,50],[50,60],[60,70]]
@@ -80,17 +80,24 @@ if 'compute' in routine:
 		print vecs
 		#---select subset of ions if desired
 		ionsel = slice(0,nions,10)
+		ionsel = slice(72,73)
 		nions = len(range(nions)[ionsel])
 		#---pre-compute a master array of all displacements
 		print 'status: precomputing displacement array, xy'
 		dimslice = slice(0,2)
-		distsxy = [[norm(ionstraj[ionsel,i+d,dimslice]-ionstraj[ionsel,i,dimslice],axis=1)**2 
+		#distsxy = [[norm(ionstraj[ionsel,i+d,dimslice]-ionstraj[ionsel,i,dimslice],axis=1)**2 
+		#	for i in range(nframes-d)] 
+		#	for d in range(nframes)]
+		distsxy = [[np.apply_along_axis(norm,1,ionstraj[ionsel,i+d,dimslice]-ionstraj[ionsel,i,dimslice])**2 
 			for i in range(nframes-d)] 
 			for d in range(nframes)]
 		checktime()
 		print 'status: precomputing displacement array, z'
 		dimslice = slice(2,3)
-		distsz = [[norm(ionstraj[ionsel,i+d,dimslice]-ionstraj[ionsel,i,dimslice],axis=1)**2 
+		#distsz = [[norm(ionstraj[ionsel,i+d,dimslice]-ionstraj[ionsel,i,dimslice],axis=1)**2 
+		#	for i in range(nframes-d)] 
+		#	for d in range(nframes)]
+		distsz = [[np.apply_along_axis(norm,1,ionstraj[ionsel,i+d,dimslice]-ionstraj[ionsel,i,dimslice])**2 
 			for i in range(nframes-d)] 
 			for d in range(nframes)]
 		checktime()
@@ -196,6 +203,11 @@ if 'postproc' in routine:
 		zone_inds = [0,1,2,3,4]
 		ax.boxplot([diffusexy[z] for z in zone_inds])
 		plt.show()
+		
+#---plotting in 3D with mayavi
+# meshpoints(ionstraj[72],scale_factor=[5. for i in range(nframes)])
+# meshplot(mean(mset_surf.surf,axis=0)+mset_surf.surf_position[0],vecs=mset_surf.vecs[0])
+
 
 #---DEVELOPMENT
 #-------------------------------------------------------------------------------------------------------------
