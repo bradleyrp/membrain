@@ -5,6 +5,8 @@ if 'mset' not in globals():
 	from membrainrunner import *
 	execfile('locations.py')
 
+from mpl_toolkits.axes_grid1 import make_axes_locatable
+
 #---Settings
 #-------------------------------------------------------------------------------------------------------------
 
@@ -21,8 +23,8 @@ analysis_names = ['v511-30000-80000-100']
 routine = ['compute','postproc'][:1]
 
 #---method
-zones = [[0,10],[10,20],[20,30],[30,40],[40,50],[50,60],[60,70]]
-occupancy = 0.8
+zones = [[0,10],[10,20],[20,30],[40,50],[60,70]]
+occupancy = 0.80
 
 #---MAIN
 #-------------------------------------------------------------------------------------------------------------
@@ -79,27 +81,27 @@ if 'compute' in routine:
 		print zones
 		print vecs
 		#---select subset of ions if desired
-		ionsel = slice(0,nions,10)
-		ionsel = slice(72,73)
+		ionsel = slice(0,nions)
 		nions = len(range(nions)[ionsel])
 		#---pre-compute a master array of all displacements
 		print 'status: precomputing displacement array, xy'
 		dimslice = slice(0,2)
-		#distsxy = [[norm(ionstraj[ionsel,i+d,dimslice]-ionstraj[ionsel,i,dimslice],axis=1)**2 
-		#	for i in range(nframes-d)] 
-		#	for d in range(nframes)]
-		distsxy = [[np.apply_along_axis(norm,1,ionstraj[ionsel,i+d,dimslice]-ionstraj[ionsel,i,dimslice])**2 
+		distsxy = [[norm(ionstraj[ionsel,i+d,dimslice]-ionstraj[ionsel,i,dimslice],axis=1)**2 
 			for i in range(nframes-d)] 
 			for d in range(nframes)]
+		#---Note, the apply_along_axis code is brutally slow. Better to upgrade to numpy 1.8 on dirac.
+		#distsxy = [[np.apply_along_axis(norm,1,ionstraj[ionsel,i+d,dimslice]-ionstraj[ionsel,i,dimslice])**2 
+		#	for i in range(nframes-d)] 
+		#	for d in range(nframes)]
 		checktime()
 		print 'status: precomputing displacement array, z'
 		dimslice = slice(2,3)
-		#distsz = [[norm(ionstraj[ionsel,i+d,dimslice]-ionstraj[ionsel,i,dimslice],axis=1)**2 
-		#	for i in range(nframes-d)] 
-		#	for d in range(nframes)]
-		distsz = [[np.apply_along_axis(norm,1,ionstraj[ionsel,i+d,dimslice]-ionstraj[ionsel,i,dimslice])**2 
+		distsz = [[norm(ionstraj[ionsel,i+d,dimslice]-ionstraj[ionsel,i,dimslice],axis=1)**2 
 			for i in range(nframes-d)] 
 			for d in range(nframes)]
+		#distsz = [[np.apply_along_axis(norm,1,ionstraj[ionsel,i+d,dimslice]-ionstraj[ionsel,i,dimslice])**2 
+		#	for i in range(nframes-d)] 
+		#	for d in range(nframes)]
 		checktime()
 		#---loop over zones
 		mastermsd_zones = []
@@ -118,7 +120,8 @@ if 'compute' in routine:
 			#tmp3c = numpy.ma.mask_cols(tmp3)
 			#filt = (1*tmp3r.mask+1*tmp3c.mask)
 			bigmask = [numpy.ma.masked_greater_equal(inzonesliced[i],occupancy) for i in range(nframes)]
-			#filt = [array((1*numpy.ma.mask_rows(bigmask[i]).mask+1*numpy.ma.mask_cols(bigmask[i]).mask)) for i in range(nframes)]
+			#filt = [array((1*numpy.ma.mask_rows(bigmask[i]).mask+1*numpy.ma.mask_cols(bigmask[i]).mask)) 
+			#	for i in range(nframes)]
 			mastermsd = [array((1*numpy.ma.mask_rows(bigmask[i]).mask+1*numpy.ma.mask_cols(bigmask[i]).mask)) for i in range(nframes)]
 			mastermsd_zones.append(mastermsd)
 			checktime()
@@ -138,7 +141,7 @@ if 'compute' in routine:
 
 #---postprocess and plot
 if 'postproc' in routine:
-	if 0:
+	if 'skates' not in globals():
 		skates = []
 		for aname in analysis_names:
 			for i in analysis_descriptors[aname]: vars()[i] = (analysis_descriptors[aname])[i]
@@ -150,9 +153,11 @@ if 'postproc' in routine:
 		times = array(skate.getnote('times'))
 		distsxy = skates[0].get(['type','distsxy'])
 		distsz = skates[0].get(['type','distsz'])
-	if 1:
-		zones_ind = [0,1,2,3,4,5]
-		times = array(skate.getnote('times'))[:20]
+	zones_ind = [0,1,2,3]
+	#---you have to tune "upto" according to the time you want, and it's modulated by occupancy
+	upto = 5
+	times = array(skates[0].getnote('times'))[:upto]
+	if 0:
 		fig = plt.figure()
 		gs = gridspec.GridSpec(2,len(zones_ind))
 		#ax = plt.subplot(121)
@@ -162,11 +167,12 @@ if 'postproc' in routine:
 			#perion = (z0[1]*distsxy[1]).T	
 			#mean(ma.masked_values(perion,0.).data,axis=1)
 			ax = fig.add_subplot(gs[0,z])
-			allcurves = array([mean(ma.masked_values((1*(z0[i]==2)*distsxy[i]).T,0.).data,axis=1) for i in range(20)]).T
+			allcurves = array([mean(ma.masked_values(array(1*(z0[i]==2)*distsxy[i]).T,0.).data,axis=1) 
+				for i in range(upto)]).T
 			for curv in allcurves[::1]:
 				valids = curv != 0.
 				curvfilt = array([times,curv]).T[valids]
-				ax.plot(curvfilt[:,0],curvfilt[:,1],'-',c=clrs[z],alpha=0.2)
+				ax.plot(curvfilt[:,0],curvfilt[:,1],'-',c=clrs[z],alpha=0.7)
 			ax.set_xscale('log')
 			ax.set_yscale('log')
 		#ax = plt.subplot(122)
@@ -176,37 +182,129 @@ if 'postproc' in routine:
 			#perion = (z0[1]*distsxy[1]).T	
 			#mean(ma.masked_values(perion,0.).data,axis=1)
 			ax = fig.add_subplot(gs[1,z])
-			allcurves = array([mean(ma.masked_values((1*(z0[i]==2)*distsz[i]).T,0.).data,axis=1) for i in range(20)]).T
+			allcurves = array([mean(ma.masked_values((1*(z0[i]==2)*distsz[i]).T,0.).data,axis=1) 
+				for i in range(upto)]).T
 			for curv in allcurves[::1]:
 				valids = curv != 0.
 				curvfilt = array([times,curv]).T[valids]
-				ax.plot(curvfilt[:,0],curvfilt[:,1],'-',c=clrs[z],alpha=0.2)
+				ax.plot(curvfilt[:,0],curvfilt[:,1],'-',c=clrs[z],alpha=0.7)
 			ax.set_xscale('log')
 			ax.set_yscale('log')
 		plt.show()
-	if 0:
+	#---calculate diffusion rates
+	if 1:
+		#---fit to get diffusion rates
 		diffusexy = []
-		for z in [0,1,2,3,4,5]:
+		for z in zones_ind:
 			print z
 			z0 = skates[0].get(['type','mastermsd_zones'])[z]
 			allcurves = array([mean(ma.masked_values((z0[i]*distsxy[i]).T,0.).data,axis=1) for i in range(nframes)]).T
 			dconsts = []
-			for curv in allcurves[::5]:
-				curvfilt = array([times,curv]).T[curv!=0.]
-				fitlims = curvfilt[:,0]<1*10**3
+			for curv in allcurves[::1]:
+				curvfilt = array([times,curv[:upto]]).T[curv[:upto]!=0.]
+				fitlims = curvfilt[:,0]<1*10**10
 				[bz,az] = numpy.polyfit(curvfilt[fitlims,0],curvfilt[fitlims,1],1)
 				dconsts.append(bz/3/2)
 			diffusexy.append(dconsts)
-	if 0:
+		diffusez = []
+		for z in zones_ind:
+			print z
+			z0 = skates[0].get(['type','mastermsd_zones'])[z]
+			allcurves = array([mean(ma.masked_values((z0[i]*distsz[i]).T,0.).data,axis=1) 
+				for i in range(nframes)]).T
+			dconsts = []
+			for curv in allcurves[::1]:
+				curvfilt = array([times,curv[:upto]]).T[curv[:upto]!=0.]
+				fitlims = curvfilt[:,0]<1*10**3
+				[bz,az] = numpy.polyfit(curvfilt[fitlims,0],curvfilt[fitlims,1],1)
+				dconsts.append(bz/3/1)
+			diffusez.append(dconsts)
+		#---box plot
+		if 0:
+			fig = plt.figure()
+			ax = plt.subplot(111)
+			ax.boxplot([diffusexy[z] for z in zones_ind])
+			ax.boxplot([diffusez[z] for z in zones_ind])
+			plt.show()
+	if 1:
 		fig = plt.figure()
 		ax = plt.subplot(111)
-		zone_inds = [0,1,2,3,4]
-		ax.boxplot([diffusexy[z] for z in zone_inds])
-		plt.show()
+		nbins = 40
+		divider = make_axes_locatable(ax)
+		axHistx = divider.append_axes("top",1.2,pad=0.1,sharex=ax)
+		axHisty = divider.append_axes("right",1.2,pad=0.1,sharey=ax)
+		for z in zones_ind:
+			dat = array([diffusexy[z],diffusez[z]]).T
+			ax.plot(dat[:,0],dat[:,1],'o',c=clrs[z],markeredgecolor=clrs[z],alpha=0.5,
+				label=str(zones[z][0]/10.)+'-'+str(zones[z][1]/10.)+' nm')
+			#---x axis histogram
+			counts,edges = histogram(log10(dat[:,0]),bins=nbins)
+			bins = 10**((edges[:-1]+edges[1:])/2.)
+			axHistx.plot(bins,counts,'o-',lw=2.,markeredgecolor=clrs[z],alpha=0.5)
+			#---y axis histogram
+			bins,counts = histogram(log10(dat[:,1]))
+			counts,edges = histogram(log10(dat[:,1]),bins=nbins)
+			bins = 10**((edges[:-1]+edges[1:])/2.)
+			axHisty.plot(counts,bins,'o-',lw=2.,markeredgecolor=clrs[z],alpha=0.5)
+		edgeprop = 2.
+		xlims = (array(diffusexy).min()/edgeprop,array(diffusexy).max()*edgeprop)
+		ylims = (array(diffusez).min()/edgeprop,array(diffusez).max()*edgeprop)
+		ax.set_ylim(ylims)
+		ax.set_xlim(xlims)
+		axHisty.set_ylim(ylims)
+		axHistx.set_xlim(xlims)
+		ax.set_yscale('log')
+		ax.set_xscale('log')		
+		ax.grid(True)
+		axHistx.grid(True)
+		axHisty.grid(True)
+		axHistx.set_xscale('log')
+		axHisty.set_yscale('log')		
+		ax.set_ylabel(r'$D_Z\:(units)$',fontsize=fsaxlabel)
+		ax.set_xlabel(r'$D_{XY}\:(units)$',fontsize=fsaxlabel)
+		ax.legend(loc='upper left')
+		plt.setp(ax.get_yticklabels(),fontsize=fsaxlabel)
+		plt.setp(ax.get_xticklabels(),fontsize=fsaxlabel)
+		axHistx.set_yticklabels([])
+		axHisty.set_xticklabels([])
+		plt.setp(axHistx.get_xticklabels()+axHisty.get_yticklabels(),visible=False)
+		plt.show()				
 		
 #---plotting in 3D with mayavi
-# meshpoints(ionstraj[72],scale_factor=[5. for i in range(nframes)])
-# meshplot(mean(mset_surf.surf,axis=0)+mset_surf.surf_position[0],vecs=mset_surf.vecs[0])
+if 0:
+	meshpoints(ionstraj[72],scale_factor=[5. for i in range(nframes)])
+	meshplot(mean(mset_surf.surf,axis=0)+mset_surf.surf_position[0],vecs=mset_surf.vecs[0])
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
 
 
 #---DEVELOPMENT
