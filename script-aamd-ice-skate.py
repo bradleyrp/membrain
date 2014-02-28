@@ -20,10 +20,10 @@ analysis_descriptors = {
 			'pkl.structures.membrane-v511.a2-surfacer.s6-kraken-md.part0009.30000-80000-100.pkl',
 		'ionname':'Cal'}}
 analysis_names = ['v511-30000-80000-100']
-routine = ['compute','postproc'][:1]
+routine = ['compute','postproc'][1:]
 
 #---method
-zones = [[0,10],[10,20],[20,30],[40,50],[60,70]]
+zonesabs = [[0,10],[10,20],[20,30],[40,50],[60,70]]
 occupancy = 0.80
 
 #---MAIN
@@ -43,7 +43,7 @@ if 'compute' in routine:
 		checktime()
 		#---check for pre-existing pickle
 		resultpkl = 'pkl.ionskate.'+specname_pickle(sysname,trajfile[0])+'.pkl'
-		mdionskate = unpickle(pickles+resultpkl)
+		#mdionskate = unpickle(pickles+resultpkl)
 		#if mdionskate != None:
 		#	raise Exception('except: pkl already exists so figure out your naming problems')
 		#---get ion positions and times
@@ -74,8 +74,8 @@ if 'compute' in routine:
 		#---specify zones
 		#zones = zones + array(center) + thick
 		#zones = list(-1*array(zones)+array(center)-thick)+list(zones+array(center)+thick)
-		zones_up = list(zones + array(center) + thick)
-		zones_down = list((array(zones)*-1).T[::-1].T + array(center) - thick)
+		zones_up = list(zonesabs + array(center) + thick)
+		zones_down = list((array(zonesabs)*-1).T[::-1].T + array(center) - thick)
 		zones = zones_up + zones_down
 		print 'zones'
 		print zones
@@ -122,7 +122,10 @@ if 'compute' in routine:
 			bigmask = [numpy.ma.masked_greater_equal(inzonesliced[i],occupancy) for i in range(nframes)]
 			#filt = [array((1*numpy.ma.mask_rows(bigmask[i]).mask+1*numpy.ma.mask_cols(bigmask[i]).mask)) 
 			#	for i in range(nframes)]
-			mastermsd = [array((1*numpy.ma.mask_rows(bigmask[i]).mask+1*numpy.ma.mask_cols(bigmask[i]).mask)) for i in range(nframes)]
+			#---Nb this is a fix for masks returning singleton booleans if everything is false
+			#mastermsd = [array((1*numpy.ma.mask_rows(bigmask[i]).mask+1*numpy.ma.mask_cols(bigmask[i]).mask)) for i in range(nframes)]
+			mastermsd = [(array((1*ma.mask_rows(bigmask[i]).mask+1*ma.mask_cols(bigmask[i]).mask)) 
+				if shape(bigmask[i].mask) != () else zeros(bigmask[i].shape)) for i in range(nframes)]
 			mastermsd_zones.append(mastermsd)
 			checktime()
 		#---record times
@@ -137,11 +140,14 @@ if 'compute' in routine:
 		result_data.addnote(['zones',zones])
 		result_data.addnote(['ionsel',ionsel])
 		#---pickle the results
-		pickledump(result_data,resultpkl,directory=pickles)
+		#pickledump(result_data,resultpkl,directory=pickles)
+
+makeplots = ['panel','calc_diffusion','diffusion'][-1:]
 
 #---postprocess and plot
 if 'postproc' in routine:
-	if 'skates' not in globals():
+	#---NOTICE: disabled this to skip writing step because files too big
+	if 'skates' not in globals() and 0:
 		skates = []
 		for aname in analysis_names:
 			for i in analysis_descriptors[aname]: vars()[i] = (analysis_descriptors[aname])[i]
@@ -153,51 +159,55 @@ if 'postproc' in routine:
 		times = array(skate.getnote('times'))
 		distsxy = skates[0].get(['type','distsxy'])
 		distsz = skates[0].get(['type','distsz'])
-	zones_ind = [0,1,2,3]
+	#---select zones for plotting
+	#zones_up = list(zonesabs + array(center) + thick)
+	#zones_down = list((array(zonesabs)*-1).T[::-1].T + array(center) - thick)
+	#zones = zones_up + zones_down
+	zones = (zonesabs+[list(i) for i in -1*array(zonesabs)])[:]
+	zones_ind = range(len(zones))
 	#---you have to tune "upto" according to the time you want, and it's modulated by occupancy
-	upto = 5
-	times = array(skates[0].getnote('times'))[:upto]
-	if 0:
+	upto = 6
+	times = [mean([clock[i+d]-clock[i] for i in range(nframes-d)]) for d in range(nframes)][:upto]
+	if 'panel' in makeplots:
+		print 'status: making panel plots'
 		fig = plt.figure()
 		gs = gridspec.GridSpec(2,len(zones_ind))
-		#ax = plt.subplot(121)
 		for z in zones_ind:
 			print 'zone = '+str(z)
-			z0 = skates[0].get(['type','mastermsd_zones'])[z]
-			#perion = (z0[1]*distsxy[1]).T	
-			#mean(ma.masked_values(perion,0.).data,axis=1)
+			z0 = mastermsd_zones[z]
 			ax = fig.add_subplot(gs[0,z])
 			allcurves = array([mean(ma.masked_values(array(1*(z0[i]==2)*distsxy[i]).T,0.).data,axis=1) 
 				for i in range(upto)]).T
 			for curv in allcurves[::1]:
 				valids = curv != 0.
 				curvfilt = array([times,curv]).T[valids]
-				ax.plot(curvfilt[:,0],curvfilt[:,1],'-',c=clrs[z],alpha=0.7)
+				ax.plot(curvfilt[:,0],curvfilt[:,1],'-',c=clrs[z%len(clrs)],
+					markeredgecolor=clrs[z%len(clrs)],alpha=0.7)
 			ax.set_xscale('log')
 			ax.set_yscale('log')
-		#ax = plt.subplot(122)
 		for z in zones_ind:
 			print 'zone = '+str(z)
-			z0 = skates[0].get(['type','mastermsd_zones'])[z]
-			#perion = (z0[1]*distsxy[1]).T	
-			#mean(ma.masked_values(perion,0.).data,axis=1)
+			z0 = mastermsd_zones[z]
 			ax = fig.add_subplot(gs[1,z])
 			allcurves = array([mean(ma.masked_values((1*(z0[i]==2)*distsz[i]).T,0.).data,axis=1) 
 				for i in range(upto)]).T
 			for curv in allcurves[::1]:
 				valids = curv != 0.
 				curvfilt = array([times,curv]).T[valids]
-				ax.plot(curvfilt[:,0],curvfilt[:,1],'-',c=clrs[z],alpha=0.7)
+				ax.plot(curvfilt[:,0],curvfilt[:,1],'-',c=clrs[z%len(clrs)],alpha=0.7)
 			ax.set_xscale('log')
 			ax.set_yscale('log')
-		plt.show()
+		plt.savefig('/home/rpb/ice-panels.png',dpi=300)
+		plt.clf()
+		plt.close()
 	#---calculate diffusion rates
-	if 1:
+	if 'calc_diffusion' in makeplots:
+		print 'status: calculating diffusion rates'
 		#---fit to get diffusion rates
 		diffusexy = []
 		for z in zones_ind:
 			print z
-			z0 = skates[0].get(['type','mastermsd_zones'])[z]
+			z0 = mastermsd_zones[z]
 			allcurves = array([mean(ma.masked_values((z0[i]*distsxy[i]).T,0.).data,axis=1) for i in range(nframes)]).T
 			dconsts = []
 			for curv in allcurves[::1]:
@@ -209,7 +219,7 @@ if 'postproc' in routine:
 		diffusez = []
 		for z in zones_ind:
 			print z
-			z0 = skates[0].get(['type','mastermsd_zones'])[z]
+			z0 = mastermsd_zones[z]
 			allcurves = array([mean(ma.masked_values((z0[i]*distsz[i]).T,0.).data,axis=1) 
 				for i in range(nframes)]).T
 			dconsts = []
@@ -219,33 +229,34 @@ if 'postproc' in routine:
 				[bz,az] = numpy.polyfit(curvfilt[fitlims,0],curvfilt[fitlims,1],1)
 				dconsts.append(bz/3/1)
 			diffusez.append(dconsts)
-		#---box plot
-		if 0:
-			fig = plt.figure()
-			ax = plt.subplot(111)
-			ax.boxplot([diffusexy[z] for z in zones_ind])
-			ax.boxplot([diffusez[z] for z in zones_ind])
-			plt.show()
-	if 1:
+	#---sick plot
+	if 'diffusion' in makeplots:
+		print 'status: plotting diffusion rates'
+		#---specify color gradients for zones
+		clrst = [brewer2mpl.get_map('Reds','sequential',len(zonesabs)).mpl_colors[i] for i in range(len(zonesabs))][::-1]
+		clrsb = [brewer2mpl.get_map('Blues','sequential',len(zonesabs)).mpl_colors[i] for i in range(len(zonesabs))][::-1]
+		clrsd = clrst+clrsb
 		fig = plt.figure()
 		ax = plt.subplot(111)
 		nbins = 40
 		divider = make_axes_locatable(ax)
 		axHistx = divider.append_axes("top",1.2,pad=0.1,sharex=ax)
 		axHisty = divider.append_axes("right",1.2,pad=0.1,sharey=ax)
-		for z in zones_ind:
+		for z in zones_ind[::-1]:
 			dat = array([diffusexy[z],diffusez[z]]).T
-			ax.plot(dat[:,0],dat[:,1],'o',c=clrs[z],markeredgecolor=clrs[z],alpha=0.5,
+			ax.plot(dat[:,0],dat[:,1],'o',c=clrsd[z%len(clrsd)],markeredgecolor=clrsd[z%len(clrsd)],alpha=1.0,
 				label=str(zones[z][0]/10.)+'-'+str(zones[z][1]/10.)+' nm')
 			#---x axis histogram
 			counts,edges = histogram(log10(dat[:,0]),bins=nbins)
 			bins = 10**((edges[:-1]+edges[1:])/2.)
-			axHistx.plot(bins,counts,'o-',lw=2.,markeredgecolor=clrs[z],alpha=0.5)
+			axHistx.plot(bins,counts,'o-',lw=2.,c=clrsd[z%len(clrsd)],
+				markeredgecolor=clrsd[z%len(clrsd)],alpha=1.0)
 			#---y axis histogram
 			bins,counts = histogram(log10(dat[:,1]))
 			counts,edges = histogram(log10(dat[:,1]),bins=nbins)
 			bins = 10**((edges[:-1]+edges[1:])/2.)
-			axHisty.plot(counts,bins,'o-',lw=2.,markeredgecolor=clrs[z],alpha=0.5)
+			axHisty.plot(counts,bins,'o-',lw=2.,c=clrsd[z%len(clrsd)],
+				markeredgecolor=clrsd[z%len(clrsd)],alpha=1.0)
 		edgeprop = 2.
 		xlims = (array(diffusexy).min()/edgeprop,array(diffusexy).max()*edgeprop)
 		ylims = (array(diffusez).min()/edgeprop,array(diffusez).max()*edgeprop)
@@ -262,13 +273,16 @@ if 'postproc' in routine:
 		axHisty.set_yscale('log')		
 		ax.set_ylabel(r'$D_Z\:(units)$',fontsize=fsaxlabel)
 		ax.set_xlabel(r'$D_{XY}\:(units)$',fontsize=fsaxlabel)
-		ax.legend(loc='upper left')
+		#ax.legend(loc='upper left')
 		plt.setp(ax.get_yticklabels(),fontsize=fsaxlabel)
 		plt.setp(ax.get_xticklabels(),fontsize=fsaxlabel)
 		axHistx.set_yticklabels([])
 		axHisty.set_xticklabels([])
 		plt.setp(axHistx.get_xticklabels()+axHisty.get_yticklabels(),visible=False)
-		plt.show()				
+		plt.savefig('/home/rpb/ice-diffusions.png',dpi=300)
+		#plt.show()
+		plt.clf()
+		plt.close()
 		
 #---plotting in 3D with mayavi
 if 0:
