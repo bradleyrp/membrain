@@ -24,11 +24,10 @@ analysis_names = ['v511-30000-80000-100']
 routine = ['compute','postproc'][1:]
 
 #---method
-upto = 50 #---how far to only look at the diffusion curves
-timelimit = 3*10**2 #---maximum ps for fitting which depends on occupancy because displacements shrink
-occupancy = 1. #---occupancy rate for consideration of the displacement
-bwid = 5 #---angstrom width of slices where default is 10 and zonesub must be none
-zonesub = [1,2,3,4,5,6,7,8,14,15,16,17,18,19,20,21] #---custom selection of zones
+upto = 50
+timelimit = 3*10**2
+occupancy = 1.0
+bwid = 10
 
 #---MAIN
 #-------------------------------------------------------------------------------------------------------------
@@ -77,7 +76,6 @@ if 'compute' in routine or 'mastermsd_zones' not in globals():
 		nframes = len(ionstraj[0])
 		#---specify zones
 		center = mean(mset_surf.surf_position)
-		cslice = int(round(center/bwid))
 		thick = mean(mset_surf.surf_thick)
 		zonesabs = list(arange(center,0-bwid,-bwid))[::-1][:-1]+list(arange(center,vecs[2]+bwid,bwid))
 		zonecenters = array(zonesabs[:-1]+zonesabs[1:])/2.
@@ -86,8 +84,6 @@ if 'compute' in routine or 'mastermsd_zones' not in globals():
 		roundz = [[int(round(i)) for i in (rewrapz[j]-center)/bwid] for j in range(nions)]
 		roundz = roundz - array(roundz).min()
 		nzones = ptp(roundz)
-		#---updated for subsetting the zones to save memory when using small bin widths
-		nzones = len(zonesub)
 		#---select subset of ions if desired
 		ionsel = slice(0,nions)
 		nions = len(range(nions)[ionsel])
@@ -106,10 +102,8 @@ if 'compute' in routine or 'mastermsd_zones' not in globals():
 			for d in range(nframes)]
 		checktime()
 		#---loop over zones
-		if zonesub == None:
-			zonesub = range(nzones)
 		mastermsd_zones = []
-		for z in zonesub:
+		for z in range(nzones):
 			print 'status: zone = '+str(z)
 			inzone = (roundz == z).T
 			inzonesliced = [[mean(inzone[i:i+d+1],axis=0) for i in range(nframes-d)] for d in range(nframes)]
@@ -135,9 +129,6 @@ if 'compute' in routine or 'mastermsd_zones' not in globals():
 			result_data.addnote(['ionsel',ionsel])
 			#---pickle the results
 			pickledump(result_data,resultpkl,directory=pickles)
-
-#---Nb when selecting subsets, make sure the automatically-generated center gives a symmetric distribution
-if 0: plt.grid(True);plt.hist(array(roundz).flatten(),range=(0,30),bins=30);plt.show()
 
 #---POSTPROCESS
 #-------------------------------------------------------------------------------------------------------------
@@ -166,16 +157,10 @@ if 'postproc' in routine:
 		print 'status: making panel plots'
 		#---color management
 		cslice = int(round(center/bwid))
-		if zonesub == None:
-			cslice = int(round(center/bwid))
-			zone_to_slice = [(i-cslice)+nzones*(-1 if (i-cslice)>(nzones/2) else 0) for i in range(nzones)]
-			#---if no subsets, just assume 1 nm bin widths
-			plot_slices = [-6,-5,-4,-3,-2,2,3,4,5,6]
-			plot_zones = [zone_to_slice.index(i) for i in plot_slices]
-		else:
-			zone_to_slice = [float(i-cslice)*bwid/10. for i in zonesub]
-			plot_slices = [-11,-10,-9,-8,-7,-6,-5,-4,-3,3,4,5,6,7,8,9,10,11]
-			plot_zones = range(len(zonesub))
+		zone_to_slice = [i-cslice for i in range(nzones)]
+		zone_to_slice = [(i-cslice)+nzones*(-1 if (i-cslice)>(nzones/2) else 0) for i in range(nzones)]
+		plot_slices = [-6,-5,-4,-3,-2,2,3,4,5,6]
+		plot_zones = [zone_to_slice.index(i) for i in plot_slices]
 		redclrs = ['k']+[mpl.cm.RdBu_r(j) for j in [float(i)/nzones for i in range((nzones+1))]]
 		bluclrs = ['k']+[mpl.cm.RdBu_r(1.-j) for j in [float(i)/nzones for i in range((nzones+1))]]
 		clrsd = [(redclrs[-i] if i < 0 else bluclrs[i]) for i in plot_slices]
@@ -229,13 +214,19 @@ if 'postproc' in routine:
 		for z in range(nzones):
 			print z
 			z0 = mastermsd_zones[z]
+
+			#allcurves = array([mean(ma.masked_values((z0[i]*distsxy[i]).T,0.).data,axis=1) 
+			#	for i in range(nframes)]).T
 			allcurvesxy = array([mean(ma.masked_values(array(1*(z0[i]==2)*distsxy[i]).T,0.).data,axis=1) 
 				for i in range(nframes)]).T
+			#allcurves = array([mean(ma.masked_values((z0[i]*distsz[i]).T,0.).data,axis=1) 
+			#	for i in range(nframes)]).T
 			allcurvesz = array([mean(ma.masked_values(array(1*(z0[i]==2)*distsz[i]).T,0.).data,axis=1) 
 				for i in range(nframes)]).T
+
 			dconstsxy = []
 			dconstsz = []
-			if not all(allcurvesxy==0) and not all(allcurvesz==0):
+			if not all(allcurves==0):
 				for c in range(len(allcurvesxy)):
 					pair_diffuse = []					
 					for curv in [allcurvesxy[c],allcurvesz[c]]:
@@ -253,58 +244,47 @@ if 'postproc' in routine:
 	#---summary plot for comparing lateral and normal diffusion
 	if 'diffusion_summary' in makeplots:
 		print 'status: plotting diffusion rates'
-		#---original code before adding zonesub
-		if 0:
-			#---color management
-			cslice = int(round(center/bwid))
-			zone_to_slice = [i-cslice for i in range(nzones)]
-			zone_to_slice = [(i-cslice)+nzones*(-1 if (i-cslice)>(nzones/2) else 0) for i in range(nzones)]
-			plot_slices = [-5,-4,-3,-2,2,3,4,5]
-			plot_zones = [zone_to_slice.index(i) for i in plot_slices]
-			redclrs = ['k']+[mpl.cm.RdBu_r(j) for j in [float(i)/nzones for i in range((nzones+1)/2)]]
-			bluclrs = ['k']+[mpl.cm.RdBu_r(1.-j) for j in [float(i)/nzones for i in range((nzones+1)/2)]]
-			clrsd = [(redclrs[-i] if i < 0 else bluclrs[i]) for i in plot_slices]
 		#---color management
 		cslice = int(round(center/bwid))
-		if zonesub == None:
-			cslice = int(round(center/bwid))
-			zone_to_slice = [(i-cslice)+nzones*(-1 if (i-cslice)>(nzones/2) else 0) for i in range(nzones)]
-			#---if no subsets, just assume 1 nm bin widths
-			plot_slices = [-6,-5,-4,-3,-2,2,3,4,5,6]
-			plot_zones = [zone_to_slice.index(i) for i in plot_slices]
-			redclrs = ['k']+[mpl.cm.RdBu_r(j) for j in [float(i)/nzones for i in range((nzones+1))]]
-			bluclrs = ['k']+[mpl.cm.RdBu_r(1.-j) for j in [float(i)/nzones for i in range((nzones+1))]]
-			clrsd = [(redclrs[-i] if i < 0 else bluclrs[i]) for i in plot_slices]
-			close_order = range(len(plot_zones))
-		else:
-			zone_to_slice = [float(i-cslice)*bwid/10. for i in zonesub]
-			plot_slices = [-10,-9,-8,-7,-6,-5,-4,-3,3,4,5,6,7,8,9,10]
-			plot_zones = range(len(zonesub))
-			redclrs = ['k']+[mpl.cm.RdBu_r(j) for j in [float(i)/nzones/1.2 for i in range(nzones-1)]]
-			bluclrs = ['k']+[mpl.cm.RdBu_r(1.-j) for j in [float(i)/nzones/1.2 for i in range(nzones-1)]]
-			clrsd = [(redclrs[-i] if i < 0 else bluclrs[i]) for i in plot_slices]
-			close_order = [nzones/2-1+i*(i%2==0)/2-i*(i%2==1)/2 for i in [int(j) 
-				for j in range(1,nzones+1)]][::-1]
+		zone_to_slice = [i-cslice for i in range(nzones)]
+		zone_to_slice = [(i-cslice)+nzones*(-1 if (i-cslice)>(nzones/2) else 0) for i in range(nzones)]
+		plot_slices = [-5,-4,-3,-2,2,3,4,5]
+		plot_zones = [zone_to_slice.index(i) for i in plot_slices]
+		redclrs = ['k']+[mpl.cm.RdBu_r(j) for j in [float(i)/nzones for i in range((nzones+1)/2)]]
+		bluclrs = ['k']+[mpl.cm.RdBu_r(1.-j) for j in [float(i)/nzones for i in range((nzones+1)/2)]]
+		clrsd = [(redclrs[-i] if i < 0 else bluclrs[i]) for i in plot_slices]
 		#---generate plot		
 		fig = plt.figure()
 		ax = plt.subplot(111)
-		nbins = 40
+		nbins = 20
 		allalpha = 1.
 		edgeprop = 2.
-		#xlims = (10**-4,max([array(i)[array(i)>0].max() for i in diffusexy if i != []])*edgeprop)
-		#ylims = (10**-4,max([array(i)[array(i)>0].max() for i in diffusez if i != []])*edgeprop)
+
+		#xlims = (array(diffusexy)[array(diffusexy)>0].min()/edgeprop,
+		#	max(array(diffusexy)[array(diffusexy)>0])*edgeprop)
+		#ylims = (min(array(diffusez)[array(diffusexy)>0])/edgeprop,
+		#	max(array(diffusez)[array(diffusexy)>0])*edgeprop)
+		#xmin = min([min([j for j in diffusexy[i] if j > 0]) for i in range(len(diffusexy)) if diffusexy[i] != []])
+		#xmax = max([max(i) for i in diffusexy if i != []])
+		#ymin = min([min([j for j in diffusez[i] if j > 0]) 
+		#	for i in range(len(diffusez)) if diffusez[i] != []])
+		#ymax = max([max(i) for i in diffusez if i != []])
 		xlims = (10**-4,10**0)
 		ylims = (10**-4,10**0)
+
 		divider = make_axes_locatable(ax)
 		axHistx = divider.append_axes("top",1.2,pad=0.1,sharex=ax)
 		axHisty = divider.append_axes("right",1.2,pad=0.1,sharey=ax)
-		for z in [plot_zones[k] for k in close_order]:
+		for z in plot_zones:
 			print z
 			clr = clrsd[plot_zones.index(z)]
 			dat = array([diffusexy[z],diffusez[z]]).T
 			if shape(dat) == (2,): dat = array([dat])
+			if xmax < max(dat[:,0]): xmax = max(dat[:,0])
+			if ymax < max(dat[:,1]): ymax = max(dat[:,1])
 			print max(dat[:,1])
 			#---toss any negative slopes
+			#dat = array([i for i in dat if i[0] > 0 and i[1] > 0])
 			ax.plot(dat[:,0],dat[:,1],'o',c=clr,markeredgecolor=clr,
 				alpha=allalpha,label=str(zone_to_slice[z]))
 			#---x axis histogram
@@ -320,12 +300,26 @@ if 'postproc' in routine:
 			print max(bins)
 			axHisty.plot(counts,bins,'-',lw=2.,c=clr,
 				markeredgecolor=clr,alpha=allalpha)
+		edgeprop = 2.
+		#nonzeroxy = [i for i in flatten(array(diffusexy)) if i > 0.]
+		#nonzeroz = [i for i in flatten(array(diffusez)) if i > 0.]
+		#xlims = (min(diffusexy[diffusexy>0])/edgeprop,max(diffusexy[diffusexy>0])*edgeprop)
+		#ylims = (min(diffusez[diffusexy>0])/edgeprop,max(diffusez[diffusexy>0])*edgeprop)
+		#xlims = (xmin,xmax)
+		#ylims = (ymin,ymax)
+		#xlims = (min([array(i)[array(i)>0].min() for i in diffusexy if i != []]),max([array(i)[array(i)>0].max() for i in diffusexy if i != []]))
+		#ylims = (min([array(i)[array(i)>0].min() for i in diffusez if i != []]),max([array(i)[array(i)>0].max() for i in diffusez if i != []]))
+		#ax.set_ylim(ylims)
+		#ax.set_xlim(xlims)
+		#axHisty.set_ylim(ylims)
+		#axHistx.set_xlim(xlims)
+
 		ax.set_xlim(xlims)
 		ax.set_ylim(ylims)
-		legend_h,legend_l = ax.get_legend_handles_labels()
-		ax.legend([legend_h[close_order.index(i)] for i in range(nzones)],[legend_l[close_order.index(i)] 
-			for i in range(nzones)],loc='center left',bbox_to_anchor=(1, 0.5),
-			bbox_transform=axHisty.transAxes)
+
+
+
+		ax.legend(loc='center left', bbox_to_anchor=(1, 0.5),bbox_transform=axHisty.transAxes)
 		ax.set_yscale('log')
 		ax.set_xscale('log')		
 		ax.grid(True)
