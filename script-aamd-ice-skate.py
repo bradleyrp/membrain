@@ -485,7 +485,7 @@ if 'postproc' in routine:
 		plt.setp(ax.get_yticklabels(),fontsize=fsaxlabel)
 		plt.setp(ax.get_xticklabels(),fontsize=fsaxlabel)
 		axHistx.set_yticklabels([])
-		axHisty.set_xticklabels([])
+		axHisty.set_xticklabels([])X
 		plt.setp(axHistx.get_xticklabels()+axHisty.get_yticklabels(),visible=False)
 		plt.savefig(pickles+'fig-'+sysname.split('-')[-1]+'-iceskate-diffusions-zdecomp-modes.png',
 			dpi=300,bbox_inches='tight')
