@@ -21,7 +21,7 @@ analysis_descriptors = {
 			'pkl.structures.membrane-v511.a2-surfacer.s6-kraken-md.part0009.30000-80000-100.pkl',
 		'ionname':'Cal'}}
 analysis_names = ['v511-30000-80000-100']
-routine = ['compute','postproc'][1:]
+routine = ['compute','computexyz','postproc'][1:]
 
 #---method
 upto = 50 #---how far to only look at the diffusion curves
@@ -34,7 +34,7 @@ zonesub = [1,2,3,4,5,6,7,8,14,15,16,17,18,19,20,21] #---custom selection of zone
 #-------------------------------------------------------------------------------------------------------------
 
 #---decomposing the diffusion by calculating it only from movements that are mostly in a particular z-slice
-if 'compute' in routine or 'mastermsd_zones' not in globals():
+if 'compute' in routine or 'computexyz' in routine or 'mastermsd_zones' not in globals():
 	for aname in analysis_names:
 		for i in analysis_descriptors[aname]: vars()[i] = (analysis_descriptors[aname])[i]
 		#---load
@@ -91,50 +91,59 @@ if 'compute' in routine or 'mastermsd_zones' not in globals():
 		#---select subset of ions if desired
 		ionsel = slice(0,nions)
 		nions = len(range(nions)[ionsel])
-		#---pre-compute a master array of all displacements
-		#---Nb the apply_along_axis code is brutally slow so upgrade to numpy 1.8 on dirac
-		print 'status: precomputing displacement array, xy'
-		dimslice = slice(0,2)
-		distsxy = [[norm(ionstraj[ionsel,i+d,dimslice]-ionstraj[ionsel,i,dimslice],axis=1)**2 
-			for i in range(nframes-d)] 
-			for d in range(nframes)]
-		checktime()
-		print 'status: precomputing displacement array, z'
-		dimslice = slice(2,3)
-		distsz = [[norm(ionstraj[ionsel,i+d,dimslice]-ionstraj[ionsel,i,dimslice],axis=1)**2 
-			for i in range(nframes-d)] 
-			for d in range(nframes)]
-		checktime()
-		#---loop over zones
-		if zonesub == None:
-			zonesub = range(nzones)
-		mastermsd_zones = []
-		for z in zonesub:
-			print 'status: zone = '+str(z)
-			inzone = (roundz == z).T
-			inzonesliced = [[mean(inzone[i:i+d+1],axis=0) for i in range(nframes-d)] for d in range(nframes)]
-			bigmask = [numpy.ma.masked_greater_equal(inzonesliced[i],occupancy) for i in range(nframes)]
-			mastermsd = [(array((1*ma.mask_rows(bigmask[i]).mask+1*ma.mask_cols(bigmask[i]).mask)) 
-				if shape(bigmask[i].mask) != () else zeros(bigmask[i].shape)) for i in range(nframes)]
-			mastermsd_zones.append(mastermsd)
+		#---if you ask for xyz diffusion, it skips the z-decomposition entirely
+		if 'computexyz' in routine:
+			print 'status: precomputing displacement array, xyz'
+			dimslice = slice(0,3)
+			distsxyz = [[norm(ionstraj[ionsel,i+d,dimslice]-ionstraj[ionsel,i,dimslice],axis=1)**2 
+				for i in range(nframes-d)] 
+				for d in range(nframes)]
 			checktime()
-			#---Nb memory flat after a single zone if you delete as follows
-			del inzone,inzonesliced,bigmask,mastermsd
-		#---Nb currently disabled due to excessive sizes
-		if 0:
-			#---record times
-			times = [mean([clock[i+d]-clock[i] for i in range(nframes-d)]) for d in range(nframes)]
-			#---package the results
-			result_data = MembraneData('ionskate')
-			#---Nb data are packaged as type (distsxy,distsz,mastermsdzones)
-			#---Nb the mastermsd_zones type goes by zone, ion, delta-t, start frame
-			result_data.data = [mastermsd_zones,distsxy,distsz]
-			result_data.addnote(['times',times])
-			result_data.addnote(['occupancy',occupancy])
-			result_data.addnote(['zones',zones])
-			result_data.addnote(['ionsel',ionsel])
-			#---pickle the results
-			pickledump(result_data,resultpkl,directory=pickles)
+		else:
+			#---pre-compute a master array of all displacements
+			#---Nb the apply_along_axis code is brutally slow so upgrade to numpy 1.8 on dirac
+			print 'status: precomputing displacement array, xy'
+			dimslice = slice(0,2)
+			distsxy = [[norm(ionstraj[ionsel,i+d,dimslice]-ionstraj[ionsel,i,dimslice],axis=1)**2 
+				for i in range(nframes-d)] 
+				for d in range(nframes)]
+			checktime()
+			print 'status: precomputing displacement array, z'
+			dimslice = slice(2,3)
+			distsz = [[norm(ionstraj[ionsel,i+d,dimslice]-ionstraj[ionsel,i,dimslice],axis=1)**2 
+				for i in range(nframes-d)] 
+				for d in range(nframes)]
+			checktime()
+			#---loop over zones
+			if zonesub == None:
+				zonesub = range(nzones)
+			mastermsd_zones = []
+			for z in zonesub:
+				print 'status: zone = '+str(z)
+				inzone = (roundz == z).T
+				inzonesliced = [[mean(inzone[i:i+d+1],axis=0) for i in range(nframes-d)] for d in range(nframes)]
+				bigmask = [numpy.ma.masked_greater_equal(inzonesliced[i],occupancy) for i in range(nframes)]
+				mastermsd = [(array((1*ma.mask_rows(bigmask[i]).mask+1*ma.mask_cols(bigmask[i]).mask)) 
+					if shape(bigmask[i].mask) != () else zeros(bigmask[i].shape)) for i in range(nframes)]
+				mastermsd_zones.append(mastermsd)
+				checktime()
+				#---Nb memory flat after a single zone if you delete as follows
+				del inzone,inzonesliced,bigmask,mastermsd
+			#---Nb currently disabled due to excessive sizes
+			if 0:
+				#---record times
+				times = [mean([clock[i+d]-clock[i] for i in range(nframes-d)]) for d in range(nframes)]
+				#---package the results
+				result_data = MembraneData('ionskate')
+				#---Nb data are packaged as type (distsxy,distsz,mastermsdzones)
+				#---Nb the mastermsd_zones type goes by zone, ion, delta-t, start frame
+				result_data.data = [mastermsd_zones,distsxy,distsz]
+				result_data.addnote(['times',times])
+				result_data.addnote(['occupancy',occupancy])
+				result_data.addnote(['zones',zones])
+				result_data.addnote(['ionsel',ionsel])
+				#---pickle the results
+				pickledump(result_data,resultpkl,directory=pickles)	
 
 #---Nb when selecting subsets, make sure the automatically-generated center gives a symmetric distribution
 if 0: plt.grid(True);plt.hist(array(roundz).flatten(),range=(0,30),bins=30);plt.show()
@@ -143,7 +152,8 @@ if 0: plt.grid(True);plt.hist(array(roundz).flatten(),range=(0,30),bins=30);plt.
 #-------------------------------------------------------------------------------------------------------------
 
 #---plotting routine
-makeplots = ['panel','calc_diffusion','diffusion_summary','all_raw_msds','mode_diffusion'][2:3]
+makeplots = ['panel','calc_diffusion','diffusion_summary','all_raw_msds','mode_diffusion',
+	'all_raw_msds_xyz'][-1:]
 
 #---postprocess and plot
 if 'postproc' in routine:
@@ -377,6 +387,23 @@ if 'postproc' in routine:
 		ax.set_yscale('log')
 		ax.set_ylim((10**-1,10**6))
 		plt.savefig(pickles+'fig-'+sysname.split('-')[-1]+'-iceskate-msd-zdecomp-modes.png',
+			dpi=300,bbox_inches='tight')
+		plt.clf()
+		plt.close()
+		
+	#---plot all the unfiltered MSD curves
+	if 'all_raw_msds_xyz' in makeplots:
+		clrs = [brewer2mpl.get_map('paired','qualitative',12).mpl_colors[i] for i in range(12)]
+		fig = plt.figure()
+		ax = plt.subplot(111)
+		allrawcurves = array([mean(distsxyz[i],axis=0) for i in range(nframes)]).T
+		for c in range(len(allrawcurves)):
+			curv = allrawcurves[c]
+			ax.plot(times,curv,c=clrs[c%len(clrs)])
+		ax.set_xscale('log')
+		ax.set_yscale('log')
+		ax.set_ylim((10**-1,10**6))
+		plt.savefig(pickles+'fig-'+sysname.split('-')[-1]+'-iceskate-msd-xyz.png',
 			dpi=300,bbox_inches='tight')
 		plt.clf()
 		plt.close()
