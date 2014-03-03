@@ -75,12 +75,12 @@ analysis_descriptors = {
 		{'simtype':'md',
 		'shortname':r'$4\times$ENTH(MD)',
 		'testname':'v614',
-		'locate':'pkl.structures.membrane-v614.s9-lonestar.120000-220000-200.pkl',
+		'locate':'pkl.structures.membrane-v614.s9-lonestar.md.part0004.120000-220000-200.pkl',
 		'start':None,
 		'end':None,
 		'nbase':None,
 		'hascurv':True,
-		'hypo':[0.05,5,5,0],
+		'hypo':[0.005,10,10,0],
 		'plot_ener_err':True,
 		'plotqe':True,
 		'removeavg':False,
@@ -117,7 +117,7 @@ if 'collect_c0s' not in globals(): collect_c0s = []
        |||||-----plot ???
        ||||||----plot ???
        |||||||---plot phase angles '''
-seq = '0111000'
+seq = '0110000'
 
 #---FUNCTIONS
 #-------------------------------------------------------------------------------------------------------------
@@ -200,7 +200,8 @@ class ModeCouple():
 		self.t1d[2] = array([[qmagst[i,j],self.t2d[2][i,j]] for j in range(nt) for i in range(mt)])
 		self.t1d[3] = array([[qmagst[i,j],self.t2d[3][i,j]] for j in range(nt) for i in range(mt)])
 		#---sum the terms
-		self.tsum2d = scalefac*(self.t2d[0]*qmagst**4-self.t2d[1]*qmagst**2-self.t2d[2]*qmagst**2+self.t2d[3])
+		self.tsum2d = scalefac*(self.t2d[0]*qmagst**4-self.t2d[1]*qmagst**2-
+			self.t2d[2]*qmagst**2+self.t2d[3])
 		self.tsum1d = array([[qmagst[i,j],self.tsum2d[i,j]] for j in range(nt) for i in range(mt)])
 		self.tsum2de = array([[sqrt((self.t2de[0][i,j]*qmagst[i,j]**4)**2+
 			(qmagst[i,j]**2*self.t2de[1][i,j])**2+
@@ -257,7 +258,8 @@ if int(seq[0]) or msets == []:
 				vecs = mean(mset.vecs,axis=0)
 				m,n = mset.griddims
 				getgrid = array([[[i,j] for j in linspace(0,vecs[1],n)] for i in linspace(0,vecs[0],m)])
-				params = [0,hypo[0],vecs[0]/2.,vecs[1]/2.,hypo[1],hypo[2],hypo[3]]
+				#---convert to angstroms
+				params = [0,hypo[0]/10.,vecs[0]/2.,vecs[1]/2.,hypo[1]*10.,hypo[2]*10.,hypo[3]]
 				c0hypo = array([[gauss2d(params,getgrid[i,j,0],getgrid[i,j,1])
 					for j in range(n)] for i in range(m)])
 				collect_c0s.append([c0hypo for i in range(len(mset.surf))])
@@ -390,9 +392,9 @@ if int(seq[2]):
 		axr.set_xscale('log')
 		axr.set_yscale('log')
 		axr.yaxis.tick_right()
-		axr.set_ylabel(\
-			r'$\left\langle \mathscr{H}_{el}\right\rangle \left(\frac{k_{B}T}{2}\right)^{-1}$',
-			fontsize=fsaxlabel)
+		#axr.set_ylabel(\
+		#	r'$\left\langle \mathscr{H}_{el}\right\rangle \left(\frac{k_{B}T}{2}\right)^{-1}$',
+		#	fontsize=fsaxlabel)
 		axr.set_xlabel(r'$\left|\mathbf{q}\right|(\mathrm{nm}^{-1})$',fontsize=fsaxlabel)
 		axr.yaxis.set_label_position("right")
 		h,l = axr.get_legend_handles_labels()
@@ -415,7 +417,8 @@ if int(seq[2]):
 		2*max([max([max([i for i in mscs[analyses_names.index(k)].t1d[t][:,1] if i != 0.]) 
 			for t in ([0,1,2,3] 
 			if (analysis_descriptors[k])['hascurv'] else [0])]) for k in analyses_names])))
-	plt.savefig(pickles+'fig-bilayer-couple-'+analysis_name+'-'+'spectrum1d'+'.png',
+	hypo_suffix = '' if not hypo else '-hypo-'+str(hypo[0])+'-'+str(hypo[1])+'-'+str(hypo[2])
+	plt.savefig(pickles+'fig-bilayer-couple-'+analysis_name+'-'+'spectrum1d'+hypo_suffix+'.png',
 		dpi=500,bbox_inches='tight')
 	plt.close(fig)
 	
@@ -436,8 +439,8 @@ if int(seq[3]):
 				if (analysis_descriptors[a])['simtype'] == 'md':
 					cm,cn = [int(i/2)-1 for i in shape(mset.undulate_hqhq2d)]
 					data[cm,cn] = 1.0
-				title = str((analysis_descriptors[a])['shortname'])+'\n'+\
-					r'$\left\langle \mathscr{H}_{el}\right\rangle \left(\frac{k_{B}T}{2}\right)^{-1}$'
+				#title = str((analysis_descriptors[a])['shortname'])+'\n'+\
+				#	r'$\left\langle \mathscr{H}_{el}\right\rangle \left(\frac{k_{B}T}{2}\right)^{-1}$'
 				lims = [1*10**-1,1*10**1]
 				cmap = mpl.cm.RdBu_r
 			elif d == 'hq2': 
@@ -474,7 +477,7 @@ if int(seq[3]):
 					dat=data[cm-i2wid:cm+i2wid+1,cn-i2wid:cn+i2wid+1],
 					tickshow=False,cmap=cmap,lims=[array([i for i in flatten(data) 
 						if i != 0.]).min(),data.max()])
-			ax.set_title(title,fontsize=fsaxlabel)
+			#ax.set_title(title,fontsize=fsaxlabel)
 		plt.savefig(pickles+'fig-bilayer-couple-'+analysis_name+'-'+d+'.png',
 			dpi=500,bbox_inches='tight')
 		plt.close(fig)
@@ -627,7 +630,7 @@ if int(seq[6]):
 		for m in range(4):
 			ms = [mset,mset2,msetmd,msetmd2][m]
 			ax = plt.subplot(gs[m])
-			 angles = mean(array([angle(ms.undulate_raw[i]) for i in range(len(ms.undulate_raw))]),axis=0)
+			angles = mean(array([angle(ms.undulate_raw[i]) for i in range(len(ms.undulate_raw))]),axis=0)
 			anglesfilt = numpy.fft.ifftshift(scipy.ndimage.filters.gaussian_filter(angles,10))
 			anglesfilt = scipy.ndimage.filters.gaussian_filter(angles,2)
 			ax.imshow(anglesfilt.T,interpolation='nearest',origin='lower',norm=mpl.colors.LogNorm(),
