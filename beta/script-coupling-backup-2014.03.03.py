@@ -80,7 +80,7 @@ analysis_descriptors = {
 		'end':None,
 		'nbase':None,
 		'hascurv':True,
-		'hypo':[2*0.0016915924011696797, 0.5223236432154279, 0.52113450910578785, 2*13.335922300627848, 2*14.194708931629373, -6030.3619185560674],
+		'hypo':[0.005,2./5,2./5,10,10,0],
 		'plot_ener_err':True,
 		'plotqe':True,
 		'removeavg':False,
@@ -96,18 +96,7 @@ if dotest == 'v2002.t3.t4.v614':
 	match_scales = ['v614','v2002-t4']
 	analysis_name = 'v2002.t3.t4.v614'
 	#---load colors in the same order as analyses_names
-	#---previous v614 hypo [0.005,2./5,2./5,10,10,0]
-	#---hypo from the failed correlation question [0.0016915924011696797, 0.5223236432154279, 0.52113450910578785, 13.335922300627848, 14.194708931629373, -6030.3619185560674]
 	clist = [(brewer2mpl.get_map('Set1', 'qualitative', 8).mpl_colors)[i] for i in [0,2,1,3,4,5,6,7,]]
-	routine = ['load','calc','plot1d','plot2d','plotphase','hyposweep'][1:3]
-	index_md = 0
-	hypo = [1.69159240e-03,   3.42705966e+02, 3.41925754e+02,   1.33359223e+01,   1.41947089e+01, -6.03036192e+03]
-	if 'hyposweep' in routine:
-		hypo_list = [[i,1./2,1./2,10,10,0] for i in arange(0.1,1.0,0.05)]
-		hypo_list = [[0.6,1./2,1./2,i,i,0] for i in range(20)+list(arange(30,100,10))]
-		hypo_list = [[0.6,i,j,14,14,0] for i in arange(0,1,0.05) for j in arange(0,1,0.05)]
-		hypo_list = [[0.6,i,j,14,14,0] for i in arange(0,1,0.05) for j in arange(0,1,0.05)]
-		hypo_list = [[0.6,1./2,1./2,i*j,i,pi/4] for j in [1,2,4,8,10] for i in list(arange(2,20,2))]
 elif dotest == 'v2002.t2.t1':
 	analyses_names = ['v2002-t2','v2002-t1']
 	plot_reord = ['v2002-t1','v2002-t2']
@@ -119,6 +108,16 @@ elif dotest == 'v2002.t2.t1':
 if 'msets' not in globals(): msets = []
 if 'mscs' not in globals(): mscs = []
 if 'collect_c0s' not in globals(): collect_c0s = []
+
+#---method 
+'''	   |---------load
+       ||--------calc
+       |||-------plot spectra, 1D
+       ||||------plot spectra, 2D
+       |||||-----plot ???
+       ||||||----plot ???
+       |||||||---plot phase angles '''
+seq = '0110000'
 
 #---FUNCTIONS
 #-------------------------------------------------------------------------------------------------------------
@@ -232,8 +231,68 @@ class ModeCouple():
 		self.qmagst = qmagst
 		self.c0s = c0s
 
-def spectrum_summary(hypotext=False):
-	'''Plots the 1D spectrum from global variables.'''
+#---MAIN
+#-------------------------------------------------------------------------------------------------------------
+
+#---load and interpolate
+if int(seq[0]) or msets == []:
+	lenscale = 1.0
+	for a in analyses_names:
+		for i in analysis_descriptors[a]: vars()[i] = (analysis_descriptors[a])[i]
+		if 'mset' in globals(): del mset
+		mset = MembraneSet()
+		if simtype == 'meso':
+			c0sraw = array(mset.load_points_vtu(locate,extra_props='induced_cur',
+				start=start,end=end,nbase=nbase,lenscale=lenscale))[:,0]
+			mset.surfacer()
+			c0s = mset.surfacer_general(c0sraw)
+			collect_c0s.append(c0s)
+			msets.append(mset)
+		elif simtype == 'md':
+			print 'loading from MD'
+			if 'mset' in globals(): del mset
+			mset = unpickle(pickles+locate)
+			msets.append(mset)
+			#---compute hypothetical curvature field for the MD simulation
+			if hypo != None:
+				vecs = mean(mset.vecs,axis=0)
+				m,n = mset.griddims
+				getgrid = array([[[i,j] for j in linspace(0,vecs[1],n)] for i in linspace(0,vecs[0],m)])
+				#---convert to angstroms
+				params = [0,hypo[0]/10.,vecs[0]*hypo[1],vecs[1]*hypo[2],hypo[3]*10.,hypo[4]*10.,hypo[5]]
+				c0hypo = array([[gauss2d(params,getgrid[i,j,0],getgrid[i,j,1])
+					for j in range(n)] for i in range(m)])
+				collect_c0s.append([c0hypo for i in range(len(mset.surf))])
+			else:
+				collect_c0s.append([])
+		elif simtype == 'meso_precomp':
+			if 'mset' in globals(): del mset
+			mset = unpickle(pickles+locate)
+			collect_c0s.append(mset.getdata('c0map').data)
+			msets.append(mset)
+
+#---calculate mode couplings
+if int(seq[1]):
+	#---match mesoscale length scales to an MD simulation
+	if match_scales != None:
+		ref_ind = analyses_names.index(match_scales[0])
+		move_ind = analyses_names.index(match_scales[1])
+		lenscale = max(mean(msets[move_ind].vecs,axis=0))/\
+			(max(mean(msets[ref_ind].vecs,axis=0))/msets[ref_ind].lenscale)
+		for a in analyses_names:
+			if (analysis_descriptors[a])['simtype'] == 'meso' or \
+				(analysis_descriptors[a])['simtype'] == 'meso_precomp':
+				msets[analyses_names.index(a)].lenscale = lenscale
+	#---calculate coupled modes
+	for a in analyses_names:
+		m = analyses_names.index(a)
+		if 'msc' in globals(): del msc
+		msc = ModeCouple()
+		msc.calculate_mode_coupling(msets[m],collect_c0s[m])
+		mscs.append(msc)
+		
+#---summary of 1D spectra
+if int(seq[2]):
 	#---prepare figure
 	fig = plt.figure(figsize=(18,8))
 	gs3 = gridspec.GridSpec(1,2,wspace=0.0,hspace=0.0)
@@ -272,7 +331,7 @@ def spectrum_summary(hypotext=False):
 			axl.scatter(mscs[m].t1d[2][:,0],mscs[m].t1d[2][:,1],color=colord,marker='x',
 				label=label,alpha=0.65)
 			label = r'$\left\langle C_{0,q}C_{0,-q}\right\rangle$'+','+shortname if 0 else ''
-			axl.scatter(mscs[m].t1d[3][:,0],mscs[m].t1d[3][:,1],color=colord,marker='.',s=20,
+			axl.scatter(mscs[m].t1d[3][:,0],mscs[m].t1d[3][:,1],color=colord,marker='x',s=20,
 				label=label,alpha=0.65)
 		#---plot details
 		axl.set_xlabel(r'$\left|\mathbf{q}\right|(\mathrm{nm}^{-1})$',fontsize=fsaxlabel)
@@ -358,118 +417,14 @@ def spectrum_summary(hypotext=False):
 		2*max([max([max([i for i in mscs[analyses_names.index(k)].t1d[t][:,1] if i != 0.]) 
 			for t in ([0,1,2,3] 
 			if (analysis_descriptors[k])['hascurv'] else [0])]) for k in analyses_names])))
-	#---fix the limits for now
-	axl.set_ylim((10**-11,10**0))
 	hypo_suffix = '' if not hypo else '-hypo-'+str(hypo[0])+'-'+str(hypo[1])+'-'+str(hypo[2])+'-'+\
 		str(hypo[3])+'-'+str(hypo[4])+'-'+str(hypo[5])
-	if hypotext:
-		axl.text(0.95,0.95,
-			r'$C_0='+str(hypo[0])+'\:\mathrm{{nm}^{-1}}$\n'+\
-			r'$(\sigma_{a},\sigma_{b})=('+str(hypo[3])+','+str(hypo[4])+')\:\mathrm{nm}$\n'+\
-			r'$(\frac{x_0}{L_x},\frac{y_0}{L_y})=('+str(hypo[1])+','+str(hypo[2])+')$',
-			horizontalalignment='right',
-			verticalalignment='top',
-			transform=axl.transAxes)
 	plt.savefig(pickles+'fig-bilayer-couple-'+analysis_name+'-'+'spectrum1d'+hypo_suffix+'.png',
-		dpi=200,bbox_inches='tight')
+		dpi=500,bbox_inches='tight')
 	plt.close(fig)
-
-#---MAIN
-#-------------------------------------------------------------------------------------------------------------
-
-#---load and interpolate
-if 'load' in routine or msets == []:
-	lenscale = 1.0
-	for a in analyses_names:
-		for i in analysis_descriptors[a]: vars()[i] = (analysis_descriptors[a])[i]
-		if 'mset' in globals(): del mset
-		mset = MembraneSet()
-		if simtype == 'meso':
-			c0sraw = array(mset.load_points_vtu(locate,extra_props='induced_cur',
-				start=start,end=end,nbase=nbase,lenscale=lenscale))[:,0]
-			mset.surfacer()
-			c0s = mset.surfacer_general(c0sraw)
-			collect_c0s.append(c0s)
-			msets.append(mset)
-		elif simtype == 'md':
-			print 'loading from MD'
-			if 'mset' in globals(): del mset
-			mset = unpickle(pickles+locate)
-			msets.append(mset)
-			#---compute hypothetical curvature field for the MD simulation
-			if hypo != None:
-				vecs = mean(mset.vecs,axis=0)
-				m,n = mset.griddims
-				getgrid = array([[[i,j] for j in linspace(0,vecs[1],n)] for i in linspace(0,vecs[0],m)])
-				#---convert to angstroms
-				params = [0,hypo[0]/10.,vecs[0]*hypo[1],vecs[1]*hypo[2],hypo[3]*10.,hypo[4]*10.,hypo[5]]
-				c0hypo = array([[gauss2d(params,getgrid[i,j,0],getgrid[i,j,1]) for j in range(n)] for i in range(m)])
-				collect_c0s.append([c0hypo for i in range(len(mset.surf))])
-			else:
-				collect_c0s.append([])
-		elif simtype == 'meso_precomp':
-			if 'mset' in globals(): del mset
-			mset = unpickle(pickles+locate)
-			collect_c0s.append(mset.getdata('c0map').data)
-			msets.append(mset)
-
-#---calculate mode couplings
-if 'calc' in routine:
-	#---match mesoscale length scales to an MD simulation
-	if match_scales != None:
-		ref_ind = analyses_names.index(match_scales[0])
-		move_ind = analyses_names.index(match_scales[1])
-		lenscale = max(mean(msets[move_ind].vecs,axis=0))/\
-			(max(mean(msets[ref_ind].vecs,axis=0))/msets[ref_ind].lenscale)
-		for a in analyses_names:
-			if (analysis_descriptors[a])['simtype'] == 'meso' or \
-				(analysis_descriptors[a])['simtype'] == 'meso_precomp':
-				msets[analyses_names.index(a)].lenscale = lenscale
-	#---calculate coupled modes
-	for a in analyses_names:
-		m = analyses_names.index(a)
-		if 'msc' in globals(): del msc
-		msc = ModeCouple()
-		msc.calculate_mode_coupling(msets[m],collect_c0s[m])
-		mscs.append(msc)
-	hypo = (analysis_descriptors['v614'])['hypo']
-	spectrum_summary(hypotext=True)
-		
-#---calculate mode couplings
-if 'hyposweep' in routine:
-	#---match mesoscale length scales to an MD simulation
-	if match_scales != None:
-		ref_ind = analyses_names.index(match_scales[0])
-		move_ind = analyses_names.index(match_scales[1])
-		lenscale = max(mean(msets[move_ind].vecs,axis=0))/\
-			(max(mean(msets[ref_ind].vecs,axis=0))/msets[ref_ind].lenscale)
-		for a in analyses_names:
-			if (analysis_descriptors[a])['simtype'] == 'meso' or \
-				(analysis_descriptors[a])['simtype'] == 'meso_precomp':
-				msets[analyses_names.index(a)].lenscale = lenscale
-	#---calculate coupled modes
-	for a in analyses_names:
-		m = analyses_names.index(a)
-		if 'msc' in globals(): del msc
-		msc = ModeCouple()
-		msc.calculate_mode_coupling(msets[m],collect_c0s[m])
-		mscs.append(msc)
-	#---loop over testable hypotheses
-	mset = msets[index_md]
-	for hypo in hypo_list:
-		print 'status: testing hypothesis: '+str(hypo)
-		vecs = mean(mset.vecs,axis=0)
-		m,n = mset.griddims
-		getgrid = array([[[i,j] for j in linspace(0,vecs[1],n)] for i in linspace(0,vecs[0],m)])
-		#---convert to angstroms
-		params = [0,hypo[0]/10.,vecs[0]*hypo[1],vecs[1]*hypo[2],hypo[3]*10.,hypo[4]*10.,hypo[5]]
-		c0hypo = array([[gauss2d(params,getgrid[i,j,0],getgrid[i,j,1])
-			for j in range(n)] for i in range(m)])
-		mscs[index_md].calculate_mode_coupling(msets[index_md],[c0hypo for i in range(len(mset.surf))])
-		spectrum_summary(hypotext=True)		
-
+	
 #---plots, compare 2D undulation spectra between bare and protein systems alone, or scaled by q4
-if 'plot2d' in routine:
+if int(seq[3]):
 	insets = True
 	i2wid = 1
 	#---plot these for both the <h_{q}h_{-q}> and <h_{q}h_{-q}>q4
@@ -528,8 +483,146 @@ if 'plot2d' in routine:
 			dpi=500,bbox_inches='tight')
 		plt.close(fig)
 	
+#---OLD
+#-------------------------------------------------------------------------------------------------------------
+
+sskip = 4 #---sets the xy ticks spacing  in units of lenscale on any 2D spectra
+		
+#---view individual contributions to the energy terms in two dimensions
+if 0:
+	islognorm = True
+	vmin = 10**-10
+	vmax = 10**0
+	fig = plt.figure(figsize=(8,8))
+	gs = gridspec.GridSpec(2,2)
+	axes = []
+	ax = plt.subplot(gs[0,0])
+	axes.append(ax)
+	ax.set_title('term 1')
+	ax.imshow(array(t0).T, extent=None, interpolation='nearest',aspect='equal',origin='lower',
+		cmap=cmap,norm=(mpl.colors.LogNorm() if islognorm else None),vmin=vmin,vmax=vmax)
+	ax.set_title(r'$\mathbf{\left\langle h_{q}h_{-q}\right\rangle}$',fontsize=18)
+	ax = plt.subplot(gs[0,1])
+	axes.append(ax)
+	ax.set_title('term 2')
+	im1 =ax.imshow(array(t1).T, extent=None, interpolation='nearest',aspect='equal',origin='lower',
+		cmap=cmap,norm=(mpl.colors.LogNorm() if islognorm else None),vmin=vmin,vmax=vmax)
+	ax.set_title(r'$\mathbf{\left\langle h_{q}C_{0,-q}\right\rangle}$',fontsize=18)
+	divider = make_axes_locatable(ax)
+	cax1 = divider.append_axes("right", size="5%", pad=0.05)
+	plt.colorbar(im1,cax=cax1)
+	ax = plt.subplot(gs[1,0])
+	axes.append(ax)
+	ax.set_title('term 3')
+	ax.imshow(array(t2).T, extent=None, interpolation='nearest',aspect='equal',origin='lower',
+		cmap=cmap,norm=(mpl.colors.LogNorm() if islognorm else None),vmin=vmin,vmax=vmax)
+	ax.set_title(r'$\mathbf{\left\langle C_{0,q}h_{-q}\right\rangle}$',fontsize=18)
+	ax = plt.subplot(gs[1,1])
+	axes.append(ax)
+	ax.set_title('term 4')
+	im3 = ax.imshow(array(t3).T, extent=None, interpolation='nearest',aspect='equal',origin='lower',
+		cmap=cmap,norm=(mpl.colors.LogNorm() if islognorm else None),vmin=vmin,vmax=vmax)
+	ax.set_title(r'$\mathbf{\left\langle C_{0,q}C_{0,-q}\right\rangle}$',fontsize=18)
+	divider = make_axes_locatable(ax)
+	cax3 = divider.append_axes("right", size="5%", pad=0.05)
+	plt.colorbar(im3,cax=cax3)
+	for a in range(len(axes)):
+		ax = axes[a]
+		if a != 0:
+			ax.set_yticks([])
+		ax.set_xticks(array(list(arange(0,m/2,sskip)*-1)[:0:-1]+list(arange(0,m/2,sskip)))+cm)
+		ax.axes.set_xticklabels([int(i) for i in array(list(arange(0,m/2,sskip)*-1)[:0:-1]+
+			list(arange(0,m/2,sskip)))*lenscale])
+		ax.set_yticks(array(list(arange(0,n/2,sskip)*-1)[:0:-1]+list(arange(0,n/2,sskip)))+cn)
+		ax.axes.set_yticklabels([int(i) for i in array(list(arange(0,n/2,sskip)*-1)[:0:-1]+
+			list(arange(0,n/2,sskip)))*lenscale])	
+		if a in [0,2]:
+			ax.set_ylabel(r'$\left|\mathbf{q_y}\right|(\mathrm{nm^{-1}})$',fontsize=14)
+		if a in [2,3]:
+			ax.set_xlabel(r'$\left|\mathbf{q_x}\right|(\mathrm{nm^{-1}})$',fontsize=14)
+	plt.savefig(pickles+'fig-bilayer-couple-view-terms-'+testname+'.png',
+		dpi=500,bbox_inches='tight')
+	if showplots:
+		plt.show()
+
+#---plots, compare 2D undulation spectra between bare and protein systems
+if int(seq[4]) and barecompare:
+	fig = plt.figure(figsize=(8,8))
+	gs2 = gridspec.GridSpec(1,2,wspace=0.4)
+	axes = []
+	m,n = mset.griddims
+	imdat0 = (abs(mean(mset.uqraw,axis=0))/double(m*n)**2)
+	m,n = mset2.griddims
+	imdat1 = (abs(mean(mset2.uqraw,axis=0))/double(m*n)**2)
+	extrema = [min(imdat0.min(),imdat1.min()),max(imdat0.max(),imdat1.max())]
+	ax = plt.subplot(gs2[0])
+	axes.append(ax)
+	ax.set_title(r'$\mathbf{\left\langle h_{q}h_{-q}\right\rangle}$, protein',fontsize=18)
+	im = ax.imshow(array(imdat0).T, extent=None,interpolation='nearest',
+		aspect='equal',origin='lower',cmap=cmap,norm=mpl.colors.LogNorm(),vmin=extrema[0],vmax=extrema[1])
+	ax = plt.subplot(gs2[1])
+	axes.append(ax)
+	im = ax.imshow(array(imdat1).T,extent=None,interpolation='nearest',
+		aspect='equal',origin='lower',cmap=cmap,norm=mpl.colors.LogNorm(),vmin=extrema[0],vmax=extrema[1])
+	ax.set_title(r'$\mathbf{\left\langle h_{q}h_{-q}\right\rangle}$, bare',fontsize=18)
+	for a in range(len(axes)):
+		ax = axes[a]
+		ax.set_xlabel(r'$\left|\mathbf{q_x}\right|(\mathrm{nm^{-1}})$',fontsize=14)
+		if a in [0]:		
+			ax.set_ylabel(r'$\left|\mathbf{q}\right|(\mathrm{nm}^{-1})$',fontsize=14)
+		ax.set_xticks(array(list(arange(0,m/2,sskip)*-1)[:0:-1]+list(arange(0,m/2,sskip)))+cm+1)
+		ax.axes.set_xticklabels([int(i) for i in array(list(arange(0,m/2,sskip)*-1)[:0:-1]+
+			list(arange(0,m/2,sskip)))*lenscale])
+		ax.set_yticks(array(list(arange(0,n/2,sskip)*-1)[:0:-1]+list(arange(0,n/2,sskip)))+cn+1)
+		ax.axes.set_yticklabels([int(i) for i in array(list(arange(0,n/2,sskip)*-1)[:0:-1]+
+			list(arange(0,n/2,sskip)))*lenscale])
+	plt.savefig(pickles+'fig-bilayer-couple-view-comparehqhq-'+testname+'.png',
+		dpi=500,bbox_inches='tight')
+	if showplots:
+		plt.show()
+
+#---plots, compare 2D undulation spectra between bare and protein systems scaled by q4
+if 0 and barecompare:
+	fig = plt.figure(figsize=(8,8))
+	gs2 = gridspec.GridSpec(1,2,wspace=0.4)
+	axes = []
+	m,n = mset.griddims
+	imdat0 = t0*qmagst**4
+	m,n = mset2.griddims
+	imdat1 = t0_bare*qmagst**4
+	extrema = [min(imdat0.min(),imdat1.min()),max(imdat0.max(),imdat1.max())]
+	ax = plt.subplot(gs2[0])
+	axes.append(ax)
+	ax.set_title(\
+		r'$\mathbf{\left\langle h_{q}h_{-q}\right\rangle {\left|\mathbf{q_y}\right|}^{4}}$, protein',
+		fontsize=18)
+	im = ax.imshow(array(imdat0).T, extent=None,interpolation='nearest',
+		aspect='equal',origin='lower',cmap=cmap,vmin=extrema[0],vmax=extrema[1])
+	ax = plt.subplot(gs2[1])
+	axes.append(ax)
+	im = ax.imshow(array(imdat1).T,extent=None,interpolation='nearest',
+		aspect='equal',origin='lower',cmap=cmap,vmin=extrema[0],vmax=extrema[1])
+	ax.set_title(\
+		r'$\mathbf{\left\langle h_{q}h_{-q}\right\rangle {\left|\mathbf{q_y}\right|}^{4}}$, bare',
+		fontsize=18)
+	for a in range(len(axes)):
+		ax = axes[a]
+		ax.set_xlabel(r'$\left|\mathbf{q_x}\right|(\mathrm{nm}^{-1})$',fontsize=14)
+		if a in [0]:			
+			ax.set_ylabel(r'$\left|\mathbf{q_y}\right|(\mathrm{nm}^{-1})$',fontsize=14)
+		ax.set_xticks(array(list(arange(0,m/2,sskip)*-1)[:0:-1]+list(arange(0,m/2,sskip)))+cm)
+		ax.axes.set_xticklabels([int(i) for i in array(list(arange(0,m/2,sskip)*-1)[:0:-1]+
+			list(arange(0,m/2,sskip)))*lenscale])
+		ax.set_yticks(array(list(arange(0,n/2,sskip)*-1)[:0:-1]+list(arange(0,n/2,sskip)))+cn)
+		ax.axes.set_yticklabels([int(i) for i in array(list(arange(0,n/2,sskip)*-1)[:0:-1]+
+			list(arange(0,n/2,sskip)))*lenscale])
+	plt.savefig(pickles+'fig-bilayer-couple-view-comparehqhqq4-'+testname+'.png',
+		dpi=500,bbox_inches='tight')
+	if showplots:
+		plt.show()
+
 #---phase plots
-if 'plotphase' in routine:
+if int(seq[6]):
 	#---analyze 2D plots of phase angles between several simulations
 	msetmd2 = unpickle(pickles+'pkl.structures.membrane-v550-stress.md.part0008.shifted.pkl')
 	msetmd2.calculate_undulations()
@@ -546,6 +639,7 @@ if 'plotphase' in routine:
 			ax.imshow(-1*anglesfilt.T,interpolation='nearest',origin='lower',norm=mpl.colors.LogNorm(),
 				cmap=mpl.cm.jet_r,vmax=pi,vmin=10**-10)
 		plt.show()
+
 	#---plot phase angle on XY for different wavelengths, or different groups of wavelengths
 	#---Nb this just shows that the DTMC model isn't dynamic, obviously
 	if 0:

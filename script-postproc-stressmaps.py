@@ -39,9 +39,20 @@ analysis_descriptors = {
 		'nprots':4,
 		'datdir3dpp':
 			'/home/rpb/compbio/membrane-v614-enthx4-12800/a8-stress-s9-120000-220000/results',
-		'framewise_part':4,
+		'framewise_part':4,	
 		'voxelsize':1.0,
 		'label':r'$\mathrm{{ENTH}\ensuremath{\times}4}$'},
+	'v701-60000-160000-200':
+		{'sysname':'membrane-v701',
+		'trajsel':'s8-lonestar/md.part0003.60000-160000-200.xtc',
+		'nprots':2,
+		'datdir3dpp':
+			'/home/rpb/compbio-alt/membrane-v701-exo70-anti-dilute/a1-stress-1.0-framewise/results',
+		'framewise_part':3,
+		'voxelsize':1.0,
+		'label':r'$\textbf{{EXO70}\ensuremath{\times}2{\small (anti)}}$',
+		'structure_pkl':'pkl.structures.membrane-v701.md.part0003.60000-160000-200.pkl',
+		},
 	'v550-300000-400000-200': 
 		{'sysname':'membrane-v550',
 		'trajsel':'s0-trajectory-full/md.part0006.300000-400000-200.xtc',
@@ -52,9 +63,12 @@ analysis_descriptors = {
 		'framewise_part':6,
 		'voxelsize':1.0,
 		'label':r'$control$'}}
-analysis_names = ['v614-120000-220000-200','v550-300000-400000-200'][:]
-routine = ['calc_c0maps','plot','video'][-1:]
+analysis_names = ['v614-120000-220000-200','v550-300000-400000-200','v701-60000-160000-200'][:]
+routine = ['calc_c0maps','plot','video'][1:2]
 span_sweep = [1,2,3,4,5,6]
+
+#---FUNCTIONS
+#-------------------------------------------------------------------------------------------------------------
 
 def stressmap_panel_plot(dat,fig,fr=None,cmap=None,vmax=None,vmin=None,altdat=None):
 	'''Function which plots a stressmap with proteins.'''
@@ -68,9 +82,9 @@ def stressmap_panel_plot(dat,fig,fr=None,cmap=None,vmax=None,vmin=None,altdat=No
 		ax = fig.add_subplot(gs[p])
 		im = ax.imshow((dat[p]).T,interpolation='nearest',origin='lower',
 			cmap=cmap,vmax=vmax,vmin=vmin)
-		if altdat[p].protein != []:
+		if altdat != None and altdat[p].protein != []:
 			plothull(ax,msets[p].protein[fr],griddims=shape(md_maps[0][0].data)[1:],
-				vecs=mean(msets[p].vecs,axis=0),subdivide=4,alpha=0.35,c='k')
+				vecs=mean(msets[p].vecs,axis=0),subdivide=nnprots[p],alpha=0.35,c='k')
 		ax.set_title(labels[p],fontsize=fsaxtitle)
 		ax.set_xlabel(r'$x\:(\mathrm{nm})$')
 		ax.set_ylabel(r'$y\:(\mathrm{nm})$')
@@ -86,21 +100,24 @@ def stressmap_panel_plot(dat,fig,fr=None,cmap=None,vmax=None,vmin=None,altdat=No
 #---MAIN
 #-------------------------------------------------------------------------------------------------------------
 
-if 'calc_c0maps' in routine or 'md_maps' not in globals():
+if 'calc_c0maps' in routine or ('md_maps' not in globals() and 'calc_c0maps' not in routine):
 	md_maps = []
 	msets = []
 	labels = []
+	nnprots = []
 	for aname in analysis_names:
 		#---get names and load the structure
 		for i in analysis_descriptors[aname]: vars()[i] = (analysis_descriptors[aname])[i]
 		grofile,trajfile = trajectory_lookup(analysis_descriptors,aname,globals())
-		msetfile = 'pkl.structures.'+specname_pickle(sysname,trajfile[0])+'.pkl'
+		if 'structure_pkl' not in globals() or structure_pkl == None:
+			msetfile = 'pkl.structures.'+specname_pickle(sysname,trajfile[0])+'.pkl'
+		else: msetfile = structure_pkl
 		mset = unpickle(pickles+msetfile)
 		msets.append(mset)
 		picklename = 'pkl.stressmaps.'+specname_pickle(sysname,trajfile[0])+'pkl'
 		md_map = unpickle(pickles+picklename)
-		md_maps.append(md_map)
 		labels.append(label)
+		nnprots.append(nprots)
 		if md_maps == None:
 			print 'status: no stressmaps available so will try to compute them now'
 			result_data_spans = [MembraneData('collect_c0maps') for i in range(len(span_sweep))]
@@ -146,23 +163,32 @@ if 'calc_c0maps' in routine or 'md_maps' not in globals():
 			#---write the store, since saving mset is very costly for some reason
 			#---Nb saving mset was 100MB with only 10 frames even after deleting the redundant data
 			pickledump(mset.store,picklename,directory=pickles)
+			md_maps = mset.store
+		md_maps.append(md_map)
+		
 
-#plt.imshow(array(results).T,interpolation='nearest',origin='lower');plt.show()
-#plt.imshow((scipy.ndimage.filters.gaussian_filter(mean(allmaps,axis=0).T,3)),interpolation='nearest',origin='lower',cmap=mpl.cm.jet);plt.show()
-#smoothplot = mean([scipy.ndimage.filters.gaussian_filter(allmaps[i],1) for i in range(len(allmaps))],axis=0)
-#plt.imshow(smoothplot.T,interpolation='nearest',origin='lower',cmap=mpl.cm.jet);plt.show()
-
+#---a single plot
 if 'plot' in routine:
-	fig = plt.figure()
-	ax = plt.subplot(121)
-	mapped = scipy.ndimage.filters.gaussian_filter(mean(md_maps[0][2].data,axis=0),2)
-	ax.imshow(array(mapped).T,interpolation='nearest',origin='lower',cmap=mpl.cm.RdBu_r)
-	ax = plt.subplot(122)
-	mapped = scipy.ndimage.filters.gaussian_filter(mean(md_maps[1][2].data,axis=0),2)
-	ax.imshow(array(mapped).T,interpolation='nearest',origin='lower',cmap=mpl.cm.RdBu_r)
-	plt.show()
+	#---average C0 map with PBC Gaussian blur
+	if 1:
+		m,n = shape(md_maps[0][0].data)[1:]
+		panelplots = [scipy.ndimage.filters.gaussian_filter(numpy.tile(mean(md_maps[i][2].data,axis=0),
+			(3,3)),2)[m:2*m,n:2*n] for i in range(len(md_maps))]
+		vmin = array(panelplots).min()
+		vmax = array(panelplots).max()
+		extrem = max(abs(vmax),abs(vmin))
+		vmax = extrem
+		vmin = -1*extrem
+		fig = plt.figure()
+		stressmap_panel_plot(panelplots,fig,vmax=vmax,vmin=vmin,altdat=msets)
+		plt.show()
 
+#---make cool videos
 if 'video' in routine:
-	leftpan = array([scipy.ndimage.filters.gaussian_filter(mean(md_maps[0][2].data[i:i+20],axis=0),2) for i in range(500-20)])
-	rightpan = array([scipy.ndimage.filters.gaussian_filter(mean(md_maps[1][2].data[i:i+20],axis=0),2) for i in range(500-20)])
-	plotmov([leftpan,rightpan],'stressmap-v614.v550',altdat=msets,panels=2,plotfunc='stressmap_panel_plot',whitezero=True)
+	vidpanels = []
+	for p in range(len(md_maps)):
+		vidpanels.append(array([scipy.ndimage.filters.gaussian_filter(mean(md_maps[p][2].data[i:i+20],axis=0),2) 
+			for i in range(500-20)]))
+	plotmov(vidpanels,'stressmap-v614.v550.v701',altdat=msets,panels=len(md_maps),
+		plotfunc='stressmap_panel_plot',whitezero=True)
+		
