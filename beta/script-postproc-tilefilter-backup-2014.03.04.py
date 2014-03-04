@@ -21,8 +21,8 @@ execfile('locations.py')
 #---parameters
 height_direction = 1
 cutoff_distance = 5.
-#make_figs = False
-'''
+make_figs = False
+
 #---analysis plan
 analysis_plan = slice(-1,None)
 analysis_descriptors = [
@@ -36,35 +36,6 @@ analysis_descriptors = [
 		'pkl.structures.membrane-v700.md.part0002.100000-200000-200.pkl','.prot-v700'),
 	('pkl.structures.membrane-v612-stress.md.part0003.pkl',slice(None),
 		'pkl.structures.membrane-v614-stress.md.part0002.rerun.pkl','.prot-v614'),]
-'''		
-#---possible analyses
-analysis_descriptors = {
-	'v614-120000-220000-200':
-		{'sysname':'membrane-v614','sysname_lookup':None,
-		'director':director_cgmd,'selector':selector_cgmd,'protein_select':cgmd_protein,
-		'trajsel':'s9-lonestar/md.part0004.120000-220000-200.xtc'},
-	'v700-500000-600000-200':
-		{'sysname':'membrane-v700','sysname_lookup':None,
-		'director':director_cgmd,'selector':selector_cgmd,'protein_select':cgmd_protein,
-		'trajsel':'u1-lonestar-longrun/md.part0009.500000-700000-200.xtc',
-		'timeslice':[500000,600000,200]},
-	'v701-60000-160000-200':
-		{'sysname':'membrane-v701','sysname_lookup':None,
-		'director':director_cgmd,'selector':selector_cgmd,'protein_select':cgmd_protein,
-		'trajsel':'s8-lonestar/md.part0003.60000-160000-200.xtc'},
-	'v612-75000-175000-200':
-		{'sysname':'membrane-v612','sysname_lookup':None,
-		'director':director_cgmd,'selector':selector_cgmd,'protein_select':cgmd_protein,
-		'trajsel':'t4-lonestar/md.part0007.75000-175000-200.xtc'},
-	'v550-4000000-500000-160':
-		{'sysname':'membrane-v550','sysname_lookup':None,
-		'director':director_cgmd,'selector':selector_cgmd,'protein_select':None,
-		'trajsel':'v1-lonestar/md.part0010.400000-500000-160.xtc'},
-	'v550-300000-400000-200':
-		{'sysname':'membrane-v550','sysname_lookup':None,
-		'director':director_cgmd,'selector':selector_cgmd,'protein_select':None,
-		'trajsel':'s0-trajectory-full/md.part0006.300000-400000-200.xtc'},
-		}	
 
 #---FUNCTIONS
 #-------------------------------------------------------------------------------------------------------------
@@ -290,7 +261,7 @@ def batch_calculate_tilefilter_areas(make_figs=None,end=None,start=None,skip=Non
 
 #---MAIN
 #-------------------------------------------------------------------------------------------------------------
-'''
+
 for ad in analysis_descriptors[analysis_plan]:
 	(startpickle,protein_subset_slice,protein_pickle,suffix) = ad
 	sysname = startpickle[24:-4]
@@ -311,4 +282,4 @@ for ad in analysis_descriptors[analysis_plan]:
 	result_data.addnote(['cutoff_distance',cutoff_distance])
 	result_data.addnote(['cutoff',cutoff])
 	pickle.dump(result_data,open(pickles+'pkl.tilefilter-areas.'+sysname+suffix+'.pkl','w'))
-'''
+

@@ -80,7 +80,7 @@ analysis_descriptors = {
 		'end':None,
 		'nbase':None,
 		'hascurv':True,
-		'hypo':[0.005,2./5,2./5,10,10,0],
+		'hypo':[2*0.0016915924011696797, 0.5223236432154279, 0.52113450910578785, 2*13.335922300627848, 2*14.194708931629373, -6030.3619185560674],
 		'plot_ener_err':True,
 		'plotqe':True,
 		'removeavg':False,
@@ -96,10 +96,13 @@ if dotest == 'v2002.t3.t4.v614':
 	match_scales = ['v614','v2002-t4']
 	analysis_name = 'v2002.t3.t4.v614'
 	#---load colors in the same order as analyses_names
+	#---previous v614 hypo [0.005,2./5,2./5,10,10,0]
+	#---hypo from the failed correlation question [0.0016915924011696797, 0.5223236432154279, 0.52113450910578785, 13.335922300627848, 14.194708931629373, -6030.3619185560674]
 	clist = [(brewer2mpl.get_map('Set1', 'qualitative', 8).mpl_colors)[i] for i in [0,2,1,3,4,5,6,7,]]
 	routine = ['load','calc','plot1d','plot2d','plotphase','hyposweep'][1:3]
+	index_md = 0
+	hypo = [1.69159240e-03,   3.42705966e+02, 3.41925754e+02,   1.33359223e+01,   1.41947089e+01, -6.03036192e+03]
 	if 'hyposweep' in routine:
-		index_md = 0
 		hypo_list = [[i,1./2,1./2,10,10,0] for i in arange(0.1,1.0,0.05)]
 		hypo_list = [[0.6,1./2,1./2,i,i,0] for i in range(20)+list(arange(30,100,10))]
 		hypo_list = [[0.6,i,j,14,14,0] for i in arange(0,1,0.05) for j in arange(0,1,0.05)]
@@ -400,8 +403,7 @@ if 'load' in routine or msets == []:
 				getgrid = array([[[i,j] for j in linspace(0,vecs[1],n)] for i in linspace(0,vecs[0],m)])
 				#---convert to angstroms
 				params = [0,hypo[0]/10.,vecs[0]*hypo[1],vecs[1]*hypo[2],hypo[3]*10.,hypo[4]*10.,hypo[5]]
-				c0hypo = array([[gauss2d(params,getgrid[i,j,0],getgrid[i,j,1])
-					for j in range(n)] for i in range(m)])
+				c0hypo = array([[gauss2d(params,getgrid[i,j,0],getgrid[i,j,1]) for j in range(n)] for i in range(m)])
 				collect_c0s.append([c0hypo for i in range(len(mset.surf))])
 			else:
 				collect_c0s.append([])
@@ -430,6 +432,8 @@ if 'calc' in routine:
 		msc = ModeCouple()
 		msc.calculate_mode_coupling(msets[m],collect_c0s[m])
 		mscs.append(msc)
+	hypo = (analysis_descriptors['v614'])['hypo']
+	spectrum_summary(hypotext=True)
 		
 #---calculate mode couplings
 if 'hyposweep' in routine:
