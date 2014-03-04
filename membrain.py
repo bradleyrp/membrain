@@ -315,6 +315,12 @@ class MembraneSet:
 		monos = []
 		monos.append([pointouts.resids()[i]-1 for i in range(len(whichlayer)) if whichlayer[i] == 0])
 		monos.append([pointouts.resids()[i]-1 for i in range(len(whichlayer)) if whichlayer[i] == 1])
+		#---monolayer rerack hack if some residue IDs are missing
+		#---Nb this may affect the tilter, mesher, identify_residues, and batch_gr functions so beware
+		if len(monos[0]+monos[1]) - 1 != max(monos[0]+monos[1]):
+			print 'warning: resorting the monolayer indices because there is a mismatch'
+			reracker = list(sort(monos[0]+monos[1]))	
+			monos = [[reracker.index(i) for i in monos[m]] for m in range(2)]
 		self.monolayer_residues = monos
 		if len(monos[0]) != len(monos[1]):
 			print 'warning: there is a difference in the number of lipids per monolayer'
