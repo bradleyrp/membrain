@@ -97,13 +97,14 @@ if dotest == 'v2002.t3.t4.v614':
 	analysis_name = 'v2002.t3.t4.v614'
 	#---load colors in the same order as analyses_names
 	clist = [(brewer2mpl.get_map('Set1', 'qualitative', 8).mpl_colors)[i] for i in [0,2,1,3,4,5,6,7,]]
-	routine = ['load','calc','plot1d','plot2d','plotphase'][1:3]
-	routine = ['hyposweep']
-	#---details for the hypothesis sweep
-	index_md = 0
-	hypo_list = [[i,1./2,1./2,10,10,0] for i in arange(0.1,1.0,0.05)]
-	hypo_list = [[0.6,1./2,1./2,i,i,0] for i in range(20)+list(arange(30,100,10))]
-	hypo_list = [[0.6,i,j,14,14,0] for i in arange(0,1,0.05) for j in arange(0,1,0.05)]
+	routine = ['load','calc','plot1d','plot2d','plotphase','hyposweep'][1:3]
+	if 'hyposweep' in routine:
+		index_md = 0
+		hypo_list = [[i,1./2,1./2,10,10,0] for i in arange(0.1,1.0,0.05)]
+		hypo_list = [[0.6,1./2,1./2,i,i,0] for i in range(20)+list(arange(30,100,10))]
+		hypo_list = [[0.6,i,j,14,14,0] for i in arange(0,1,0.05) for j in arange(0,1,0.05)]
+		hypo_list = [[0.6,i,j,14,14,0] for i in arange(0,1,0.05) for j in arange(0,1,0.05)]
+		hypo_list = [[0.6,1./2,1./2,i*j,i,pi/4] for j in [1,2,4,8,10] for i in list(arange(2,20,2))]
 elif dotest == 'v2002.t2.t1':
 	analyses_names = ['v2002-t2','v2002-t1']
 	plot_reord = ['v2002-t1','v2002-t2']
