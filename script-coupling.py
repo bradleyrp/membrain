@@ -80,7 +80,7 @@ analysis_descriptors = {
 		'end':None,
 		'nbase':None,
 		'hascurv':True,
-		'hypo':[2*0.0016915924011696797, 0.5223236432154279, 0.52113450910578785, 2*13.335922300627848, 2*14.194708931629373, -6030.3619185560674],
+		'hypo':[0.005,1./2,1./2,5,5,0],
 		'plot_ener_err':True,
 		'plotqe':True,
 		'removeavg':False,
@@ -90,24 +90,31 @@ analysis_descriptors = {
 #---analyses
 dotest = 'v2002.t3.t4.v614'
 if dotest == 'v2002.t3.t4.v614':
-	analyses_names = ['v614','v2002-t4','v2002-t3']
+	analyses_names = ['v614','v2002-t3']
+	#---Nb I think 'v2002-t3' is missing c0s in the mset or they are zeros everywhere
 	#---reverse order of importance for the 1D spectrum plot
-	plot_reord = ['v2002-t4','v2002-t3','v614']
-	match_scales = ['v614','v2002-t4']
-	analysis_name = 'v2002.t3.t4.v614'
+	plot_reord = ['v2002-t3','v614']
+	match_scales = ['v614','v2002-t3']
+	analysis_name = 'v2002.t3.v614'
 	#---load colors in the same order as analyses_names
 	#---previous v614 hypo [0.005,2./5,2./5,10,10,0]
-	#---hypo from the failed correlation question [0.0016915924011696797, 0.5223236432154279, 0.52113450910578785, 13.335922300627848, 14.194708931629373, -6030.3619185560674]
+	#---hypo from the failed correlation question 
+	#[0.00169,0.52232,0.52113,13.33592,14.19470,-6030.36191]
 	clist = [(brewer2mpl.get_map('Set1', 'qualitative', 8).mpl_colors)[i] for i in [0,2,1,3,4,5,6,7,]]
 	routine = ['load','calc','plot1d','plot2d','plotphase','hyposweep'][1:3]
 	index_md = 0
-	hypo = [1.69159240e-03,   3.42705966e+02, 3.41925754e+02,   1.33359223e+01,   1.41947089e+01, -6.03036192e+03]
 	if 'hyposweep' in routine:
 		hypo_list = [[i,1./2,1./2,10,10,0] for i in arange(0.1,1.0,0.05)]
 		hypo_list = [[0.6,1./2,1./2,i,i,0] for i in range(20)+list(arange(30,100,10))]
 		hypo_list = [[0.6,i,j,14,14,0] for i in arange(0,1,0.05) for j in arange(0,1,0.05)]
 		hypo_list = [[0.6,i,j,14,14,0] for i in arange(0,1,0.05) for j in arange(0,1,0.05)]
 		hypo_list = [[0.6,1./2,1./2,i*j,i,pi/4] for j in [1,2,4,8,10] for i in list(arange(2,20,2))]
+		hypo_list = [[i,cx,cy,sig1,sig2,0] 
+			for cx in [0.5] 
+			for cy in [0.5] 
+			for sig1 in range(1,10+1,2) 
+			for sig2 in range(1,10+1,2)
+			for i in arange(0.4,0.04,-0.1)]
 elif dotest == 'v2002.t2.t1':
 	analyses_names = ['v2002-t2','v2002-t1']
 	plot_reord = ['v2002-t1','v2002-t2']
@@ -359,7 +366,7 @@ def spectrum_summary(hypotext=False):
 			for t in ([0,1,2,3] 
 			if (analysis_descriptors[k])['hascurv'] else [0])]) for k in analyses_names])))
 	#---fix the limits for now
-	axl.set_ylim((10**-11,10**0))
+	#axl.set_ylim((10**-11,10**0))
 	hypo_suffix = '' if not hypo else '-hypo-'+str(hypo[0])+'-'+str(hypo[1])+'-'+str(hypo[2])+'-'+\
 		str(hypo[3])+'-'+str(hypo[4])+'-'+str(hypo[5])
 	if hypotext:
@@ -403,7 +410,8 @@ if 'load' in routine or msets == []:
 				getgrid = array([[[i,j] for j in linspace(0,vecs[1],n)] for i in linspace(0,vecs[0],m)])
 				#---convert to angstroms
 				params = [0,hypo[0]/10.,vecs[0]*hypo[1],vecs[1]*hypo[2],hypo[3]*10.,hypo[4]*10.,hypo[5]]
-				c0hypo = array([[gauss2d(params,getgrid[i,j,0],getgrid[i,j,1]) for j in range(n)] for i in range(m)])
+				c0hypo = array([[gauss2d(params,getgrid[i,j,0],getgrid[i,j,1]) for j in range(n)] 
+					for i in range(m)])
 				collect_c0s.append([c0hypo for i in range(len(mset.surf))])
 			else:
 				collect_c0s.append([])
@@ -412,7 +420,7 @@ if 'load' in routine or msets == []:
 			mset = unpickle(pickles+locate)
 			collect_c0s.append(mset.getdata('c0map').data)
 			msets.append(mset)
-
+####### c0 1/nm * 1/10
 #---calculate mode couplings
 if 'calc' in routine:
 	#---match mesoscale length scales to an MD simulation
@@ -432,10 +440,10 @@ if 'calc' in routine:
 		msc = ModeCouple()
 		msc.calculate_mode_coupling(msets[m],collect_c0s[m])
 		mscs.append(msc)
-	hypo = (analysis_descriptors['v614'])['hypo']
-	spectrum_summary(hypotext=True)
+	#hypo = (analysis_descriptors['v614'])['hypo']
+	spectrum_summary(hypotext=False)
 		
-#---calculate mode couplings
+#---calculate mode couplings according to testable hypotheses
 if 'hyposweep' in routine:
 	#---match mesoscale length scales to an MD simulation
 	if match_scales != None:
@@ -462,7 +470,7 @@ if 'hyposweep' in routine:
 		m,n = mset.griddims
 		getgrid = array([[[i,j] for j in linspace(0,vecs[1],n)] for i in linspace(0,vecs[0],m)])
 		#---convert to angstroms
-		params = [0,hypo[0]/10.,vecs[0]*hypo[1],vecs[1]*hypo[2],hypo[3]*10.,hypo[4]*10.,hypo[5]]
+		params = [0,hypo[0],vecs[0]*hypo[1],vecs[1]*hypo[2],hypo[3]*10.,hypo[4]*10.,hypo[5]]
 		c0hypo = array([[gauss2d(params,getgrid[i,j,0],getgrid[i,j,1])
 			for j in range(n)] for i in range(m)])
 		mscs[index_md].calculate_mode_coupling(msets[index_md],[c0hypo for i in range(len(mset.surf))])

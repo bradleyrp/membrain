@@ -1,71 +1,89 @@
-#!/usr/bin/python -i
+#!/usr/bin/python
 
 from membrainrunner import *
+execfile('locations.py')
 
-import numpy as N
-import pylab
-from scipy.optimize import curve_fit
-from numpy import array
-from scipy.optimize import leastsq
-import os
+from scipy.spatial.distance import *
 
 #---PARAMETERS
 #-------------------------------------------------------------------------------------------------------------
 
-#---settings
-skip = 1
-framecount = None
-location = ''
-execfile('locations.py')
+#---selections
+sel_cgmd_surfacer = ['name PO4 or name POG','name C2A']
+director_cgmd = ['name PO4','name C4A','name C4B']
+selector_cgmd = 'name PO4'
+cgmd_protein = 'name BB'
 
-#---parameters
-height_direction = 1
-cutoff_distance = 5.
-#make_figs = False
-'''
-#---analysis plan
-analysis_plan = slice(-1,None)
-analysis_descriptors = [
-	('pkl.structures.membrane-v701.md.part0003.60000-160000-200.pkl',slice(None),None,''),
-	('pkl.structures.membrane-v700.md.part0002.100000-200000-200.pkl',slice(None),None,''),
-	('pkl.structures.membrane-v612-stress.md.part0003.pkl',slice(None),None,''),
-	('pkl.structures.membrane-v614-stress.md.part0002.rerun.pkl',slice(None),None,''),
-	('pkl.structures.membrane-v550.md.part0006.300000-400000-200.pkl',slice(None),
-		'pkl.structures.membrane-v614-stress.md.part0002.rerun.pkl','.prot-v614'),
-	('pkl.structures.membrane-v550.md.part0006.300000-400000-200.pkl',slice(None),
-		'pkl.structures.membrane-v700.md.part0002.100000-200000-200.pkl','.prot-v700'),
-	('pkl.structures.membrane-v612-stress.md.part0003.pkl',slice(None),
-		'pkl.structures.membrane-v614-stress.md.part0002.rerun.pkl','.prot-v614'),]
-'''		
 #---possible analyses
 analysis_descriptors = {
 	'v614-120000-220000-200':
 		{'sysname':'membrane-v614','sysname_lookup':None,
-		'director':director_cgmd,'selector':selector_cgmd,'protein_select':cgmd_protein,
-		'trajsel':'s9-lonestar/md.part0004.120000-220000-200.xtc'},
-	'v700-500000-600000-200':
-		{'sysname':'membrane-v700','sysname_lookup':None,
-		'director':director_cgmd,'selector':selector_cgmd,'protein_select':cgmd_protein,
-		'trajsel':'u1-lonestar-longrun/md.part0009.500000-700000-200.xtc',
-		'timeslice':[500000,600000,200]},
-	'v701-60000-160000-200':
-		{'sysname':'membrane-v701','sysname_lookup':None,
-		'director':director_cgmd,'selector':selector_cgmd,'protein_select':cgmd_protein,
-		'trajsel':'s8-lonestar/md.part0003.60000-160000-200.xtc'},
-	'v612-75000-175000-200':
-		{'sysname':'membrane-v612','sysname_lookup':None,
-		'director':director_cgmd,'selector':selector_cgmd,'protein_select':cgmd_protein,
-		'trajsel':'t4-lonestar/md.part0007.75000-175000-200.xtc'},
-	'v550-4000000-500000-160':
-		{'sysname':'membrane-v550','sysname_lookup':None,
-		'director':director_cgmd,'selector':selector_cgmd,'protein_select':None,
-		'trajsel':'v1-lonestar/md.part0010.400000-500000-160.xtc'},
-	'v550-300000-400000-200':
-		{'sysname':'membrane-v550','sysname_lookup':None,
-		'director':director_cgmd,'selector':selector_cgmd,'protein_select':None,
-		'trajsel':'s0-trajectory-full/md.part0006.300000-400000-200.xtc'},
-		}	
+		'trajsel':'s9-lonestar/md.part0004.120000-220000-200.xtc'}}
+routine = ['topogareas']
+analysis_names = ['v614-120000-220000-200']
 
+#---parameters
+binwid = 5.
+
+#---MAIN
+#-------------------------------------------------------------------------------------------------------------
+
+#---load
+if 'msets' not in globals():
+	msets = []
+	topogareas = []
+	for aname in analysis_names:
+		for i in analysis_descriptors[aname]: vars()[i] = (analysis_descriptors[aname])[i]
+		msetfile = 'pkl.structures.'+specname_guess(sysname,trajsel)+'.pkl'
+		msets.append(unpickle(pickles+msetfile))
+		topogarea = unpickle(pickles+'pkl.topography_transform.'+specname_guess(sysname,trajsel)+'.pkl')
+		if topogarea == None:
+			print 'status: generating topography_transform data'
+			mset = msets[-1]
+			tilefiltdat = []
+			for fr in range(len(mset.surf)):
+				print fr
+				protpts = mset.protein[fr][:,:2]
+				surfpts = mset.wrappbc(mset.unzipgrid(array(mset.surf[fr]),vecs=mset.vec(0)),
+					vecs=mset.vec(fr),mode='nine')
+				cd = scipy.spatial.distance.cdist(protpts,surfpts[:,:2])
+				rawdat = array([np.min(cd,axis=0),surfpts[:,2]]).T
+				tilefiltdat.append(rawdat)
+			print 'status: pickling the result'
+			result_data = MembraneData('topography_transform')
+			result_data.data = array(array(tilefiltdat))
+			for i in analysis_descriptors[aname]: 
+				result_data.addnote([i,(analysis_descriptors[aname])[i]])
+			pickledump(result_data,'pkl.topography_transform.'+specname_guess(sysname,trajsel)+'.pkl',
+				directory=pickles)
+			topogareas.append(result_data.data)
+		else:
+			print 'status: pulling topography_transform data'
+			topogareas.append(topogarea.data)
+			
+#---compute tilefiltered areas
+if 'topogareas' in routine:
+	for m in [analysis_names.index(aname) for aname	in analysis_names]:
+		a = analysis_names[m]
+		for i in analysis_descriptors[a]: vars()[i] = (analysis_descriptors[a])[i]
+		m = analysis_names.index(a)
+		mset = msets[m]
+		topogarea = topogareas[m]
+		cutoff = min(mean(mset.vecs,axis=0)[:2])
+		if 'areacurves' not in globals():
+			areacurves = []
+			for rawdat in topogarea:
+				areacurves.append([float(sum(rawdat[rawdat[:,0]<i,1]>0.))/sum(rawdat[:,0]<i) 
+					for i in arange(binwid,cutoff,binwid)])
+			areacurves = array(areacurves)
+		fig = plt.figure()
+		ax = plt.subplot(111)
+		ax.plot(arange(binwid,cutoff,binwid),mean(areacurves,axis=0))
+		ax.axhline(y=0,linewidth=2, color='k')
+		ax.fill_betweenx(mean(areacurves,axis=0)-std(areacurves,axis=0),
+			mean(areacurves,axis=0)+std(areacurves,axis=0),facecolor='b')
+		plt.show()
+		
 #---FUNCTIONS
 #-------------------------------------------------------------------------------------------------------------
 
