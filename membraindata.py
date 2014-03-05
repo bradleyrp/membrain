@@ -65,8 +65,13 @@ class MembraneData:
 		#---type: c0map holds data in stressmap pickles after integrating the voxel-wise stress tensors
 		elif self.calctype == 'c0map':
 			self.struct = {'frame':0}
+		#---type: topography_transform holds an array of minimum distance vs surface point height
+		#---Nb this is an alternative to the topographycorrelate class
+		elif self.calctype == 'topography_transform':
+			self.struct = {'frame':0}
 		#---type: ionskate for storing ice-skating ion MSD decompositions
 		#---Nb the mastermsd_zones array is very jagged so easy lookups might not work
+		#---Nb this was basically scrapped due to memory issues
 		elif self.calctype == 'ionskate':
 			self.struct = {'type':0,'zone':1,'ion':2,'deltat':3,'start_frame':4}
 			self.struct_opts = {'type': {'mastermsd_zones':0,'distsxy':1,'distsz':2}}
