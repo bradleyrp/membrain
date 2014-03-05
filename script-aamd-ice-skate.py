@@ -11,20 +11,21 @@ from mpl_toolkits.axes_grid1 import make_axes_locatable
 #---Settings
 #-------------------------------------------------------------------------------------------------------------
 
-#---possible analyses
 analysis_descriptors = {
-	'v511-30000-80000-100':
-		{'sysname':'membrane-v511',
-		'sysname_lookup':'membrane-v511-ions',
-		'trajsel':'s6-kraken-md.part0009.30000-80000-100.ions.xtc',
-		'structure_pkl':
-			'pkl.structures.membrane-v511.a2-surfacer.s6-kraken-md.part0009.30000-80000-100.pkl',
-		'ionname':'Cal'}}
-analysis_names = ['v511-30000-80000-100']
-routine = ['compute','computexyz','postproc'][1:]
+'v530-30000-100000-100':
+		{'sysname':'membrane-v530',
+		'sysname_lookup':'membrane-v530-ions',
+		'trajsel':'u5-sim-trestles-md.part0006.30000-100000-100.ions.xtc',
+	'structure_pkl':
+			'pkl.structures.membrane-v530.a4-surfacer.u5-sim-trestles-md.part0006.30000-100000-100.pkl',
+		'ionname':'NA'}}
+analysis_names = ['v530-30000-100000-100']
+
+
+routine = ['compute','postproc','computexyz',][0:2]
 
 #---method
-upto = 50 #---how far to only look at the diffusion curves
+upto = 500 #---how far to only look at the diffusion curves
 timelimit = 3*10**2 #---maximum ps for fitting which depends on occupancy because displacements shrink
 occupancy = 1. #---occupancy rate for consideration of the displacement
 bwid = 5 #---angstrom width of slices where default is 10 and zonesub must be none
@@ -63,7 +64,8 @@ if 'compute' in routine or 'computexyz' in routine or 'mastermsd_zones' not in g
 			ionspos.append(ion_select.coordinates())
 			clock.append(mset.universe.trajectory[fr].time)
 		vecs=mean(mset_surf.vecs,axis=0)
-		ionspos = array(ionspos)[:-1]
+#		ionspos = array(ionspos)[:-1] # Maybe not necessary if the times match?
+		print len(ionspos)
 		ionstraj = []
 		for ind in range(shape(ionspos)[1]):
 			course = array(ionspos)[:,ind]
@@ -153,7 +155,7 @@ if 0: plt.grid(True);plt.hist(array(roundz).flatten(),range=(0,30),bins=30);plt.
 
 #---plotting routine
 makeplots = ['panel','calc_diffusion','diffusion_summary','all_raw_msds','mode_diffusion',
-	'all_raw_msds_xyz'][-1:]
+	'all_raw_msds_xyz'][1:]
 
 #---postprocess and plot
 if 'postproc' in routine:
@@ -181,7 +183,6 @@ if 'postproc' in routine:
 			zone_to_slice = [(i-cslice)+nzones*(-1 if (i-cslice)>(nzones/2) else 0) for i in range(nzones)]
 			#---if no subsets, just assume 1 nm bin widths
 			plot_slices = [-6,-5,-4,-3,-2,2,3,4,5,6]
-			plot_zones = [zone_to_slice.index(i) for i in plot_slices]
 		else:
 			zone_to_slice = [float(i-cslice)*bwid/10. for i in zonesub]
 			plot_slices = [-11,-10,-9,-8,-7,-6,-5,-4,-3,3,4,5,6,7,8,9,10,11]
@@ -399,12 +400,13 @@ if 'postproc' in routine:
 		allrawcurves = array([mean(distsxyz[i],axis=0) for i in range(nframes)]).T
 		for c in range(len(allrawcurves)):
 			curv = allrawcurves[c]
-			ax.plot(times,curv,c=clrs[c%len(clrs)])
+			ax.plot(times,curv[0:upto],c=clrs[c%len(clrs)]) # It should not be necessary to fix this to upto.
 		ax.set_xscale('log')
 		ax.set_yscale('log')
 		ax.set_ylim((10**-1,10**6))
-		plt.savefig(pickles+'fig-'+sysname.split('-')[-1]+'-iceskate-msd-xyz.png',
-			dpi=300,bbox_inches='tight')
+		plt.show()
+#		plt.savefig(pickles+'fig-'+sysname.split('-')[-1]+'-iceskate-msd-xyz.png',
+#			dpi=300,bbox_inches='tight')
 		plt.clf()
 		plt.close()
 		
