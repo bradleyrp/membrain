@@ -28,6 +28,13 @@ sel_aamd_surfacer = ['name P','(name C2 and not resname CHL1)']
 cgmd_protein = 'name BB'
 
 #---possible analyses
+#analysis_descriptors = {
+#	'v511-30000-80000-100':
+#		{'sysname':'membrane-v511',
+#		'sysname_lookup':'membrane-v511-atomP',
+#		'director':director_aamd_symmetric,'selector':selector_aamd_symmetric,'protein_select':None,
+#		'trajsel':'s6-kraken-md.part0009.30000-80000-100.atomP.xtc'}}
+#analysis_names = ['v511-30000-80000-100']
 analysis_descriptors = {
 	'v530-30000-100000-100':
 		{'sysname':'membrane-v530',
