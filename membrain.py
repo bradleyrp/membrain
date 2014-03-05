@@ -1135,6 +1135,6 @@ def unpickle(filename):
 		fp.close()
 		return x
 	else:
-		print 'error: file does not exist'
+		print 'status: file does not exist'
 		return
 	

@@ -22,7 +22,9 @@ from mpl_toolkits.mplot3d import Axes3D
 
 #---Import libraries
 import numpy.polynomial
-from mayavi import mlab
+
+#---RPB disabled mayavi because the error messages were irritating
+#---Nb run "from mayavi import mlab" to use meshplot
 
 #---Color definitions
 import brewer2mpl
