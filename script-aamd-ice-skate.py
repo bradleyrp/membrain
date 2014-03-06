@@ -12,6 +12,14 @@ from mpl_toolkits.axes_grid1 import make_axes_locatable
 #-------------------------------------------------------------------------------------------------------------
 
 analysis_descriptors = {
+	'v531-20000-62000-100':
+		{'sysname':'membrane-v531',
+		'sysname_lookup':'membrane-v531-ions',
+		'trajsel':'s4-sim-trestles-md.part0007.20000-62000-100.ions.xtc',
+		'structure_pkl':
+			'pkl.structures.membrane-v531.a6-surfacer.s4-sim-trestles-md.part0007.20000-62000-100.pkl',
+		'ionname':'MG'},
+
 	'v530-30000-100000-100':
 		{'sysname':'membrane-v530',
 		'sysname_lookup':'membrane-v530-ions',
@@ -26,8 +34,8 @@ analysis_descriptors = {
 		'structure_pkl':
 			'pkl.structures.membrane-v511.a2-surfacer.s6-kraken-md.part0009.30000-80000-100.pkl',
 		'ionname':'Cal'}}
-analysis_names = ['v530-30000-100000-100']
-routine = ['compute','postproc','computexyz',][1:2]
+analysis_names = ['v531-20000-62000-100']
+routine = ['compute','postproc','computexyz',][0:2]
 
 #---method parameters
 upto = 500 #---how far to only look at the diffusion curves

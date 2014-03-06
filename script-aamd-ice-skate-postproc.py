@@ -17,6 +17,8 @@ mpl.rcParams['ytick.major.pad'] = 8
 
 clrs = [brewer2mpl.get_map('paired','qualitative',4).mpl_colors[i] for i in range(4)]
 
+plt.grid(True);plt.hist(array(roundz).flatten(),range=(0,nzones),bins=nzones);plt.show()
+
 fig = plt.figure(figsize=(11,8.5))
 gs = gridspec.GridSpec(1,1,wspace=0.0,hspace=0.05)
 ax = fig.add_subplot(gs[0])
