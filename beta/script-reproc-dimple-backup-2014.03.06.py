@@ -15,7 +15,6 @@ framecount = None
 location = ''
 execfile('locations.py')
 
-'''
 import matplotlib.gridspec as gridspec
 which_brewer_colors = [0,1,2,3,4,5,6,7]
 clrs = [brewer2mpl.get_map('paired','qualitative',9).mpl_colors[i] for i in which_brewer_colors]
@@ -23,7 +22,7 @@ clrs2 = brewer2mpl.get_map('Set1', 'qualitative', 5).mpl_colors
 mpl.rc('text.latex', preamble='\usepackage{sfmath}')
 mpl.rcParams['axes.linewidth'] = 2.0
 mpl.rcParams.update({'font.size': 14})
-'''
+
 analysis_descriptors = [
 	('pkl.dimple.v614-stress.md.part0002.rerun.pkl',(clrs[0],clrs[1]),
 		r'$\textbf{{ENTH}\ensuremath{\times}4}$',1,None),
@@ -80,14 +79,6 @@ do_errorlook_sigma = False
 do_sigma_vs_hmax = False
 do_resid_1d = False
 do_pubplot = False
-
-do_stacked_plot = False
-do_hmax_vs_sigmas = False
-do_errorlook = False
-do_errorlook_sigma = False
-do_sigma_vs_hmax = False
-do_resid_1d = False
-do_pubplot = False
 		
 #---pre-made analysis routines
 plotspecs = 'enthpub'
@@ -129,45 +120,6 @@ sigmamax = 30
 which_orders = [2]
 which_orders_extents = 2
 
-analysis_descriptors = {
-	'v614-120000-220000-200':
-		{'sysname':'membrane-v614','sysname_lookup':None,
-		'trajsel':'s9-lonestar/md.part0004.120000-220000-200.xtc',
-		'label':r'$\mathrm{{ENTH}\ensuremath{\times}4}$',
-		'nprots':4,
-		'whichframes':slice(None,None),
-		'protein_pkl':None,
-		'ccodes':(clrs[0],clrs[1]),
-		'fillcode':1,
-		},
-	'v612-75000-175000-200':
-		{'sysname':'membrane-v612','sysname_lookup':None,
-		'trajsel':'t4-lonestar/md.part0007.75000-175000-200.xtc',
-		'label':r'$\mathrm{{ENTH}\ensuremath{\times}1}$',
-		'nprots':1,
-		'protein_pkl':None,
-		'whichframes':slice(None,None),
-		'ccodes':(clrs[0],clrs[1]),
-		'fillcode':1},
-	'v550-400000-500000-160':
-		{'sysname':'membrane-v550','sysname_lookup':None,
-		'trajsel':'s0-trajectory-full/md.part0006.300000-400000-200.xtc',
-		'label':r'$\mathrm{control}$',
-		'nprots':1,
-		'whichframes':slice(0,500),
-		'ccodes':(clrs[0],clrs[1]),
-		'fillcode':1,
-		'protein_pkl':'pkl.structures.membrane-v612.t4-lonestar.md.part0007.75000-175000-200.pkl',
-		'custom_protein_shifts':['peak','valley']}}
-analysis_names = ['v614-120000-220000-200','v612-75000-175000-200','v550-400000-500000-160']
-plot_reord = analysis_names
-routine = ['enth_pubplot2']
-
-'''
-('pkl.dimple.v614-stress.md.part0002.rerun.pkl',(clrs[0],clrs[1]),
-	r'$\textbf{{ENTH}\ensuremath{\times}4}$',1,None),
-'''
-
 #---FUNCTIONS
 #-------------------------------------------------------------------------------------------------------------
 
@@ -184,85 +136,12 @@ def gauss2d(params,x,y):
 #-------------------------------------------------------------------------------------------------------------
 
 #---load
-if 'results_stack' not in globals():
-	results_stack = []
-	for aname in analysis_names:
-		for i in analysis_descriptors[aname]: vars()[i] = (analysis_descriptors[aname])[i]
-		results_stack.append(unpickle(pickles+'pkl.dimple.'+specname_guess(sysname,trajsel)+'.pkl'))
-
-		#ccodes = analyses[p][1]
-		#name = analyses[p][2]
-		#fillcode = analyses[p][3]
-
-
-#---go time
-if 1:
-	fig = plt.figure()
-	gs00 = gridspec.GridSpec(len(analysis_names),1)
-	maxpeak = 0
-	for aname in plot_reord:
-		for i in analysis_descriptors[aname]: vars()[i] = (analysis_descriptors[aname])[i]
-		anum = analysis_names.index(aname)
-		pnum = plot_reord.index(aname)
-		thisaxis = fig.add_subplot(gs00[anum])
-		expected_direction = results_stack[anum][0].notes[([i[0] 
-			for i in results_stack[anum][0].notes].index('expected_direction'))][1]
-		order = ((0,1,2) if expected_direction == 1 else (1,0,2))
-		meanslist = [0,0,0]
-		valid_frames = [0,0,0]
-		for o in which_orders:
-			params = results_stack[anum][order[o]].get(['type','params'])
-			maxhs = results_stack[anum][order[o]].get(['type','maxhs'])
-			maxhxys = results_stack[anum][order[o]].get(['type','maxhxys'])
-
-			if do_resid_filter:
-				target_zones = results_stack[anum][order[o]].get(['type','target_zones'])
-				resids = [sqrt(mean([abs(gauss2d(params[0],i[0],i[1])-i[2])**2 for i in target_zones[j]])) 
-					for j in range(len(maxhs))]
-				validhis = [i for i in range(len(maxhs)) if (10*abs(maxhs[i]) > maxhfilter[0] 
-					and abs(10*maxhs[i]) < maxhfilter[1]) and resids[i] < resid_filter]
-			else:			
-				validhis = [i for i in range(len(maxhs)) if (10*abs(maxhs[i]) > maxhfilter[0] 
-					and abs(10*maxhs[i]) < maxhfilter[1])]
-			#---nanometer correction
-			validhs = [10*maxhs[i] for i in validhis]
-			hist0,binedge0 = numpy.histogram(validhs,bins=nbins,normed=False,weights=[1./len(validhs) 
-				for i in validhs],range=(minval,maxval))
-			mid0 = (binedge0[1:]+binedge0[:-1])/2
-			if o == 1:
-				#thisaxis.plot(mid0,hist0,'-',c=ccodes[o],alpha=1,lw=2,label=name)
-				thisaxis.plot(mid0,hist0,'-',c=ccodes[o],alpha=1,lw=2)
-			elif o == 0:
-				thisaxis.plot(mid0,hist0,'-',c=ccodes[o],alpha=1,lw=2)
-			else:
-				thisaxis.plot(mid0,hist0,'-',c=ccodes[1],alpha=1.,lw=2)
-			thisaxis.fill_between(mid0,hist0,[0 for i in mid0],facecolor=ccodes[1],
-				alpha=0.2,interpolate=True)
-			if max(hist0) > maxpeak: maxpeak = max(hist0)
-			meanslist[order[o]] = mean(validhs)
-			valid_frames[order[o]] = len(validhis)
-		'''
-		textline = r'$\left\langle H_{max}\right\rangle =\textrm{('+str('%3.3f'%meanslist[0])+','+\
-			str('%3.3f'%meanslist[1])+','+str('%3.3f'%meanslist[2])+')}$'+\
-			'\n['+str('%d'%valid_frames[0])+','+str('%d'%valid_frames[1])+\
-			','+str('%d'%valid_frames[2])+'] of '+str(len(maxhs))+'  '
-		thisaxis.text(0.98,0.9,textline,transform=thisaxis.transAxes,fontsize=12,
-			horizontalalignment='right',verticalalignment='top')
-		'''
-		thisaxis.set_title(label,rotation='horizontal')	
-		thisaxis.set_ylim(0,1.2*maxpeak)
-	plt.show()
-	
-
-
-
-
-
-#---OLD CODE?
-#-------------------------------------------------------------------------------------------------------------
+results_stack = []
+for pnum in range(len(analyses)):
+	results_stack.append(pickle.load(open(pickles+analyses[pnum][0],'r')))
 	
 #---publication-style plots, ENTH results
-if 'enth_pubplot2XXXXXXXXXXXXXXXXXXX' in routine:
+if do_pubplot:
 	#---this is custom plot for IET manuscript
 	#---note overall grid is really 3 rows (systems) and 5 columns (3 for curvs, 2 for area)
 
@@ -301,12 +180,9 @@ if 'enth_pubplot2XXXXXXXXXXXXXXXXXXX' in routine:
 	maxpeak = 0
 	for p in range(len(analyses)):
 		thisaxis = ax_hmax[p]
-
-		#ccodes = analyses[p][1]
-		#name = analyses[p][2]
-		#fillcode = analyses[p][3]
-		
-		
+		ccodes = analyses[p][1]
+		name = analyses[p][2]
+		fillcode = analyses[p][3]
 		expected_direction = results_stack[p][0].notes[([i[0] 
 			for i in results_stack[p][0].notes].index('expected_direction'))][1]
 		order = ((0,1,2) if expected_direction == 1 else (1,0,2))

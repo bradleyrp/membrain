@@ -19,6 +19,13 @@ analysis_descriptors = {
 		'structure_pkl':
 			'pkl.structures.membrane-v530.a4-surfacer.u5-sim-trestles-md.part0006.30000-100000-100.pkl',
 		'ionname':'NA'},
+	'v531-20000-62000-100':
+		{'sysname':'membrane-v531',
+		'sysname_lookup':'membrane-v531-ions',
+		'trajsel':'s4-sim-trestles-md.part0007.20000-62000-100.ions.xtc',
+		'structure_pkl':
+			'pkl.structures.membrane-v531.a6-surfacer.s4-sim-trestles-md.part0007.20000-62000-100.pkl',
+		'ionname':'MG'},
 	'v511-30000-80000-100':
 		{'sysname':'membrane-v511',
 		'sysname_lookup':'membrane-v511-ions',
@@ -26,7 +33,7 @@ analysis_descriptors = {
 		'structure_pkl':
 			'pkl.structures.membrane-v511.a2-surfacer.s6-kraken-md.part0009.30000-80000-100.pkl',
 		'ionname':'Cal'}}
-analysis_names = ['v530-30000-100000-100']
+analysis_names = ['v531-20000-62000-100']
 routine = ['compute','postproc','computexyz',][1:2]
 
 #---method parameters

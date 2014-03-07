@@ -57,3 +57,11 @@ name=membrane-v530-atomP
 struct=/home/rpb/compbio/membrane-v530/a2-surfacer/system.atomP.gro
 /home/rpb/compbio/membrane-v530/a2-surfacer/u5-sim-trestles-md.part0006.30000-100000-100.atomP.xtc
 
+name=membrane-v531-ions
+struct=/home/rpb/compbio/membrane-v531/a5-ions/system.ions.gro
+/home/rpb/compbio/membrane-v531/a5-ions/s4-sim-trestles-md.part0007.20000-62000-100.ions.xtc
+
+name=membrane-v531-atomP
+struct=/home/rpb/compbio/membrane-v531/a6-surfacer/system.atomP.gro
+/home/rpb/compbio/membrane-v531/a6-surfacer/s4-sim-trestles-md.part0007.20000-62000-100.atomP.xtc
+
