@@ -12,6 +12,15 @@ from mpl_toolkits.axes_grid1 import make_axes_locatable
 #-------------------------------------------------------------------------------------------------------------
 
 analysis_descriptors = {
+
+	'v514-10000-29000-100':
+		{'sysname':'membrane-v514',
+		'sysname_lookup':'membrane-v514-ions',
+		'trajsel':'s3-sim-compbio-md.part0004.10000-29000-100.ions.xtc',
+		'structure_pkl':
+			'pkl.structures.membrane-v514.a2-surfacer.s3-sim-compbio-md.part0004.10000-29000-100.pkl',
+		'ionname':'NA'},
+
 	'v532-20000-58000-100':
 		{'sysname':'membrane-v532',
 		'sysname_lookup':'membrane-v532-ions',
@@ -42,8 +51,8 @@ analysis_descriptors = {
 		'structure_pkl':
 			'pkl.structures.membrane-v511.a2-surfacer.s6-kraken-md.part0009.30000-80000-100.pkl',
 		'ionname':'Cal'}}
-analysis_names = ['v532-20000-58000-100']
-routine = ['compute','postproc','computexyz',][2]
+analysis_names = ['v514-10000-29000-100']
+routine = ['compute','postproc','computexyz',][0:2]
 
 #---method parameters
 upto = 500 #---how far to only look at the diffusion curves
@@ -55,6 +64,8 @@ if not flush_bin_edges: #---never define zonesub manually of using flush method
 	zonesub = [1,2,3,4,5,6,7,8,14,15,16,17,18,19,20,21] #---custom selection of zones
 	zonesub = None #---only set this manually if flush_bin_edges is turned off
 dtlimit = 350 #---time maximum for computation, above which we don't include the data to save memory
+dtlimit = nframes # v514 and v515 are short (18/20 ns) or so.
+# Therefore we should either fit all the data or find the place the curves start to trend down.
 ion_drop_thresh = 0.001 #---threshold ion occupancy for analysis
 sideslices = 6 #---number of slices to include on each side
 
@@ -214,10 +225,9 @@ if 'compute' in routine or 'computexyz' in routine or 'mastermsd_zones' not in g
 #-------------------------------------------------------------------------------------------------------------
 
 #---plotting routine
-#makeplots = ['panel','calc_diffusion','diffusion_summary','all_raw_msds','mode_diffusion',
-#	'all_raw_msds_xyz'][2:3]
 makeplots = ['panel','calc_diffusion','diffusion_summary','all_raw_msds','mode_diffusion',
-	'all_raw_msds_xyz'][5]
+	'all_raw_msds_xyz'][2:3]
+
 
 
 #---postprocess and plot

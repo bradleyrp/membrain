@@ -29,3 +29,11 @@ membrane-v532/a4-ions/s4-sim-trestles-md.part0007.20000-58000-100.ions.xtc
 name=membrane-v532-atomP
 struct=membrane-v532/a5-surfacer/system.atomP.gro
 membrane-v532/a5-surfacer/s4-sim-trestles-md.part0007.20000-58000-100.atomP.xtc
+
+name=membrane-v514-ions
+struct=membrane-v514/a1-ions/system.ions.gro
+membrane-v514/a1-ions/s3-sim-compbio-md.part0004.10000-29000-100.ions.xtc
+
+name=membrane-v514-atomP
+struct=membrane-v514/a2-surfacer/system.atomP.gro
+membrane-v514/a2-surfacer/s3-sim-compbio-md.part0004.10000-29000-100.atomP.xtc
