@@ -12,6 +12,14 @@ from mpl_toolkits.axes_grid1 import make_axes_locatable
 #-------------------------------------------------------------------------------------------------------------
 
 analysis_descriptors = {
+	'v532-20000-58000-100':
+		{'sysname':'membrane-v532',
+		'sysname_lookup':'membrane-v532-ions',
+		'trajsel':'s4-sim-trestles-md.part0007.20000-58000-100.ions.xtc',
+		'structure_pkl':
+			'pkl.structures.membrane-v532.a5-surfacer.s4-sim-trestles-md.part0007.20000-58000-100.pkl',
+		'ionname':'Cal'},
+		
 	'v531-20000-62000-100':
 		{'sysname':'membrane-v531',
 		'sysname_lookup':'membrane-v531-ions',
@@ -34,8 +42,8 @@ analysis_descriptors = {
 		'structure_pkl':
 			'pkl.structures.membrane-v511.a2-surfacer.s6-kraken-md.part0009.30000-80000-100.pkl',
 		'ionname':'Cal'}}
-analysis_names = ['v531-20000-62000-100']
-routine = ['compute','postproc','computexyz',][0:2]
+analysis_names = ['v532-20000-58000-100']
+routine = ['compute','postproc','computexyz',][2]
 
 #---method parameters
 upto = 500 #---how far to only look at the diffusion curves
@@ -93,6 +101,7 @@ if 'compute' in routine or 'computexyz' in routine or 'mastermsd_zones' not in g
 		ionstraj = []
 		for ind in range(shape(ionspos)[1]):
 			course = array(ionspos)[:,ind]
+#			course = course[2:,:] # Ugly hack not necessary for v532 -DRS
 			#---three-line handling PBCs
 			hoplistp = (course[1:]-course[:-1])>array(mset_surf.vecs)[1:]/2.
 			hoplistn = (course[:-1]-course[1:])>array(mset_surf.vecs)[1:]/2.
@@ -205,8 +214,11 @@ if 'compute' in routine or 'computexyz' in routine or 'mastermsd_zones' not in g
 #-------------------------------------------------------------------------------------------------------------
 
 #---plotting routine
+#makeplots = ['panel','calc_diffusion','diffusion_summary','all_raw_msds','mode_diffusion',
+#	'all_raw_msds_xyz'][2:3]
 makeplots = ['panel','calc_diffusion','diffusion_summary','all_raw_msds','mode_diffusion',
-	'all_raw_msds_xyz'][2:3]
+	'all_raw_msds_xyz'][5]
+
 
 #---postprocess and plot
 if 'postproc' in routine:
@@ -476,7 +488,7 @@ if 'postproc' in routine:
 		clrs = [brewer2mpl.get_map('paired','qualitative',12).mpl_colors[i] for i in range(12)]
 		fig = plt.figure()
 		ax = plt.subplot(111)
-		allrawcurves = array([mean(distsxyz[i],axis=0) for i in range(nframes)]).T
+		allrawcurves = array([mean(distsxyz[i],axis=0) for i in range(dtlimit)]).T
 		for c in range(len(allrawcurves)):
 			curv = allrawcurves[c]
 			ax.plot(times,curv[0:upto],c=clrs[c%len(clrs)]) # It should not be necessary to fix this to upto.

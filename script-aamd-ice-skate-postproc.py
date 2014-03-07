@@ -17,13 +17,12 @@ mpl.rcParams['ytick.major.pad'] = 8
 
 clrs = [brewer2mpl.get_map('paired','qualitative',4).mpl_colors[i] for i in range(4)]
 
-plt.grid(True);plt.hist(array(roundz).flatten(),range=(0,nzones),bins=nzones);plt.show()
-
 fig = plt.figure(figsize=(11,8.5))
 gs = gridspec.GridSpec(1,1,wspace=0.0,hspace=0.05)
 ax = fig.add_subplot(gs[0])
 
-allrawcurves = array([mean(distsxyz[i],axis=0) for i in range(nframes)]).T
+allrawcurves = array([mean(distsxyz[i],axis=0) for i in range(dtlimit)]).T
+times = [mean([clock[i+d]-clock[i] for i in range(nframes-d)]) for d in range(dtlimit)]
 fast = []
 slow = []
 for c in range(len(allrawcurves)):
@@ -57,7 +56,7 @@ index = pfinal[1]
 amp = 10.0**pfinal[0]
 print index, amp
 ax.plot(array(times)/1000., powerlaw(times, amp, index), c=clrs[3], lw=4, label='Power law fit, amplitude = %.2f, exponent = %.2f' %(amp,index))
-ax.plot(array(times)/1000., powerlaw(times, amp, float64(1.0)), c='k', lw=4, label='Power law fit, amplitude = %.2f (forced), exponent = %.2f' %(amp,index))
+#ax.plot(array(times)/1000., powerlaw(times, amp, float64(1.0)), c='k', lw=4, label='Power law fit, amplitude = %.2f (forced), exponent = %.2f' %(amp,index))
 #ax.set_ylim((10**-1,10**6))
 ax.grid(True)
 ax.legend(loc=2,fontsize=18)
@@ -75,6 +74,6 @@ yax.set_tick_params(pad=50)
 fig.text(0, 0.5, "MSD (nm$^2$)", rotation="vertical", va="center",fontsize=22)	
 gs.tight_layout(fig, rect=[0.03, 0.0, 1, 1]) # Leave space for the common y-label.
 #plt.show()
-#plt.savefig('/home/davids/Science/p1-bilayers/Analysis/Ion-diffusion/v511-MSD-slow-forcedfit.png',dpi=300)
+plt.savefig('/home/davids/repo-pickles/fig-v532-iceskate-powerlawfit.png',dpi=300)
 plt.clf()
 plt.close()
