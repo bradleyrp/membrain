@@ -12,13 +12,23 @@ from mpl_toolkits.axes_grid1 import make_axes_locatable
 #-------------------------------------------------------------------------------------------------------------
 
 analysis_descriptors = {
-	'v530-30000-100000-100':
-		{'sysname':'membrane-v530',
-		'sysname_lookup':'membrane-v530-ions',
-		'trajsel':'u5-sim-trestles-md.part0006.30000-100000-100.ions.xtc',
+
+	'v514-10000-29000-100':
+		{'sysname':'membrane-v514',
+		'sysname_lookup':'membrane-v514-ions',
+		'trajsel':'s3-sim-compbio-md.part0004.10000-29000-100.ions.xtc',
 		'structure_pkl':
-			'pkl.structures.membrane-v530.a4-surfacer.u5-sim-trestles-md.part0006.30000-100000-100.pkl',
+			'pkl.structures.membrane-v514.a2-surfacer.s3-sim-compbio-md.part0004.10000-29000-100.pkl',
 		'ionname':'NA'},
+
+	'v532-20000-58000-100':
+		{'sysname':'membrane-v532',
+		'sysname_lookup':'membrane-v532-ions',
+		'trajsel':'s4-sim-trestles-md.part0007.20000-58000-100.ions.xtc',
+		'structure_pkl':
+			'pkl.structures.membrane-v532.a5-surfacer.s4-sim-trestles-md.part0007.20000-58000-100.pkl',
+		'ionname':'Cal'},
+		
 	'v531-20000-62000-100':
 		{'sysname':'membrane-v531',
 		'sysname_lookup':'membrane-v531-ions',
@@ -26,6 +36,14 @@ analysis_descriptors = {
 		'structure_pkl':
 			'pkl.structures.membrane-v531.a6-surfacer.s4-sim-trestles-md.part0007.20000-62000-100.pkl',
 		'ionname':'MG'},
+
+	'v530-30000-100000-100':
+		{'sysname':'membrane-v530',
+		'sysname_lookup':'membrane-v530-ions',
+		'trajsel':'u5-sim-trestles-md.part0006.30000-100000-100.ions.xtc',
+		'structure_pkl':
+			'pkl.structures.membrane-v530.a4-surfacer.u5-sim-trestles-md.part0006.30000-100000-100.pkl',
+		'ionname':'NA'},
 	'v511-30000-80000-100':
 		{'sysname':'membrane-v511',
 		'sysname_lookup':'membrane-v511-ions',
@@ -33,8 +51,11 @@ analysis_descriptors = {
 		'structure_pkl':
 			'pkl.structures.membrane-v511.a2-surfacer.s6-kraken-md.part0009.30000-80000-100.pkl',
 		'ionname':'Cal'}}
-analysis_names = ['v531-20000-62000-100']
-routine = ['compute','postproc','computexyz',][1:2]
+analysis_names = ['v514-10000-29000-100']
+routine = ['compute','postproc','computexyz',][0:2]
+
+#---method parameters
+upto = 500 #---how far to only look at the diffusion curves
 
 #---method parameters
 upto = 500 #---how far to only look at the diffusion curves
@@ -46,6 +67,8 @@ if not flush_bin_edges: #---never define zonesub manually of using flush method
 	zonesub = [1,2,3,4,5,6,7,8,14,15,16,17,18,19,20,21] #---custom selection of zones
 	zonesub = None #---only set this manually if flush_bin_edges is turned off
 dtlimit = 350 #---time maximum for computation, above which we don't include the data to save memory
+dtlimit = nframes # v514 and v515 are short (18/20 ns) or so.
+# Therefore we should either fit all the data or find the place the curves start to trend down.
 ion_drop_thresh = 0.001 #---threshold ion occupancy for analysis
 sideslices = 6 #---number of slices to include on each side
 
@@ -92,6 +115,7 @@ if 'compute' in routine or 'computexyz' in routine or 'mastermsd_zones' not in g
 		ionstraj = []
 		for ind in range(shape(ionspos)[1]):
 			course = array(ionspos)[:,ind]
+#			course = course[2:,:] # Ugly hack not necessary for v532 -DRS
 			#---three-line handling PBCs
 			hoplistp = (course[1:]-course[:-1])>array(mset_surf.vecs)[1:]/2.
 			hoplistn = (course[:-1]-course[1:])>array(mset_surf.vecs)[1:]/2.
@@ -206,6 +230,8 @@ if 'compute' in routine or 'computexyz' in routine or 'mastermsd_zones' not in g
 #---plotting routine
 makeplots = ['panel','calc_diffusion','diffusion_summary','all_raw_msds','mode_diffusion',
 	'all_raw_msds_xyz'][2:3]
+
+
 
 #---postprocess and plot
 if 'postproc' in routine:
@@ -475,7 +501,7 @@ if 'postproc' in routine:
 		clrs = [brewer2mpl.get_map('paired','qualitative',12).mpl_colors[i] for i in range(12)]
 		fig = plt.figure()
 		ax = plt.subplot(111)
-		allrawcurves = array([mean(distsxyz[i],axis=0) for i in range(nframes)]).T
+		allrawcurves = array([mean(distsxyz[i],axis=0) for i in range(dtlimit)]).T
 		for c in range(len(allrawcurves)):
 			curv = allrawcurves[c]
 			ax.plot(times,curv[0:upto],c=clrs[c%len(clrs)]) # It should not be necessary to fix this to upto.

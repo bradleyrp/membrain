@@ -64,7 +64,7 @@ elif location == 'ds':
 	#---Nb: put system-specific commands here. 
 	basedir = '/home/davids/membrane-v5xx/'
 	locations = '/home/davids/membrain/locations-ds'
-	pickles = '/home/davids/worker/repo-pickles/'
+	pickles = '/home/davids/repo-pickles/'
 	plot_suppress = False
 	execfile('plotter.py')
 	#---plot commands previously found in plotter.py

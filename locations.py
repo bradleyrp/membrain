@@ -71,6 +71,11 @@ elif location == 'ds':
 	mpl.rc('font',**{'family':'sans-serif','sans-serif':['Helvetica']})
 	mpl.rc('text', usetex=True) 
 	mpl.rc('text.latex', preamble='\usepackage{sfmath}')
+	fsaxtext = 16
+	fsaxlabel = 16
+	fsaxticks = 16
+	fsaxtitle = 20
+	fsaxlegend = 14
 
 #---Load locations from the table-of-contents
 [systems,structures,trajectories] = parse_locations_file(basedir,locations)
