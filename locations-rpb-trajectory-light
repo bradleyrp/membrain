@@ -36,6 +36,14 @@ name=membrane-v532-headspan
 struct=membrane-v532-headspan/md.part0010.25500.gro
 membrane-v532-headspan/md.part0010.25500-27500-4.xtc
 
+name=membrane-v531-ions
+struct=membrane-v531/a5-ions/system.ions.gro
+membrane-v531/a5-ions/s4-sim-trestles-md.part0007.20000-62000-100.ions.xtc
+
+name=membrane-v531-atomP
+struct=membrane-v531/a6-surfacer/system.atomP.gro
+membrane-v531/a6-surfacer/s4-sim-trestles-md.part0007.20000-62000-100.atomP.xtc
+
 
 ########################################################
 
@@ -99,3 +107,4 @@ struct=/store-delta/compbio/membrane-v612-enthx1-12800/a1-stress-1.0-berendsen/s
 name=membrane-v550-stress
 struct=/store-delta/compbio/membrane-v550/u0-sim-copy/system-input.gro
 /store-delta/compbio/membrane-v550/u2-stress-1.0/md.part0008.rerun.trr
+

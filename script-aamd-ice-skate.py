@@ -12,7 +12,6 @@ from mpl_toolkits.axes_grid1 import make_axes_locatable
 #-------------------------------------------------------------------------------------------------------------
 
 analysis_descriptors = {
-
 	'v514-10000-29000-100':
 		{'sysname':'membrane-v514',
 		'sysname_lookup':'membrane-v514-ions',
@@ -20,7 +19,6 @@ analysis_descriptors = {
 		'structure_pkl':
 			'pkl.structures.membrane-v514.a2-surfacer.s3-sim-compbio-md.part0004.10000-29000-100.pkl',
 		'ionname':'NA'},
-
 	'v532-20000-58000-100':
 		{'sysname':'membrane-v532',
 		'sysname_lookup':'membrane-v532-ions',
@@ -28,7 +26,6 @@ analysis_descriptors = {
 		'structure_pkl':
 			'pkl.structures.membrane-v532.a5-surfacer.s4-sim-trestles-md.part0007.20000-58000-100.pkl',
 		'ionname':'Cal'},
-		
 	'v531-20000-62000-100':
 		{'sysname':'membrane-v531',
 		'sysname_lookup':'membrane-v531-ions',
@@ -36,7 +33,6 @@ analysis_descriptors = {
 		'structure_pkl':
 			'pkl.structures.membrane-v531.a6-surfacer.s4-sim-trestles-md.part0007.20000-62000-100.pkl',
 		'ionname':'MG'},
-
 	'v530-30000-100000-100':
 		{'sysname':'membrane-v530',
 		'sysname_lookup':'membrane-v530-ions',
@@ -51,8 +47,8 @@ analysis_descriptors = {
 		'structure_pkl':
 			'pkl.structures.membrane-v511.a2-surfacer.s6-kraken-md.part0009.30000-80000-100.pkl',
 		'ionname':'Cal'}}
-analysis_names = ['v514-10000-29000-100']
-routine = ['compute','postproc','computexyz',][0:2]
+analysis_names = ['v531-20000-62000-100']
+routine = ['postproc','computexyz',][0:1]
 
 #---method parameters
 upto = 500 #---how far to only look at the diffusion curves
@@ -67,8 +63,6 @@ if not flush_bin_edges: #---never define zonesub manually of using flush method
 	zonesub = [1,2,3,4,5,6,7,8,14,15,16,17,18,19,20,21] #---custom selection of zones
 	zonesub = None #---only set this manually if flush_bin_edges is turned off
 dtlimit = 350 #---time maximum for computation, above which we don't include the data to save memory
-dtlimit = nframes # v514 and v515 are short (18/20 ns) or so.
-# Therefore we should either fit all the data or find the place the curves start to trend down.
 ion_drop_thresh = 0.001 #---threshold ion occupancy for analysis
 sideslices = 6 #---number of slices to include on each side
 
@@ -115,7 +109,7 @@ if 'compute' in routine or 'computexyz' in routine or 'mastermsd_zones' not in g
 		ionstraj = []
 		for ind in range(shape(ionspos)[1]):
 			course = array(ionspos)[:,ind]
-#			course = course[2:,:] # Ugly hack not necessary for v532 -DRS
+			course = course[2:,:] # Ugly hack not necessary for v532 -DRS
 			#---three-line handling PBCs
 			hoplistp = (course[1:]-course[:-1])>array(mset_surf.vecs)[1:]/2.
 			hoplistn = (course[:-1]-course[1:])>array(mset_surf.vecs)[1:]/2.
@@ -124,6 +118,9 @@ if 'compute' in routine or 'computexyz' in routine or 'mastermsd_zones' not in g
 		ionstraj=array(ionstraj)
 		nions = len(ionstraj)
 		nframes = len(ionstraj[0])
+		if dtlimit > nframes:
+			dtlimit = nframes
+			print 'warning: dtlimit was higher than nframes so watch out for statistical anomalies'
 		#---specify zones
 		center = mean(mset_surf.surf_position)
 		cslice = int(round(center/bwid))
@@ -229,7 +226,7 @@ if 'compute' in routine or 'computexyz' in routine or 'mastermsd_zones' not in g
 
 #---plotting routine
 makeplots = ['panel','calc_diffusion','diffusion_summary','all_raw_msds','mode_diffusion',
-	'all_raw_msds_xyz'][2:3]
+	'all_raw_msds_xyz'][1:3]
 
 
 
@@ -321,6 +318,8 @@ if 'postproc' in routine:
 		#---fit to get diffusion rates
 		diffusexy = []
 		diffusez = []
+		#---temporary search for slow ion indices
+		filter_groups = []
 		for z in range(nzonessub):
 			print z
 			z0 = mastermsd_zones[z]
@@ -339,6 +338,7 @@ if 'postproc' in routine:
 				for i in range(dtlimit)]).T
 			dconstsxy = []
 			dconstsz = []
+			filter_group = []
 			if not all(allcurvesxy==0) and not all(allcurvesz==0):
 				for c in range(len(allcurvesxy)):
 					pair_diffuse = []					
@@ -350,10 +350,12 @@ if 'postproc' in routine:
 							pair_diffuse.append(bz)
 						else: pair_diffuse.append(-1)
 					if -1 not in pair_diffuse:
-						dconstsxy.append(pair_diffuse[0]/3./2)
-						dconstsz.append(pair_diffuse[1]/3./1)
+						dconstsxy.append(pair_diffuse[0]/2./2)
+						dconstsz.append(pair_diffuse[1]/2./1)
+						filter_group.append(c)
 			diffusexy.append(dconstsxy)
 			diffusez.append(dconstsz)
+			filter_groups.append(filter_group)
 	#---summary plot for comparing lateral and normal diffusion
 	if 'diffusion_summary' in makeplots:
 		print 'status: plotting diffusion rates'
@@ -525,13 +527,13 @@ if 'postproc' in routine:
 				curvfilt = array([times,curv]).T
 				fitlims = curvfilt[:,0] < timelimit
 				[bz,az] = numpy.polyfit(curvfilt[fitlims,0],curvfilt[fitlims,1],1)
-				diffusexy_raw.append(bz/3/2)
+				diffusexy_raw.append(bz/2/2)
 			diffusez_raw = []
 			for curv in allcurvesz[::1]:
 				curvfilt = array([times,curv]).T
 				fitlims = curvfilt[:,0] < timelimit
 				[bz,az] = numpy.polyfit(curvfilt[fitlims,0],curvfilt[fitlims,1],1)
-				diffusez_raw.append(bz/3/1)
+				diffusez_raw.append(bz/2/1)
 			diffusexy_raw = array(diffusexy_raw)
 			diffusez_raw = array(diffusez_raw)
 		print 'status: plotting raw diffusion rates'
@@ -644,4 +646,11 @@ if 'postproc' in routine:
 			ax.plot(times,allcurves[i],'r')
 		plt.show()
 		
-
+#---visualize the ion trajectories
+'''
+>>> meshpoints(ionstraj[297],scale_factor=[2. for i in range(len(ionstraj[297]))])
+>>> meshplot(mean(mset_surf.monolayer1,axis=0),vecs=mean(mset_surf.vecs,axis=0),show='surf')
+>>> meshplot(mean(mset_surf.monolayer2,axis=0),vecs=mean(mset_surf.vecs,axis=0),show='surf')
+meshpoints(ionstraj[261],scale_factor=[2. for i in range(len(ionstraj[261]))])
+meshpoints(ionspos[24],scale_factor=[2. for i in range(len(ionspos[24]))],color=(1,1,1))
+'''
