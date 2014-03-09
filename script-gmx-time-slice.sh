@@ -6,16 +6,16 @@ loc=$(pwd)
 tmpname=$(echo ${loc:$((${#masterdir}))})
 sysname=$(echo $tmpname | awk 'BEGIN { FS = "/" } ; { print $2}')
 timestepps=2
-slicestart=40000
-sliceend=90000
+slicestart=20000
+sliceend=62000
 sliceskip=100
 
 #---flags for subset of system
 subset=1
-subsetstring="keep 0\nr DOPC\nkeep 1\nq\n"
-subsetid=".dopc"
-sig="dopc"
-sysinputgro=../s3-start-to-lonestar/system-input.gro
+subsetstring="keep 0\na MG | a CL\nkeep 1\nq\n"
+subsetid=".ions"
+sig="ions"
+sysinputgro=../s4-sim-trestles/system-input.gro
 
 #-------------------------------------------------------------------------------------------------------------
 
@@ -81,15 +81,23 @@ for part in ${filelist[@]}; do
 	echo $part
 	tmpname=$(echo ${part:$((${#masterdir}+${#sysname}+2)):-4} | sed -ne 's/\//-/p')
 	if [[ -f $part ]]; then
+		echo ${part:0:-4}.edr
+		gmxcheck -e ${part:0:-4}.edr &> tmp2.log
+		start=$(sed -e 's/\r/\n/g' tmp2.log | awk '/Reading energy frame      0 time/ {print $6}')
+		echo $start
+		begintime=$(python -c "import sys;x=float(sys.argv[1]);z = int(float(sys.argv[3]));
+y = int(x/z)*z+((x-int(x/z)*z)>0)*z;print max([y,float(sys.argv[2])])" \
+			$start $slicestart $sliceskip)
 		echo "writing "$tmpname".xtc"
+		echo "starting at "$begintime
 		trjconv \
 			-f $part \
 			-s ${part:0:-4}".tpr" \
 			-o $tmpname".xtc" \
-			-b $slicestart \
+			-b $begintime \
 			-n index-$sig.ndx \
 			-e $sliceend \
-			-skip $(float_eval $sliceskip"/"$timestepps) \
+			-dt $sliceskip \
 			&> log-trjconv-$tmpname
 		filelist2+=($tmpname".xtc")
 	else
@@ -118,14 +126,17 @@ for part in ${filelist[@]}; do
 	echo $part
 	tmpname=$(echo ${part:$((${#masterdir}+${#sysname}+2)):-4} | sed -ne 's/\//-/p')
 	if [[ -f $part ]]; then
+		begintime=$(python -c "import sys;x=float(sys.argv[1]);z = int(float(sys.argv[3]));
+y = int(x/z)*z+((x-int(x/z)*z)>0)*z;print max([y,float(sys.argv[2])])" \
+$start $slicestart $sliceskip)
 		echo "writing "$tmpname".xtc"
 		echo -e "0\n" | trjconv \
 			-f $part \
 			-s ${part:0:-4}".tpr" \
 			-o $tmpname".xtc" \
-			-b $slicestart \
+			-b $begintime \
+			-dt $sliceskip \
 			-e $sliceend \
-			-skip $(float_eval $sliceskip"/"$timestepps) \
 			&> log-trjconv-$tmpname
 		filelist2+=($tmpname".xtc")
 	else

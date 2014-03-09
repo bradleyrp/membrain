@@ -65,6 +65,7 @@ class MembraneSet:
 		self.time_start = 0.0
 		self.time_total = 0.0
 		self.time_dt = 0.0
+		self.time_list = []
 		#---Surface heights on a grid
 		self.surf = []
 		self.surf_thick = []
@@ -125,6 +126,11 @@ class MembraneSet:
 			self.time_total = self.universe.trajectory.totaltime
 		if hasattr(self.universe.trajectory,'dt'):
 			self.time_dt = self.universe.trajectory.dt
+		print 'before'
+		if hasattr(self.universe,'trajectory'):
+			print 'inside'
+			self.time_list = [self.universe.trajectory[i].time 
+				for i in range(len(self.universe.trajectory))]
 		print 'status: the trajectory file has '+str(self.nframes)+' frames'
 
 	def load_points(self,xyzdir,nbase=0,start=None,end=None,
@@ -470,13 +476,13 @@ class MembraneSet:
 		#---Triangulate the surface on a regular grid
 		topmesh = self.makemesh(topxyzwrap,self.vec(frameno),self.griddims,method=interp)
 		botmesh = self.makemesh(botxyzwrap,self.vec(frameno),self.griddims,method=interp)
-		#---Convert from points in 3-space to heights on a grid
-		self.monolayer1.append(topmesh)
-		self.monolayer2.append(botmesh)
 		#---Take the average surface
 		#---Nb this is the location of the infamous transpose errors. Forgot to reverse order of list indices
 		topzip = self.rezipgrid(topmesh,frameno=frameno)
 		botzip = self.rezipgrid(botmesh,frameno=frameno)
+		#---Convert from points in 3-space to heights on a grid
+		self.monolayer1.append(array(topzip))
+		self.monolayer2.append(array(botzip))
 		surfz = [[1./2*(topzip[i][j]+botzip[i][j]) for j in range(self.griddims[1])] 
 			for i in range(self.griddims[0])]
 		if thick:
@@ -487,7 +493,7 @@ class MembraneSet:
 		surfz = surfz - mean(surfz)
 		self.surf.append(surfz)
 		self.surf_index.append(frameno)
-		self.surf_time.append(self.universe.trajectory.time)
+		self.surf_time.append(self.universe.trajectory[frameno].time)
 			
 	def triangulator(self,selector,start=None,end=None,skip=None,framecount=None,label=None,tesstype=None):
 		'''Triangulate the surface by lipid for the entire trajectory.'''
