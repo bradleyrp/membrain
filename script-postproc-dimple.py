@@ -92,7 +92,7 @@ cutoff_distance = 15.
 
 #---analysis plan
 analysis_descriptors = {
-'v614-120000-220000-200':
+	'v614-120000-220000-200':
 		{'sysname':'membrane-v614','sysname_lookup':None,
 		'trajsel':'s9-lonestar/md.part0004.120000-220000-200.xtc',
 		'label':r'$\mathrm{{ENTH}\ensuremath{\times}4}$',
@@ -110,6 +110,15 @@ analysis_descriptors = {
 		'whichframes':slice(None,None),
 		'expected_direction':1},
 	'v550-400000-500000-160':
+		{'sysname':'membrane-v550','sysname_lookup':None,
+		'trajsel':'s0-trajectory-full/md.part0006.300000-400000-200.xtc',
+		'label':r'$\mathrm{control}$',
+		'nprots':1,
+		'whichframes':slice(0,500),
+		'protein_pkl':'pkl.structures.membrane-v612.t4-lonestar.md.part0007.75000-175000-200.pkl',
+		'custom_protein_shifts':['peak','valley'],
+		'expected_direction':1},
+	'v614-??-???':
 		{'sysname':'membrane-v550','sysname_lookup':None,
 		'trajsel':'s0-trajectory-full/md.part0006.300000-400000-200.xtc',
 		'label':r'$\mathrm{control}$',

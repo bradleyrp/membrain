@@ -137,6 +137,7 @@ if 'msets' not in globals():
 #---compute tilefiltered areas
 if 'topogareas_singleplots' in routine:
 	pnum = 0
+	ncontrols = 0
 	npanels = sum([(1 if i == None else 3)
 		for i in [(analysis_descriptors[aname])['protein_traj'] for aname in analysis_names]])
 	if 'all_areacurves' not in globals(): all_areacurves = [[] for i in range(npanels)]
@@ -148,7 +149,9 @@ if 'topogareas_singleplots' in routine:
 		print aname
 		mset = msets[m]
 		if protein_traj == None: datlist = [topogareas[m]]
-		else: datlist = topogareas[m]
+		else: 
+			datlist = topogareas[m]
+			ncontrols += 1
 		for p in range(len(datlist)):
 			topogarea = datlist[p]
 			cutoff = min(mean(mset.vecs,axis=0)[:2])
@@ -174,7 +177,9 @@ if 'topogareas_singleplots' in routine:
 			ax.set_ylim((0,1.0))
 			#---plot details
 			ax.get_xaxis().set_major_locator(mpl.ticker.MaxNLocator(nbins=3,prune='both'))
-			ax.set_title(label,fontsize=fsaxlabel)
+			ax.set_title(label+('('+str(ncontrols)+')' if protein_traj != None else ''),
+				fontsize=fsaxlabel)
+			if protein_traj != None: ncontrols += 1
 			plt.setp(ax.get_xticklabels(),fontsize=fsaxlabel)
 			plt.setp(ax.get_yticklabels(),fontsize=fsaxlabel)
 			ax.set_xlabel(r'$r_{min}\:(\mathrm{nm})$',fontsize=fsaxlabel)

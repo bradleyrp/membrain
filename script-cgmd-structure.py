@@ -26,6 +26,10 @@ analysis_descriptors = {
 		{'sysname':'membrane-v614','sysname_lookup':None,
 		'director':director_cgmd,'selector':selector_cgmd,'protein_select':cgmd_protein,
 		'trajsel':'s9-lonestar/md.part0004.120000-220000-200.xtc'},
+	'v614-40000-140000-200':
+		{'sysname':'membrane-v614','sysname_lookup':None,
+		'director':director_cgmd,'selector':selector_cgmd,'protein_select':cgmd_protein,
+		'trajsel':'s6-sim-lonestar/md.part0002.40000-140000-200.xtc'},
 	'v700-500000-600000-200':
 		{'sysname':'membrane-v700','sysname_lookup':None,
 		'director':director_cgmd,'selector':selector_cgmd,'protein_select':cgmd_protein,
@@ -50,7 +54,8 @@ analysis_descriptors = {
 		}	
 		
 analysis_names = ['v701-60000-160000-200','v614-120000-220000-200','v700-500000-600000-200',
-	'v612-75000-175000-200','v550-4000000-5000000-160','v550-300000-400000-200'][-1:]
+	'v612-75000-175000-200','v550-4000000-5000000-160','v550-300000-400000-200',
+	'v614-40000-140000-200'][-1:]
 
 #---MAIN
 #-------------------------------------------------------------------------------------------------------------

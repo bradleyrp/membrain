@@ -126,9 +126,7 @@ class MembraneSet:
 			self.time_total = self.universe.trajectory.totaltime
 		if hasattr(self.universe.trajectory,'dt'):
 			self.time_dt = self.universe.trajectory.dt
-		print 'before'
 		if hasattr(self.universe,'trajectory'):
-			print 'inside'
 			self.time_list = [self.universe.trajectory[i].time 
 				for i in range(len(self.universe.trajectory))]
 		print 'status: the trajectory file has '+str(self.nframes)+' frames'
@@ -323,7 +321,9 @@ class MembraneSet:
 		monos.append([pointouts.resids()[i]-1 for i in range(len(whichlayer)) if whichlayer[i] == 1])
 		#---monolayer rerack hack if some residue IDs are missing
 		#---Nb this may affect the tilter, mesher, identify_residues, and batch_gr functions so beware
-		if len(monos[0]+monos[1]) - 1 != max(monos[0]+monos[1]):
+		print monos[0]
+		print monos[1]
+		if (max(monos[0]+monos[1])-min(monos[0]+monos[1])) != len(monos[0]+monos[1])-1:
 			print 'warning: resorting the monolayer indices because there is a mismatch'
 			reracker = list(sort(monos[0]+monos[1]))	
 			monos = [[reracker.index(i) for i in monos[m]] for m in range(2)]

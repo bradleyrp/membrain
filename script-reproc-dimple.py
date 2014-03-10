@@ -182,24 +182,29 @@ def gauss2d(params,x,y):
 
 #---MAIN
 #-------------------------------------------------------------------------------------------------------------
-
+do_old = False
 #---load
 if 'results_stack' not in globals():
-	results_stack = []
-	for aname in analysis_names:
-		for i in analysis_descriptors[aname]: vars()[i] = (analysis_descriptors[aname])[i]
-		results_stack.append(unpickle(pickles+'pkl.dimple.'+specname_guess(sysname,trajsel)+'.pkl'))
-
-		#ccodes = analyses[p][1]
-		#name = analyses[p][2]
-		#fillcode = analyses[p][3]
-
+	if do_old:
+		results_stack = []
+		for aname in analysis_names:
+			for i in analysis_descriptors[aname]: vars()[i] = (analysis_descriptors[aname])[i]
+			results_stack.append(unpickle(pickles+'pkl.dimple.'+specname_guess(sysname,trajsel)+'.pkl'))
+	else:
+		print 'go!'
+		results_stack = []
+		for pklname in [\
+			'./backup-2014.01.18-dimple/pkl.dimple.v614-stress.md.part0002.rerun.pkl',
+			'./backup-2014.01.18-dimple/pkl.dimple.v612-stress.md.part0003.pkl',
+			'./backup-2014.01.18-dimple/pkl.dimple.v550.md.part0006.300000-400000-200.prot-v614.pkl']:
+			results_stack.append(unpickle(pickles+pklname))
 
 #---go time
-if 1:
+if 'enth_pubplot2' in routine:
 	fig = plt.figure()
 	gs00 = gridspec.GridSpec(len(analysis_names),1)
 	maxpeak = 0
+	axes = []
 	for aname in plot_reord:
 		for i in analysis_descriptors[aname]: vars()[i] = (analysis_descriptors[aname])[i]
 		anum = analysis_names.index(aname)
@@ -249,8 +254,10 @@ if 1:
 		thisaxis.text(0.98,0.9,textline,transform=thisaxis.transAxes,fontsize=12,
 			horizontalalignment='right',verticalalignment='top')
 		'''
+	
 		thisaxis.set_title(label,rotation='horizontal')	
-		thisaxis.set_ylim(0,1.2*maxpeak)
+		axes.append(thisaxis)
+	for ax in axes: ax.set_ylim(0,1.2*maxpeak)
 	plt.show()
 	
 
