@@ -647,10 +647,12 @@ if 'postproc' in routine:
 		plt.show()
 		
 #---visualize the ion trajectories
-'''
->>> meshpoints(ionstraj[297],scale_factor=[2. for i in range(len(ionstraj[297]))])
->>> meshplot(mean(mset_surf.monolayer1,axis=0),vecs=mean(mset_surf.vecs,axis=0),show='surf')
->>> meshplot(mean(mset_surf.monolayer2,axis=0),vecs=mean(mset_surf.vecs,axis=0),show='surf')
-meshpoints(ionstraj[261],scale_factor=[2. for i in range(len(ionstraj[261]))])
-meshpoints(ionspos[24],scale_factor=[2. for i in range(len(ionspos[24]))],color=(1,1,1))
-'''
+if 0:
+	meshpoints(ionstraj[297],scale_factor=[2. for i in range(len(ionstraj[297]))])
+	#---beware these commands might be outdated
+	meshplot(mean(mset_surf.monolayer1,axis=0),vecs=mean(mset_surf.vecs,axis=0),show='surf')
+	meshplot(mean(mset_surf.monolayer2,axis=0),vecs=mean(mset_surf.vecs,axis=0),show='surf')
+	meshpoints(ionstraj[261],scale_factor=[2. for i in range(len(ionstraj[261]))])
+	meshpoints(ionspos[24],scale_factor=[2. for i in range(len(ionspos[24]))],color=(1,1,1))
+
+
