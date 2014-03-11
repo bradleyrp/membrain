@@ -19,14 +19,14 @@ selector = '(name P and not resname CHL1) or (name C3 and resname CHL1)'
 #---Analysis plan
 analysis_plan = slice(0,2)
 analysis_descriptors = [
-	(['membrane-v534'],['Cal'],['POPC','CHL1','DOPE','DOPS','P35P'],
-		'all',director_asymmetric,slice(-1,None),
-		'resname P35P and (name OP52 or name OP53 or name OP54 or name OP32 or name OP33 or name OP34)',
-		'P35P'),
-	(['membrane-v533'],['Mg'],['POPC','CHL1','DOPE','DOPS','P35P'],
-		'all',director_asymmetric,slice(-1,None),
-		'resname P35P and (name OP52 or name OP53 or name OP54 or name OP32 or name OP33 or name OP34)',
-		'P35P'),
+#	(['membrane-v534'],['Cal'],['POPC','CHL1','DOPE','DOPS','P35P'],
+#		'all',director_asymmetric,slice(-1,None),
+#		'resname P35P and (name OP52 or name OP53 or name OP54 or name OP32 or name OP33 or name OP34)',
+#		'P35P'),
+#	(['membrane-v533'],['Mg'],['POPC','CHL1','DOPE','DOPS','P35P'],
+#		'all',director_asymmetric,slice(-1,None),
+#		'resname P35P and (name OP52 or name OP53 or name OP54 or name OP32 or name OP33 or name OP34)',
+#		'P35P'),
 	(['membrane-v531-headspan'],['Mg'],['PI2P'],
 		'all',director_asymmetric,slice(-1,None),
 		'resname PI2P and (name OP52 or name OP53 or name OP54 or name OP42 or name OP43 or name OP44)',
@@ -91,6 +91,6 @@ if 0:
 		hist0 = numpy.histogram(tf_areas[sys],bins=50)
 		c = clrs[sys%len(clrs)]
 		ax.plot(hist0[1][1:],hist0[0],'o-',lw=2,color=c)
-	plt.savefig('/home/rpb/tmp.png')
+	#plt.savefig('/home/rpb/tmp.png')
 	plt.show()
 

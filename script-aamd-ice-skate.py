@@ -47,9 +47,9 @@ analysis_descriptors = {
 		'structure_pkl':
 			'pkl.structures.membrane-v511.a2-surfacer.s6-kraken-md.part0009.30000-80000-100.pkl',
 		'ionname':'Cal'}}
-analysis_names = ['v531-20000-62000-100']
+analysis_names = ['v532-20000-58000-100']
 routine = ['postproc','computexyz',][0:1]
-
+plot_suppress = True
 #---method parameters
 upto = 500 #---how far to only look at the diffusion curves
 
@@ -73,6 +73,8 @@ edgeprop = 2.
 
 #---MAIN
 #-------------------------------------------------------------------------------------------------------------
+if plot_suppress:
+	mpl.use('Agg')
 
 #---decomposing the diffusion by calculating it only from movements that are mostly in a particular z-slice
 if 'compute' in routine or 'computexyz' in routine or 'mastermsd_zones' not in globals():
@@ -154,7 +156,7 @@ if 'compute' in routine or 'computexyz' in routine or 'mastermsd_zones' not in g
 			print 'status: requested bin width = '+str(bwid)
 			print 'status: actual bin width with flush bins = '+str(mean(binws))
 			print 'status: plotting histogram'
-			plt.grid(True);plt.hist(array(roundz).flatten(),range=(0,nzones),bins=nzones);plt.show()
+#			plt.grid(True);plt.hist(array(roundz).flatten(),range=(0,nzones),bins=nzones);plt.show()
 			nzonessub = len(zonesub)
 			#---Nb you could easily derive another zone selection and put it here
 		#---updated for subsetting the zones to save memory when using small bin widths
@@ -401,6 +403,10 @@ if 'postproc' in routine:
 		#---generate plot		
 		fig = plt.figure()
 		ax = plt.subplot(111)
+		tmp = [array(i) for i in diffusexy]
+		diffusexy = [i*10**6 for i in tmp]
+		tmp = [array(i) for i in diffusez]
+		diffusez = [i*10**6 for i in tmp]		
 		xlims = (min([array(i)[array(i)>0].min() for i in diffusexy if i != []])/edgeprop,
 			max([array(i)[array(i)>0].max() for i in diffusexy if i != []])*edgeprop)
 		ylims = (min([array(i)[array(i)>0].min() for i in diffusez if i != []])/edgeprop,
@@ -446,8 +452,8 @@ if 'postproc' in routine:
 		axHisty.grid(True)
 		axHistx.set_xscale('log')
 		axHisty.set_yscale('log')		
-		ax.set_ylabel(r'$D_Z$',fontsize=fsaxlabel)
-		ax.set_xlabel(r'$D_{XY}$',fontsize=fsaxlabel)
+		ax.set_ylabel(r'$D_{z} \, (\upmu \mathsf{m}^2$/s)',fontsize=fsaxlabel)
+		ax.set_xlabel(r'$D_{xy}\, (\upmu \mathsf{m}^2$/s)',fontsize=fsaxlabel)
 		plt.setp(ax.get_yticklabels(),fontsize=fsaxlabel)
 		plt.setp(ax.get_xticklabels(),fontsize=fsaxlabel)
 		axHistx.set_yticklabels([])
@@ -579,7 +585,9 @@ if 'postproc' in routine:
 		axHisty = divider.append_axes("right",1.2,pad=0.1,sharey=ax)
 		for z in plot_zones:
 			clr = clrsd[plot_zones.index(z)]
-			dat = array([diffusexy_raw[array(pzs)==z],diffusez_raw[array(pzs)==z]]).T	
+			dat = array([diffusexy_raw[array(pzs)==z],diffusez_raw[array(pzs)==z]]).T
+			#---Convert units to micron**2/s -DRS
+			dat = [i*10**6 for i in dat]
 			if len(dat) > 0:
 				if shape(dat) == (2,): dat = array([dat])
 				#---toss any negative slopes
@@ -611,8 +619,8 @@ if 'postproc' in routine:
 		axHisty.grid(True)
 		axHistx.set_xscale('log')
 		axHisty.set_yscale('log')		
-		ax.set_ylabel(r'$D_Z\:(units)$',fontsize=fsaxlabel)
-		ax.set_xlabel(r'$D_{XY}\:(units)$',fontsize=fsaxlabel)
+		ax.set_ylabel(r'$D_z (\mathsf{\mu m} ^2/s)$',fontsize=fsaxlabel)
+		ax.set_xlabel(r'$D_{xy} $ (\mathsf{\mu m} ^2/s)$',fontsize=fsaxlabel)
 		plt.setp(ax.get_yticklabels(),fontsize=fsaxlabel)
 		plt.setp(ax.get_xticklabels(),fontsize=fsaxlabel)
 		axHistx.set_yticklabels([])
