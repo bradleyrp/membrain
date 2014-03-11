@@ -44,7 +44,7 @@ membrane-v515/a1-ions/s2-sim-compbio-md.part0004.10000-30000-100.ions.xtc
 
 name=membrane-v515-atomP
 struct=membrane-v515/a2-surfacer/system.atomP.gro
-membrane-v515/a2-surfacer/s2-sim-compbio-md.part0004.10000-30000-100.atomP.xtc
+membrane-v514/a2-surfacer/s2-sim-compbio-md.part0004.10000-30000-100.atomP.xtc
 
 name=membrane-v531-headspan-early
 struct=membrane-v531/s4-sim-trestles/system-input.gro

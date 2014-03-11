@@ -29,7 +29,7 @@ analysis_descriptors = [
 	('pkl.gr2d.v532.PIP2-PIP2.s4-sim-trestles-md.part0004.12000-16000-10.pkl','Ca$^{2+}$ 12-16 ns'),
 	('pkl.gr2d.v532.PIP2-PIP2.s5-sim-kraken-md.part0018.54000-60000-10.pkl','Ca$^{2+}$ 54-60 ns')
 	]
-analyses = [analysis_descriptors[i] for i in range(2,4)]
+analyses = [analysis_descriptors[2:4] for i in range(2)]
 analysis_name = 'v532-pi2p-early-late'
 
 #---MAIN
