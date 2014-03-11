@@ -133,16 +133,33 @@ analysis_descriptors = {
 	'v614-120000-220000-200':
 		{'sysname':'membrane-v614','sysname_lookup':None,
 		'trajsel':'s9-lonestar/md.part0004.120000-220000-200.xtc',
+		'label':r'$\mathrm{{ENTH}\ensuremath{\times}4\,(v2)}$',
+		'nprots':4,
+		'whichframes':slice(None,None),
+		'protein_pkl':None,
+		'ccodes':(clrs[0],clrs[1]),
+		'fillcode':1},
+	'v614-40000-140000-200':
+		{'sysname':'membrane-v614','sysname_lookup':None,
+		'trajsel':'s6-sim-lonestar/md.part0002.40000-140000-200.xtc',
 		'label':r'$\mathrm{{ENTH}\ensuremath{\times}4}$',
 		'nprots':4,
 		'whichframes':slice(None,None),
 		'protein_pkl':None,
 		'ccodes':(clrs[0],clrs[1]),
-		'fillcode':1,
-		},
+		'fillcode':1},
 	'v612-75000-175000-200':
 		{'sysname':'membrane-v612','sysname_lookup':None,
 		'trajsel':'t4-lonestar/md.part0007.75000-175000-200.xtc',
+		'label':r'$\mathrm{{ENTH}\ensuremath{\times}1\,(v2)}$',
+		'nprots':1,
+		'protein_pkl':None,
+		'whichframes':slice(None,None),
+		'ccodes':(clrs[0],clrs[1]),
+		'fillcode':1},
+	'v612-10000-80000-200':
+		{'sysname':'membrane-v612','sysname_lookup':None,
+		'trajsel':'s9-trestles/md.part0003.10000-80000-200.xtc',
 		'label':r'$\mathrm{{ENTH}\ensuremath{\times}1}$',
 		'nprots':1,
 		'protein_pkl':None,
@@ -151,22 +168,29 @@ analysis_descriptors = {
 		'fillcode':1},
 	'v550-400000-500000-160':
 		{'sysname':'membrane-v550','sysname_lookup':None,
+		'trajsel':'v1-lonestar/md.part0010.400000-500000-160.xtc',
+		'label':r'$\mathrm{control\,(v2)}$',
+		'nprots':1,
+		'whichframes':slice(0,500),
+		'ccodes':(clrs[0],clrs[1]),
+		'fillcode':1,
+		'protein_pkl':'pkl.structures.membrane-v612.t4-lonestar.md.part0007.75000-175000-200.pkl',
+		'custom_protein_shifts':['peak','valley'],}
+	'v550-300000-400000-200':
+		{'sysname':'membrane-v550','sysname_lookup':None,
 		'trajsel':'s0-trajectory-full/md.part0006.300000-400000-200.xtc',
-		'label':r'$\mathrm{control}$',
+		'label':r'$\mathrm{control\,(v2)}$',
 		'nprots':1,
 		'whichframes':slice(0,500),
 		'ccodes':(clrs[0],clrs[1]),
 		'fillcode':1,
 		'protein_pkl':'pkl.structures.membrane-v612.t4-lonestar.md.part0007.75000-175000-200.pkl',
 		'custom_protein_shifts':['peak','valley']}}
-analysis_names = ['v614-120000-220000-200','v612-75000-175000-200','v550-400000-500000-160']
+analysis_names = ['v614-120000-220000-200','v614-40000-140000-200',
+	'v612-75000-175000-200','v612-10000-80000-200','v550-400000-500000-160']
 plot_reord = analysis_names
 routine = ['enth_pubplot2']
-
-'''
-('pkl.dimple.v614-stress.md.part0002.rerun.pkl',(clrs[0],clrs[1]),
-	r'$\textbf{{ENTH}\ensuremath{\times}4}$',1,None),
-'''
+bigname = 'v614v1-v614v2-v612v1-v612v2-v550'
 
 #---FUNCTIONS
 #-------------------------------------------------------------------------------------------------------------
@@ -182,29 +206,31 @@ def gauss2d(params,x,y):
 
 #---MAIN
 #-------------------------------------------------------------------------------------------------------------
-do_old = False
 #---load
 if 'results_stack' not in globals():
-	if do_old:
+	#---looking at old results, temporary fix before adding it above or simply re-computing those files
+	do_old = False
+	if not do_old:
 		results_stack = []
 		for aname in analysis_names:
 			for i in analysis_descriptors[aname]: vars()[i] = (analysis_descriptors[aname])[i]
 			results_stack.append(unpickle(pickles+'pkl.dimple.'+specname_guess(sysname,trajsel)+'.pkl'))
+	#---end tmpfix
 	else:
-		print 'go!'
 		results_stack = []
 		for pklname in [\
 			'./backup-2014.01.18-dimple/pkl.dimple.v614-stress.md.part0002.rerun.pkl',
 			'./backup-2014.01.18-dimple/pkl.dimple.v612-stress.md.part0003.pkl',
 			'./backup-2014.01.18-dimple/pkl.dimple.v550.md.part0006.300000-400000-200.prot-v614.pkl']:
 			results_stack.append(unpickle(pickles+pklname))
+			
 
 #---go time
 if 'enth_pubplot2' in routine:
 	fig = plt.figure()
 	gs00 = gridspec.GridSpec(len(analysis_names),1)
 	maxpeak = 0
-	axes = []
+	ax_hmax = []
 	for aname in plot_reord:
 		for i in analysis_descriptors[aname]: vars()[i] = (analysis_descriptors[aname])[i]
 		anum = analysis_names.index(aname)
@@ -219,7 +245,6 @@ if 'enth_pubplot2' in routine:
 			params = results_stack[anum][order[o]].get(['type','params'])
 			maxhs = results_stack[anum][order[o]].get(['type','maxhs'])
 			maxhxys = results_stack[anum][order[o]].get(['type','maxhxys'])
-
 			if do_resid_filter:
 				target_zones = results_stack[anum][order[o]].get(['type','target_zones'])
 				resids = [sqrt(mean([abs(gauss2d(params[0],i[0],i[1])-i[2])**2 for i in target_zones[j]])) 
@@ -246,18 +271,29 @@ if 'enth_pubplot2' in routine:
 			if max(hist0) > maxpeak: maxpeak = max(hist0)
 			meanslist[order[o]] = mean(validhs)
 			valid_frames[order[o]] = len(validhis)
-		'''
-		textline = r'$\left\langle H_{max}\right\rangle =\textrm{('+str('%3.3f'%meanslist[0])+','+\
-			str('%3.3f'%meanslist[1])+','+str('%3.3f'%meanslist[2])+')}$'+\
-			'\n['+str('%d'%valid_frames[0])+','+str('%d'%valid_frames[1])+\
-			','+str('%d'%valid_frames[2])+'] of '+str(len(maxhs))+'  '
-		thisaxis.text(0.98,0.9,textline,transform=thisaxis.transAxes,fontsize=12,
-			horizontalalignment='right',verticalalignment='top')
-		'''
-	
-		thisaxis.set_title(label,rotation='horizontal')	
-		axes.append(thisaxis)
-	for ax in axes: ax.set_ylim(0,1.2*maxpeak)
+		thisaxis.text(0.02,0.9,label,transform=thisaxis.transAxes,fontsize=fsaxtitle,
+			horizontalalignment='left',verticalalignment='top')
+		ax_hmax.append(thisaxis)
+	for a in range(len(ax_hmax)):
+		ax = ax_hmax[a]
+		if a == 0:
+			ax.set_title(r'$curvature$',fontsize=fsaxlabel)
+		ax.set_ylim(0,1.2*maxpeak)
+		ax.axvline(x=0,ls='-',lw=1,c='k')
+		ax.get_yaxis().set_major_locator(MaxNLocator(nbins=6,prune='both'))
+		ax.grid(True)
+		ax.set_xlim(maxhrange)
+		ax.set_yticklabels([])
+		if a == len(ax_hmax)-1:
+			ax.set_xticks(arange(maxhrange[0],maxhrange[1]+0.001,maxhstep))
+			ax.spines['bottom'].set_position(('outward', 10))
+			ax.set_xlabel('$\mathsf{H_{max}\,(nm^{-1})}$',fontsize=16)
+			second_bottom = mpl.spines.Spine(ax, 'bottom', ax.spines['bottom']._path)
+			ax.spines['second_bottom'] = second_bottom
+		else:
+			ax.set_xticks(arange(maxhrange[0],maxhrange[1]+.0001,maxhstep))
+			ax.set_xticklabels([])
+	plt.savefig(pickles+'fig-dimple-hmax-'+bigname+'.png',dpi=500,bbox_inches='tight')
 	plt.show()
 	
 

@@ -235,7 +235,7 @@ for ad in analysis_descriptors[analysis_plan]:
 			label_im_neg, nb_labels = ndimage.label(surfneg)
 			surf_discrete = label_im_poz - label_im_neg
 			#---protein shadow selection
-			prot_disc_pts = [[int(round(pt[0]/vecs[0]*(griddims[0]-1))),
+			prot_disc_pts = [[int(round(pt[0]/vecs[0]*(griddims[0]-1))),g
 				int(round(pt[1]/vecs[1]*(griddims[1]-1)))] for pt in proteins[fr%len(proteins)]]
 			#---the following is equivalent
 			#protpos = array(where(array(mset.rezipgrid(proteins[fr%len(proteins)]))!=0.0)).T

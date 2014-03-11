@@ -13,6 +13,8 @@ struct=/home/rpb/compbio-alt/membrane-v614/s9-lonestar/system-input.resnr.gro
 name=membrane-v612
 struct=/home/rpb/compbio-alt/membrane-v612/t2-pip2-fix/md.part0005.gro
 /home/rpb/compbio-alt/membrane-v612/t4-lonestar/md.part0007.75000-175000-200.xtc
+/home/rpb/compbio/membrane-v612-enthx1-12800/s9-trestles/md.part0003.10000-80000-200.xtc
+/home/rpb/compbio/membrane-v612-enthx1-12800/s9-trestles/md.part0003.10000-80000-200.trr
 
 name=membrane-v700
 struct=/home/rpb/compbio-alt/membrane-v700-exo70-dilute/s6-pip2-fix-begin-start/system-input.resnr.gro

@@ -42,6 +42,15 @@ analysis_descriptors = {
 		'framewise_part':4,	
 		'voxelsize':1.0,
 		'label':r'$\mathrm{{ENTH}\ensuremath{\times}4}$'},
+	'v614-40000-140000-200': 
+		{'sysname':'membrane-v614',
+		'trajsel':'s6-sim-lonestar/md.part0002.40000-140000-200.xtc',
+		'nprots':4,
+		'datdir3dpp':
+			'/home/rpb/compbio/membrane-v614-enthx4-12800/a9-stress-s6-40000-140000-200/results',
+		'framewise_part':2,	
+		'voxelsize':1.0,
+		'label':r'$\mathrm{{ENTH}\ensuremath{\times}4}$'},
 	'v612-75000-175000-200':
 		{'sysname':'membrane-v612','sysname_lookup':None,
 		'trajsel':'t4-lonestar/md.part0007.75000-175000-200.xtc',
@@ -73,8 +82,9 @@ analysis_descriptors = {
 		'framewise_part':6,
 		'voxelsize':1.0,
 		'label':r'$\mathrm{control}$'}}
-analysis_names = ['v614-120000-220000-200','v612-75000-175000-200','v550-300000-400000-200'][:]
-routine = ['calc_c0maps','plot','video'][2:3]
+analysis_names = ['v614-120000-220000-200','v612-75000-175000-200','v550-300000-400000-200',
+	'v614-40000-140000-200'][:]
+routine = ['calc_c0maps','plot','video'][1:2]
 span_sweep = [1,2,3,4,5,6]
 bigname = '.'.join(analysis_names)
 
@@ -182,7 +192,6 @@ if 'calc_c0maps' in routine or ('md_maps' not in globals() and 'calc_c0maps' not
 			md_maps = mset.store
 			md_maps.append(md_map)
 		
-
 #---a single plot
 if 'plot' in routine:
 	#---average C0 map with PBC Gaussian blur
