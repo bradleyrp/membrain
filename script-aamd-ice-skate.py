@@ -404,9 +404,9 @@ if 'postproc' in routine:
 		fig = plt.figure()
 		ax = plt.subplot(111)
 		tmp = [array(i) for i in diffusexy]
-		diffusexy = [i*10**6 for i in tmp]
+		diffusexy = [i*10**4 for i in tmp]
 		tmp = [array(i) for i in diffusez]
-		diffusez = [i*10**6 for i in tmp]		
+		diffusez = [i*10**4 for i in tmp]		
 		xlims = (min([array(i)[array(i)>0].min() for i in diffusexy if i != []])/edgeprop,
 			max([array(i)[array(i)>0].max() for i in diffusexy if i != []])*edgeprop)
 		ylims = (min([array(i)[array(i)>0].min() for i in diffusez if i != []])/edgeprop,
