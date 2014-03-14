@@ -45,7 +45,7 @@ analysis_descriptors = {
 		'whichframes':slice(0,500),
 		'protein_pkl':'pkl.structures.membrane-v612.t4-lonestar.md.part0007.75000-175000-200.pkl',
 		'custom_topogcorr_specs':None,
-		'custom_protein_shifts':['unshifted','peak','valley',[0.,-70.]]}}
+		'custom_protein_shifts':['unshifted','peak','valley',[0.,-70.]][1:]}}
 		
 #---analysis menu
 do = ['phasecomp','topography_calc','topography_plot'][2]
@@ -54,25 +54,26 @@ if do == 'phasecomp':
 	plot_reord = analysis_names
 	dolist = ['phase_std_spec2d']
 	bigname = '.'.join(analysis_names)
-	nhistbins = 40
+	nhistbins = 80
 elif do == 'topography_calc':
 	analysis_names = ['v614-120000-220000-200','v612-75000-175000-200',
 		'v550-400000-500000-160'][-1:]
 	plot_reord = analysis_names
 	dolist = ['topogcorr_calc']
-	nhistbins = 40
+	nhistbins = 80
 elif do == 'topography_plot':
 	analysis_names = ['v614-120000-220000-200','v612-75000-175000-200','v550-400000-500000-160'][:]
 	plot_reord = analysis_names
 	dolist = ['topogcorr_calc','topogcorr_plot_alt'][1:]
 	topogcorr_plot_zrange = (-2.5,2.5)
 	bigname = 'v614-v612-v550'
-	nhistbins = 40
+	nhistbins = 80
 	nhistbins_smooth = 10
 
 #---settings
 cmap = mpl.cm.RdBu_r
 clrs = [brewer2mpl.get_map('Set1','qualitative',9).mpl_colors[i] for i in range(9)]
+clrdict = {'red':0,'blue':1}
 
 #---method, topographic correlate
 topogcorr_plot_struct = True
@@ -285,7 +286,7 @@ if 'topogcorr_calc' in dolist:
 		pickledump(tc,'pkl.topography_correlate.'+specname_guess(sysname,trajsel)+'.pkl',
 			directory=pickles)
 
-#---plot the topography correlate curves
+#---plot the topography correlate curves deprecated by the alternate method below
 if 'topogcorr_plot' in dolist:
 	zrange = topogcorr_plot_zrange if len(analysis_names) > 1 else None
 	swaprows = True if len(analysis_names) == 1 else False
@@ -313,7 +314,6 @@ if 'topogcorr_plot' in dolist:
 			#---set labels
 			if h == 0: color = 'k'
 			elif h < len(tc.prots_refs): color = clrs[(h-1)%(len(tc.prots_refs)-1)]
-			#---calculate
 			#---Nb since we use the argmax to give the mode of a broad distribution, hard to find error bars
 			#---Nb tried taking the second moment relative to the mode but this made no sense
 			histdatnorm = nan_to_num([array(tc.topoghist[h][i]/(tc.topoghist[h][i].sum(axis=0))) 
@@ -408,9 +408,8 @@ plt.show()
 
 #---plot the alternative topography correlate curves with more sensible averaging
 #---Nb this replaces the original method, which didn't lump frames together
+#---Nb the colors and handling the curves for the control case work fine but it is clumsy
 if 'topogcorr_plot_alt' in dolist:
-	runlen = 1
-	maxout = 1
 	zrange = topogcorr_plot_zrange if len(analysis_names) > 1 else None
 	swaprows = True if len(analysis_names) == 1 else False
 	fig = plt.figure()
@@ -418,8 +417,9 @@ if 'topogcorr_plot_alt' in dolist:
 		(2 if swaprows else len(analysis_names)),wspace=0.0,hspace=0.0)
 	tcs = []
 	axs = []
+	avgslices = [slice(0,1),slice(30,60)]
+	alpha_slices = [1.,0.2]
 	maxyval = 0.
-	nticks = 4
 	#---loop over analyses
 	for a in analysis_names:
 		#---prepare figure with gridspec
@@ -436,62 +436,60 @@ if 'topogcorr_plot_alt' in dolist:
 		ax = fig.add_subplot((gs[0] if len(analysis_names) == 1 
 			else gs[(m if swaprows else 0),(0 if swaprows else m)]))
 		axs.append(ax)
-		hcorr_smooths = []
-		s0 = 1 if protein_pkl == None else 0
-		s0 = 0 if len(tc.prots_refs) == 1 else s0
-		for h in range(len(tc.hcorr)):
-			#---calculate
-			#---Nb since we use the argmax to give the mode of a broad distribution, hard to find error bars
-			#---Nb tried taking the second moment relative to the mode but this made no sense
-			histdatnorm = nan_to_num([array(tc.topoghist[h][i]/(tc.topoghist[h][i].sum(axis=0))) 
-				for i in range(len(tc.topoghist[h]))])
-			if protein_pkl == None:
-				if h == 0:
-					plotlabel = 'full'
-				else:
-					plotlabel = tc.prots_names[h]
-			else:
-				plotlabel = tc.prots_names[h+2]
-			color = 'k' if h == 0 else clrs[h-s0]
-			for i in range(0,maxout,runlen):
-				dat = mean(sum(histdatnorm,axis=0).T[:,i:i+runlen],axis=1)
-				dat = dat/sum(dat)
-				window = float(nhistbins)/nhistbins_smooth
-				dat = [sum(dat[i:i+int(window)])/window	for i in range(int(len(dat)-window))]
-				maxyval = max(dat) if maxyval < max(dat) else maxyval
-				#---suppress the full domain plot for systems with more than one protein
-				if (len(tc.hcorr) > 1 and h > 0) or len(tc.hcorr) == 1 or protein_pkl != None:
-					ax.plot((array(tc.yedges[:-1]+tc.yedges[1:])/2./10.)[:-window],dat,label=plotlabel,lw=3,
-						c=color)
 		ax.set_title(label,fontsize=fsaxtitle)
-		#---bottom row shows average structures
-		ax = fig.add_subplot((gs[1] if len(analysis_names) == 1 
+		#---plot the average structure on the bottom row
+		axbot = fig.add_subplot((gs[1] if len(analysis_names) == 1 
 			else gs[(m if swaprows else 1),(1 if swaprows else m)]))
 		maxval = max(abs(mean(mset.surf,axis=0).min()/10.),abs(mean(mset.surf,axis=0).max()/10.))
-		im = plotter2d(ax,mset,dat=mean(mset.surf,axis=0)/10.,lognorm=False,cmap=cmap,
+		im = plotter2d(axbot,mset,dat=mean(mset.surf,axis=0)/10.,lognorm=False,cmap=cmap,
 			inset=False,cmap_washout=1.0,ticklabel_show=[1,1],tickshow=[1,1],centertick=False,
 			fs=fsaxlabel,label_style='xy',
 				lims=([-maxval,maxval] if zrange == None else [zrange[0],zrange[1]]))
-		s0 = 1 if protein_pkl == None else 0
-		s0 = 1
-		s0 = 0 if len(tc.prots_refs) == 1 else s0
-		for s in range(s0,len(tc.prots_refs)):
-			if protein_pkl == None or tc.prots_names[s+2] in custom_protein_shifts:
-				color = 'k' if s == 0 else clrs[s-s0]
-				print a
-				print color
+		if m != 0:
+			axbot.set_yticklabels([])
+			axbot.set_ylabel('')
+		#---plot the curves
+		hcorr_smooths = []
+		for h in range(len(tc.hcorr)):
+			#---if not control or one of the names we want to plot
+			if (protein_pkl == None and (len(tc.hcorr) == 1 or h > 0)) or \
+				(protein_pkl != None and tc.prots_names[h+2] in custom_protein_shifts):
+				histdatnorm = nan_to_num([array(tc.topoghist[h][i]/(tc.topoghist[h][i].sum(axis=0))) 
+					for i in range(len(tc.topoghist[h]))])
+				#---look up the right name for full domain, protein subset, or control
+				if protein_pkl == None and h == 0: plotlabel = 'full'
+				if protein_pkl == None and h != 0: plotlabel = tc.prots_names[h]
+				if protein_pkl != None: plotlabel = tc.prots_names[h+2]
+				#---color lookup
+				if protein_pkl == None: color = 'k' if h == 0 else clrs[h]
+				else:
+					if tc.prots_names[h+2] == 'peak': color = clrs[clrdict['red']]
+					elif tc.prots_names[h+2] == 'valley': color = clrs[clrdict['blue']]
+					else: color = clrs[[i for i in range(len(clrs)) if i not in clrdict.values()][h-2]]
+				#---plot curves
+				for sl in avgslices:
+					dat = mean(sum(histdatnorm,axis=0).T[:,sl],axis=1)
+					dat = dat/sum(dat)
+					window = float(nhistbins)/nhistbins_smooth
+					dat = [sum(dat[i:i+int(window)])/window	for i in range(int(len(dat)-window))]
+					maxyval = max(dat) if maxyval < max(dat) else maxyval
+					#---suppress the full domain plot for systems with more than one protein
+					if (len(tc.hcorr) > 1 and h > 0) or len(tc.hcorr) == 1 or protein_pkl != None:
+						ax.plot((array(tc.yedges[:-1]+tc.yedges[1:])/2./10.)[:-window],dat,
+							label=plotlabel,lw=3,c=color,alpha=alpha_slices[avgslices.index(sl)])
+				#---set protein shifts and plot protein hulls
 				if not hasattr(tc,'prots_shifts'): shift = array([0.,0.])
 				elif tc.prots_shifts == []: shift = array([0.,0.])
-				else: shift = tc.prots_shifts[s]
+				else: shift = tc.prots_shifts[h]
 				for pbcshift in [[0,0],[1,0],[0,1],[1,1],[-1,0],[0,-1],[-1,-1],[-1,1],[1,-1]]:
-					plothull(ax,mean(mset_protein.protein,axis=0)[tc.prots_refs[s],:2]+\
+					plothull(axbot,mean(mset_protein.protein,axis=0)[tc.prots_refs[h],:2]+\
 						shift+array([mean(mset.vecs,axis=0)[i]*pbcshift[i] for i in range(2)]),
-						mset=mset_protein,c=color,alpha=1.)
+						mset=mset_protein,c= color,alpha=1.)
 		#---inset axis colorbar
 		if m == len(analysis_names)-1:
-			axins = inset_axes(ax,width="5%",height="100%",loc=3,
+			axins = inset_axes(axbot,width="5%",height="100%",loc=3,
 				bbox_to_anchor=(1.,0.,1.,1.),
-				bbox_transform=ax.transAxes,
+				bbox_transform=axbot.transAxes,
 				borderpad=0)
 			cbar = plt.colorbar(im,cax=axins,orientation="vertical")
 			plt.setp(axins.get_yticklabels(),fontsize=fsaxlabel)
@@ -499,14 +497,14 @@ if 'topogcorr_plot_alt' in dolist:
 				fontsize=fsaxlabel,rotation=270)
 		#---clean up
 		if m != 0:
-			ax.set_yticklabels([])
-			ax.set_ylabel('')
+			axbot.set_yticklabels([])
+			axbot.set_ylabel('')
 	for axnum in range(len(axs)):
 		ax = axs[axnum]
 		ax.set_ylim((0,maxyval*1.1))
 		ax.set_xlim((min(tcs[0].yedges)/10.,max(tcs[0].yedges)/10.))
 		ax.axvline(x=0,ymin=0.,ymax=1,lw=2,color='k')
-		ax.set_xlabel(r'$\left\langle z(r)\right\rangle (\mathrm{nm})$',fontsize=fsaxlabel)
+		ax.set_xlabel(r'$\left\langle z_r\right\rangle (\mathrm{nm})$',fontsize=fsaxlabel)
 		ax.set_yticklabels([])
 		ax.grid(True)
 		ax.get_xaxis().set_major_locator(mpl.ticker.MaxNLocator(prune='both',nbins=6))			
@@ -519,7 +517,6 @@ if 'topogcorr_plot_alt' in dolist:
 	if plotviewflag: plt.show()
 	plt.clf()
 		
-
 #---DEVELOP
 #-------------------------------------------------------------------------------------------------------------
 

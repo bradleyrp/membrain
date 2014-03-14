@@ -47,7 +47,7 @@ analysis_descriptors = {
 		'structure_pkl':
 			'pkl.structures.membrane-v511.a2-surfacer.s6-kraken-md.part0009.30000-80000-100.pkl',
 		'ionname':'Cal'}}
-analysis_names = ['v532-20000-58000-100']
+analysis_names = ['v532-20000-58000-100','v530-30000-100000-100','v531-20000-62000-100'][-1:]
 routine = ['postproc','computexyz',][0:1]
 plot_suppress = True
 #---method parameters

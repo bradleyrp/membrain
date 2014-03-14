@@ -36,6 +36,10 @@ struct=/home/rpb/compbio-alt/membrane-v550/s0-trajectory-full/md.part0007.450.gr
 /home/rpb/compbio-alt/membrane-v550/s0-trajectory-full/md.part0006.300000-400000-200.xtc
 /home/rpb/compbio/membrane-v550/v1-lonestar/md.part0010.400000-500000-160.xtc
 
+name=membrane-v509
+struct=/home/rpb/compbio/membrane-v509/a1-ions/system.ions.gro
+/home/rpb/compbio/membrane-v509/a1-ions/s4-kraken-md.part0007.30000-90000-100.ions.xtc
+
 name=membrane-v510-atomP
 struct=/home/rpb/compbio/membrane-v510/a3-surfacer/system.atomP.gro
 /home/rpb/compbio/membrane-v510/a3-surfacer/s8-kraken-md.part0021.40000-90000-100.atomP.xtc

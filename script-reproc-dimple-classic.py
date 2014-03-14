@@ -1,15 +1,35 @@
 #!/usr/bin/python -i
 
-from membrainrunner import *
-execfile('locations.py')
+'''
+This script is the classic version of the second-step (reproc) of the dimple-fitting procedure, raised from 
+the dead in order to rectify the old and new versions. It was formerly known as 
+script-reproc-dimple-backup-2014.03.06.py script-reproc-dimple-classic.py
+'''
 
-import matplotlib.gridspec as gridspec
+from membrainrunner import *
+
+import os
 from scipy.optimize import leastsq
+import matplotlib as mpl
+from pylab import *
 
 #---PARAMETERS
 #-------------------------------------------------------------------------------------------------------------
 
-analysis_descriptors_v1 = [
+skip = 1
+framecount = None
+location = ''
+execfile('locations.py')
+
+import matplotlib.gridspec as gridspec
+which_brewer_colors = [0,1,2,3,4,5,6,7]
+clrs = [brewer2mpl.get_map('paired','qualitative',9).mpl_colors[i] for i in which_brewer_colors]
+clrs2 = brewer2mpl.get_map('Set1', 'qualitative', 5).mpl_colors
+mpl.rc('text.latex', preamble='\usepackage{sfmath}')
+mpl.rcParams['axes.linewidth'] = 2.0
+mpl.rcParams.update({'font.size': 14})
+
+analysis_descriptors = [
 	('pkl.dimple.v614-stress.md.part0002.rerun.pkl',(clrs[0],clrs[1]),
 		r'$\textbf{{ENTH}\ensuremath{\times}4}$',1,None),
 	('pkl.dimple.v612-stress.md.part0003.pkl',(clrs[2],clrs[3]),
@@ -55,17 +75,10 @@ analysis_descriptors_v1 = [
 	('pkl.dimple.v701.md.part0003.60000-160000-200.pkl',(clrs[2],clrs[3]),
 		r'$\textbf{{EXO70}\ensuremath{\times}2{\small (anti)}}$',1,None),
 	('pkl.dimple.v550.md.part0006.300000-400000-200.dummytest.pkl',(clrs[6],clrs[7]),
-		r'$\textbf{control, invert}$',0,None)]
+		r'$\textbf{control, invert}$',0,None),
+		 pkl.dimple.v614.s9-lonestar.md.part0004.120000-220000-200.s9.120000-220000-200.pkl]
 
 #---methods
-do_stacked_plot = True
-do_hmax_vs_sigmas = False
-do_errorlook = False
-do_errorlook_sigma = False
-do_sigma_vs_hmax = False
-do_resid_1d = False
-do_pubplot = False
-
 do_stacked_plot = False
 do_hmax_vs_sigmas = False
 do_errorlook = False
@@ -82,7 +95,7 @@ if plotspecs == 'both':
 	figsize = (14,16)
 	analysis_plan = [0,1,2,3,4,9,10,11,12,13,14,15,16,17,18,19,20]
 	#analysis_plan = [0,1,2,3,4]
-	analyses = [analysis_descriptors_v1[i] for i in analysis_plan]
+	analyses = [analysis_descriptors[i] for i in analysis_plan]
 	appor = range(len(analysis_plan))
 elif plotspecs == 'enth':
 	analysis_plan = slice(0,3)
@@ -91,7 +104,7 @@ elif plotspecs == 'enth':
 	figsize = (14,8)
 elif plotspecs == 'enthpub':
 	analysis_plan = [0,2,3]
-	analyses = [analysis_descriptors_v1[i] for i in analysis_plan]
+	analyses = [analysis_descriptors[i] for i in analysis_plan]
 	do_stacked_plot = False
 	do_pubplot = True
 	figsize = (10,4)
@@ -111,77 +124,8 @@ maxhfilter = [0.001,0.1]
 maxhrange = (-0.06,0.06)
 maxhstep = 0.01
 sigmamax = 30
-which_orders = [0,1,2]
-colorset = ['b','r','k']
+which_orders = [2]
 which_orders_extents = 2
-
-analysis_descriptors = {
-	'v614-120000-220000-200':
-		{'sysname':'membrane-v614','sysname_lookup':None,
-		'trajsel':'s9-lonestar/md.part0004.120000-220000-200.xtc',
-		'label':r'$\mathrm{{ENTH}\ensuremath{\times}4\,(v2)}$',
-		'nprots':4,
-		'whichframes':slice(None,None),
-		'protein_pkl':None,
-		'ccodes':(clrs[0],clrs[1]),
-		'fillcode':1},
-	'v614-40000-140000-200':
-		{'sysname':'membrane-v614','sysname_lookup':None,
-		'trajsel':'s6-sim-lonestar/md.part0002.40000-140000-200.xtc',
-		'label':r'$\mathrm{{ENTH}\ensuremath{\times}4}$',
-		'nprots':4,
-		'whichframes':slice(None,None),
-		'protein_pkl':None,
-		'ccodes':(clrs[0],clrs[1]),
-		'fillcode':1},
-	'v612-75000-175000-200':
-		{'sysname':'membrane-v612','sysname_lookup':None,
-		'trajsel':'t4-lonestar/md.part0007.75000-175000-200.xtc',
-		'label':r'$\mathrm{{ENTH}\ensuremath{\times}1\,(v2)}$',
-		'nprots':1,
-		'protein_pkl':None,
-		'whichframes':slice(None,None),
-		'ccodes':(clrs[0],clrs[1]),
-		'fillcode':1},
-	'v612-10000-80000-200':
-		{'sysname':'membrane-v612','sysname_lookup':None,
-		'trajsel':'s9-trestles/md.part0003.10000-80000-200.xtc',
-		'label':r'$\mathrm{{ENTH}\ensuremath{\times}1}$',
-		'nprots':1,
-		'protein_pkl':None,
-		'whichframes':slice(None,None),
-		'ccodes':(clrs[0],clrs[1]),
-		'fillcode':1},
-	'v550-400000-500000-160':
-		{'sysname':'membrane-v550','sysname_lookup':None,
-		'trajsel':'v1-lonestar/md.part0010.400000-500000-160.xtc',
-		'label':r'$\mathrm{control\,(v2)}$',
-		'nprots':1,
-		'whichframes':slice(0,500),
-		'ccodes':(clrs[0],clrs[1]),
-		'fillcode':1,
-		'protein_pkl':'pkl.structures.membrane-v612.t4-lonestar.md.part0007.75000-175000-200.pkl',
-		'custom_protein_shifts':['peak','valley']},
-	'v550-300000-400000-200':
-		{'sysname':'membrane-v550','sysname_lookup':None,
-		'trajsel':'s0-trajectory-full/md.part0006.300000-400000-200.xtc',
-		'label':r'$\mathrm{control}$',
-		'nprots':1,
-		'whichframes':slice(0,500),
-		'ccodes':(clrs[0],clrs[1]),
-		'fillcode':1,
-		'protein_pkl':'pkl.structures.membrane-v612.t4-lonestar.md.part0007.75000-175000-200.pkl',
-		'custom_protein_shifts':['peak','valley']}}
-analysis_names = [
-	'v614-120000-220000-200',
-	'v614-40000-140000-200',
-	'v612-75000-175000-200',
-	'v612-10000-80000-200',
-	'v550-300000-400000-200',
-	'v550-400000-500000-160']
-plot_reord = analysis_names
-routine = ['plot_summary'][2:1]
-bigname = 'v614v1-v614v2-v612v1-v612v2-v550'
 
 #---FUNCTIONS
 #-------------------------------------------------------------------------------------------------------------
@@ -195,106 +139,19 @@ def gauss2d(params,x,y):
 	return z0+c0*exp(-((x-x0)*cos(th)+(y-y0)*sin(th))**2/2./sx**2)*exp(-(-(x-x0)*sin(th)+
 		(y-y0)*cos(th))**2/2./sy**2)
 
-#---MAIN, UPDATED
+#---MAIN
 #-------------------------------------------------------------------------------------------------------------
 
 #---load
-if 'results_stack' not in globals():
-	#---looking at old results, temporary fix before adding it above or simply re-computing those files
-	do_old = False
-	if not do_old:
-		results_stack = []
-		for aname in analysis_names:
-			for i in analysis_descriptors[aname]: vars()[i] = (analysis_descriptors[aname])[i]
-			results_stack.append(unpickle(pickles+'pkl.dimple.'+specname_guess(sysname,trajsel)+'.pkl'))
-	#---end tmpfix
-	else:
-		results_stack = []
-		for pklname in [\
-			'./backup-2014.01.18-dimple/pkl.dimple.v614-stress.md.part0002.rerun.pkl',
-			'./backup-2014.01.18-dimple/pkl.dimple.v612-stress.md.part0003.pkl',
-			'./backup-2014.01.18-dimple/pkl.dimple.v550.md.part0006.300000-400000-200.prot-v614.pkl']:
-			results_stack.append(unpickle(pickles+pklname))
-			
-#---plot summary of dimple fitting procedure, updated version
-if 'plot_summary' in routine:
-	fig = plt.figure()
-	gs00 = gridspec.GridSpec(len(analysis_names),1)
-	maxpeak = 0
-	ax_hmax = []
-	for aname in plot_reord:
-		for i in analysis_descriptors[aname]: vars()[i] = (analysis_descriptors[aname])[i]
-		anum = analysis_names.index(aname)
-		pnum = plot_reord.index(aname)
-		thisaxis = fig.add_subplot(gs00[anum])
-		expected_direction = results_stack[anum][0].notes[([i[0] 
-			for i in results_stack[anum][0].notes].index('expected_direction'))][1]
-		order = ((0,1,2) if expected_direction == 1 else (1,0,2))
-		meanslist = [0,0,0]
-		valid_frames = [0,0,0]
-		for o in which_orders:
-			params = results_stack[anum][order[o]].get(['type','params'])
-			maxhs = results_stack[anum][order[o]].get(['type','maxhs'])
-			maxhxys = results_stack[anum][order[o]].get(['type','maxhxys'])
-			if do_resid_filter:
-				target_zones = results_stack[anum][order[o]].get(['type','target_zones'])
-				resids = [sqrt(mean([abs(gauss2d(params[0],i[0],i[1])-i[2])**2 for i in target_zones[j]])) 
-					for j in range(len(maxhs))]
-				validhis = [i for i in range(len(maxhs)) if (10*abs(maxhs[i]) > maxhfilter[0] 
-					and abs(10*maxhs[i]) < maxhfilter[1]) and resids[i] < resid_filter]
-			else:			
-				validhis = [i for i in range(len(maxhs)) if (10*abs(maxhs[i]) > maxhfilter[0] 
-					and abs(10*maxhs[i]) < maxhfilter[1])]
-			#---nanometer correction
-			validhs = [10*maxhs[i] for i in validhis]
-			hist0,binedge0 = numpy.histogram(validhs,bins=nbins,normed=False,weights=[1./len(validhs) 
-				for i in validhs],range=(minval,maxval))
-			mid0 = (binedge0[1:]+binedge0[:-1])/2
-			if o == 1:
-				#thisaxis.plot(mid0,hist0,'-',c=ccodes[o],alpha=1,lw=2,label=name)
-				#thisaxis.plot(mid0,hist0,'-',c=ccodes[o],alpha=1,lw=2)
-				thisaxis.plot(mid0,hist0,'-',c=colorset[o],alpha=1,lw=2)
-			elif o == 0:
-				thisaxis.plot(mid0,hist0,'-',c=colorset[o],alpha=1,lw=2)
-			else:
-				thisaxis.plot(mid0,hist0,'-',c=colorset[o],alpha=1.,lw=2)
-			#thisaxis.fill_between(mid0,hist0,[0 for i in mid0],facecolor=ccodes[1],
-			#	alpha=0.2,interpolate=True)
-			if max(hist0) > maxpeak: maxpeak = max(hist0)
-			meanslist[order[o]] = mean(validhs)
-			valid_frames[order[o]] = len(validhis)
-		thisaxis.text(0.02,0.9,label,transform=thisaxis.transAxes,fontsize=fsaxtitle,
-			horizontalalignment='left',verticalalignment='top')
-		ax_hmax.append(thisaxis)
-	for a in range(len(ax_hmax)):
-		ax = ax_hmax[a]
-		if a == 0:
-			ax.set_title(r'$curvature$',fontsize=fsaxlabel)
-		ax.set_ylim(0,1.2*maxpeak)
-		ax.axvline(x=0,ls='-',lw=1,c='k')
-		ax.get_yaxis().set_major_locator(mpl.ticker.MaxNLocator(nbins=6,prune='both'))
-		ax.grid(True)
-		ax.set_xlim(maxhrange)
-		ax.set_yticklabels([])
-		if a == len(ax_hmax)-1:
-			ax.set_xticks(arange(maxhrange[0],maxhrange[1]+0.001,maxhstep))
-			ax.spines['bottom'].set_position(('outward', 10))
-			ax.set_xlabel('$\mathsf{H_{max}\,(nm^{-1})}$',fontsize=16)
-			second_bottom = mpl.spines.Spine(ax, 'bottom', ax.spines['bottom']._path)
-			ax.spines['second_bottom'] = second_bottom
-		else:
-			ax.set_xticks(arange(maxhrange[0],maxhrange[1]+.0001,maxhstep))
-			ax.set_xticklabels([])
-	plt.savefig(pickles+'fig-dimple-hmax-'+bigname+'.png',dpi=500,bbox_inches='tight')
-	plt.show()
+results_stack = []
+for pnum in range(len(analyses)):
+	results_stack.append(pickle.load(open(pickles+analyses[pnum][0],'r')))
 	
-#---MAIN, ORIGINAL CODE
-#-------------------------------------------------------------------------------------------------------------
-
 #---publication-style plots, ENTH results
 if do_pubplot:
 	#---this is custom plot for IET manuscript
 	#---note overall grid is really 3 rows (systems) and 5 columns (3 for curvs, 2 for area)
+
 	#---plots
 	fig = plt.figure(figsize=figsize)
 	ax_hmax = []
@@ -325,6 +182,7 @@ if do_pubplot:
 	gs11.update(left=0.62,right=0.98,top=0.333-0.06,bottom=0.02,wspace=0.0,hspace=0.0)	
 	ax = plt.subplot(gs11[0,0]);ax_area.append(ax)
 	ax = plt.subplot(gs11[0,1]);ax_area_distn.append(ax)
+
 	#---plot maximum mean curvatures	
 	maxpeak = 0
 	for p in range(len(analyses)):
@@ -383,7 +241,7 @@ if do_pubplot:
 			ax.set_title(r'$\textbf{curvature}$',fontsize=16)
 		ax.set_ylim(0,1.2*maxpeak)
 		ax.axvline(x=0,ls='-',lw=1,c='k')
-		ax.get_yaxis().set_major_locator(mpl.ticker.MaxNLocator(nbins=6,prune='both'))
+		ax.get_yaxis().set_major_locator(MaxNLocator(nbins=6,prune='both'))
 		ax.grid(True)
 		ax.set_xlim(maxhrange)
 		ax.set_yticklabels([])
@@ -442,25 +300,35 @@ if do_pubplot:
 		ax.grid(True)
 		ax.set_ylim(0,1.1*maxpeak)
 		ax.set_yticklabels([])		
-		ax.get_xaxis().set_major_locator(mpl.ticker.MaxNLocator(prune='both'))
+		ax.get_xaxis().set_major_locator(MaxNLocator(prune='both'))
 		ax.set_xticks(arange(5,maxval_sigma+0.001,5))
 		if a == len(ax_sigs)-1:
 			ax.set_xlabel('$\mathsf{\sigma_a,\sigma_b\,(nm)}$',fontsize=14)
 		else:
 			ax.set_xticklabels([])		
-		if 0:
-			textline = 'means: ['+str('%3.1f'%sigmeans[a][0])+','+str('%3.1f'%sigmeans[a][1])+\
-				']\n'+'modes: ['+str('%3.1f'%sigmodes[a][0])+','+str('%3.1f'%sigmodes[a][1])+']'+\
-				'\n['+str('%d'%valid_frames[a][0])+','+str('%d'%valid_frames[a][1])+'] of '+\
-				str(total_frames[a])+'  '
-			ax.text(0.98,0.9,textline,transform=ax.transAxes,fontsize=12,horizontalalignment='right',
-				verticalalignment='top')	
+		'''
+		textline = 'means: ['+str('%3.1f'%sigmeans[a][0])+','+str('%3.1f'%sigmeans[a][1])+\
+			']\n'+'modes: ['+str('%3.1f'%sigmodes[a][0])+','+str('%3.1f'%sigmodes[a][1])+']'+\
+			'\n['+str('%d'%valid_frames[a][0])+','+str('%d'%valid_frames[a][1])+'] of '+\
+			str(total_frames[a])+'  '
+		ax.text(0.98,0.9,textline,transform=ax.transAxes,fontsize=12,horizontalalignment='right',
+			verticalalignment='top')	
+		'''
+
 	#---plot areas
 	maxpeak = 0
 	numframes = []
 	for p in range(len(analyses)):
 		thisaxis = ax_area[p]
-		mset = unpickle(pickles+results_stack[p][2].getnote('startpickle'))
+		#---hack
+		extra_locs = ['./','structures-broken-transposer-error/','backup-2013.20.21-enth-review-pickles/']
+		i = 0
+		mset = None
+		for loc in extra_locs:
+			mset = unpickle(pickles+loc+results_stack[p][2].getnote('startpickle'))
+			if mset != None: break
+		print mset
+		#---end hack
 		vecs = mean(mset.vecs,axis=0)
 		area_per_tile = product(vecs[0:2])/100./((mset.griddims[0]-1)*(mset.griddims[1]-1))
 		target_zones = results_stack[p][2].get(['type','target_zones'])
@@ -481,12 +349,14 @@ if do_pubplot:
 				for i in range(1*(mset.griddims[0]-1))])
 		else:
 			surfpbc = mset.surf
+		#---hack to fix weird indexing not sure why this script isn't executing perfectly
+		nareas = min([len(target_zones),len(surfpbc)])
 		poz_area_counts = [sum([surfpbc[j][int(i[0]*(mset.griddims[0]-1)/vecs[0])]\
 			[int(i[1]*(mset.griddims[1]-1)/vecs[1])]>0. for i in target_zones[j]]) 
-			for j in range(len(target_zones))]
+			for j in range(nareas)]
 		neg_area_counts = [sum([surfpbc[j][int(i[0]*(mset.griddims[0]-1)/vecs[0])]\
 			[int(i[1]*(mset.griddims[1]-1)/vecs[1])]<0. for i in target_zones[j]]) 
-			for j in range(len(target_zones))]
+			for j in range(nareas)]
 		posarea = array([area_per_tile*poz_area_counts[i] for i in range(len(poz_area_counts))])
 		negarea = array([area_per_tile*neg_area_counts[i] for i in range(len(neg_area_counts))])
 		thisaxis.plot(posarea,'r-',label='$z>0$',lw=1,alpha=0.8)
@@ -504,7 +374,7 @@ if do_pubplot:
 		ax.set_ylim(0,1.1*maxpeak)
 		ax.set_ylim(0,1.1*maxpeak)
 		ax.set_yticklabels([])		
-		ax.get_xaxis().set_major_locator(mpl.ticker.MaxNLocator(prune='both',nbins=4))
+		ax.get_xaxis().set_major_locator(MaxNLocator(prune='both',nbins=4))
 		ax.set_xlim((0,numframes[a]))		
 		if a == len(ax_area)-1:
 			ax.set_xlabel('frame',fontsize=14)
@@ -518,7 +388,15 @@ if do_pubplot:
 	maxfreq = 0
 	for p in range(len(analyses)):
 		thisaxis = ax_area_distn[p]
-		mset = unpickle(pickles+results_stack[p][2].getnote('startpickle'))
+		#---hack
+		extra_locs = ['./','structures-broken-transposer-error/','backup-2013.20.21-enth-review-pickles/']
+		i = 0
+		mset = None
+		for loc in extra_locs:
+			mset = unpickle(pickles+loc+results_stack[p][2].getnote('startpickle'))
+			if mset != None: break
+		print mset
+		#---end hack
 		vecs = mean(mset.vecs,axis=0)
 		area_per_tile = product(vecs[0:2])/100./((mset.griddims[0]-1)*(mset.griddims[1]-1))
 		target_zones = results_stack[p][2].get(['type','target_zones'])
@@ -573,8 +451,8 @@ if do_pubplot:
 		ax.set_ylabel(r'$\textbf{area}$'+'\n'+r'$\textbf{(nm\ensuremath{{}^{2}})}$',fontsize=10)
 		maxfreq = 0.5
 		ax.set_xlim(0,1.0*maxfreq)
-		ax.get_yaxis().set_major_locator(mpl.ticker.MaxNLocator(prune='both',nbins=4))
-		ax.get_xaxis().set_major_locator(mpl.ticker.MaxNLocator(prune='both',nbins=4))
+		ax.get_yaxis().set_major_locator(MaxNLocator(prune='both',nbins=4))
+		ax.get_xaxis().set_major_locator(MaxNLocator(prune='both',nbins=4))
 		#---disabled all frequency labels
 		if a == len(ax_area_distn)-1 and False:
 			ax.set_xlabel('frequency',fontsize=14)
@@ -583,7 +461,7 @@ if do_pubplot:
 
 	#---extra frame counter since frame counts different
 	ax = ax_area[1]
-	ax.get_xaxis().set_major_locator(mpl.ticker.MaxNLocator(prune='both',nbins=4))
+	ax.get_xaxis().set_major_locator(MaxNLocator(prune='both',nbins=4))
 	ax.set_xlabel('frame')
 	
 	#---shared area label
@@ -670,7 +548,7 @@ if do_stacked_plot:
 			ax.set_title(r'$\textbf{mean curvatures}$')
 		ax.set_ylim(0,1.2*maxpeak)
 		ax.axvline(x=0,ls='-',lw=1,c='k')
-		ax.get_yaxis().set_major_locator(mpl.ticker.MaxNLocator(nbins=6,prune='both'))
+		ax.get_yaxis().set_major_locator(MaxNLocator(nbins=6,prune='both'))
 		ax.grid(True)
 		ax.set_xlim(maxhrange)
 		ax.set_yticklabels([])
@@ -726,7 +604,7 @@ if do_stacked_plot:
 		ax.grid(True)
 		ax.set_ylim(0,1.1*maxpeak)
 		ax.set_yticklabels([])		
-		ax.get_xaxis().set_major_locator(mpl.ticker.MaxNLocator(prune='both'))
+		ax.get_xaxis().set_major_locator(MaxNLocator(prune='both'))
 		ax.set_xticks(arange(5,maxval_sigma+0.001,5))
 		if a == len(axes_sigmas)-1:
 			ax.set_xlabel('$\mathsf{\sigma_a,\sigma_b\,(nm)}$',fontsize=14)
@@ -782,7 +660,7 @@ if do_stacked_plot:
 		ax.grid(True)
 		ax.set_ylim(0,1.1*maxpeak)
 		ax.set_yticklabels([])		
-		ax.get_xaxis().set_major_locator(mpl.ticker.MaxNLocator(prune='both'))
+		ax.get_xaxis().set_major_locator(MaxNLocator(prune='both'))
 		ax.set_xticks(arange(5,maxval_sigma+0.001,5))
 		if a == len(axes_sigmas)-1:
 			ax.set_xlabel('$\mathsf{\sigma_a,\sigma_b\,(nm)}$',fontsize=14)
@@ -850,7 +728,7 @@ if do_stacked_plot:
 			ax.set_ylim(0,1.1*maxpeak)
 			ax.set_ylim(0,1.1*maxpeak)
 			ax.set_yticklabels([])		
-			ax.get_xaxis().set_major_locator(mpl.ticker.MaxNLocator(prune='both',nbins=6))
+			ax.get_xaxis().set_major_locator(MaxNLocator(prune='both',nbins=6))
 			if a == len(axes_areas)-1:
 				ax.set_xlabel('frame',fontsize=14)
 				axpos = ax.get_position()
@@ -922,8 +800,8 @@ if do_stacked_plot:
 			ax.set_ylabel(r'$\textbf{area}$'+'\n'+r'$\textbf{(nm\ensuremath{{}^{2}})}$',fontsize=10)
 			maxfreq = 0.5
 			ax.set_xlim(0,1.0*maxfreq)
-			ax.get_yaxis().set_major_locator(mpl.ticker.MaxNLocator(prune='both',nbins=4))
-			ax.get_xaxis().set_major_locator(mpl.ticker.MaxNLocator(prune='both',nbins=4))
+			ax.get_yaxis().set_major_locator(MaxNLocator(prune='both',nbins=4))
+			ax.get_xaxis().set_major_locator(MaxNLocator(prune='both',nbins=4))
 			if a == len(axes_area_hists)-1:
 				ax.set_xlabel('frequency',fontsize=14)
 			else:
@@ -1072,7 +950,7 @@ if do_errorlook:
 				xts = arange(-.1,.104,0.05)
 				ax.axes.set_xticks([0,5,10,15,20])
 				ax.axes.set_xticklabels(xts,fontsize=9)
-				ax.get_xaxis().set_major_locator(mpl.ticker.MaxNLocator(nbins=6,prune='both'))
+				ax.get_xaxis().set_major_locator(MaxNLocator(nbins=6,prune='both'))
 				ax.set_xlabel('$\mathsf{H_{max}\,(nm^{-1})}$',fontsize=7)
 				if p != 0:
 					ax.axes.set_yticklabels([])
@@ -1144,7 +1022,7 @@ if do_errorlook_sigma:
 				xts = arange(0,81,20)
 				ax.axes.set_xticks([0,5,10,15,20])
 				ax.axes.set_xticklabels(arange(0,81,20),fontsize=9)
-				ax.get_xaxis().set_major_locator(mpl.ticker.MaxNLocator(nbins=6,prune='both'))
+				ax.get_xaxis().set_major_locator(MaxNLocator(nbins=6,prune='both'))
 				ax.set_xlabel('$\mathsf{\sigma (nm)}$',fontsize=9)				
 				if p != 0:
 					ax.axes.set_yticklabels([])
@@ -1215,7 +1093,7 @@ if do_sigma_vs_hmax:
 				xts = arange(-.1,.104,0.05)
 				ax.axes.set_xticks([0,5,10,15,20])
 				ax.axes.set_xticklabels(xts,fontsize=9)
-				ax.get_xaxis().set_major_locator(mpl.ticker.MaxNLocator(nbins=6,prune='both'))
+				ax.get_xaxis().set_major_locator(MaxNLocator(nbins=6,prune='both'))
 				ax.set_xlabel('$\mathsf{H_{max}\,(nm^{-1})}$',fontsize=7)
 				if p != 0:
 					ax.axes.set_yticklabels([])
@@ -1227,7 +1105,7 @@ if do_sigma_vs_hmax:
 				yts = arange(0,81,20)
 				ax.axes.set_yticks([0,5,10,15,20])
 				ax.axes.set_yticklabels(arange(0,81,20),fontsize=9)
-				ax.get_yaxis().set_major_locator(mpl.ticker.MaxNLocator(nbins=6,prune='both'))
+				ax.get_yaxis().set_major_locator(MaxNLocator(nbins=6,prune='both'))
 				ax.set_ylabel('$\mathsf{\sigma (nm)}$',fontsize=9)			
 				if o != 2:
 					ax.axes.set_xticklabels([])
@@ -1290,7 +1168,7 @@ if do_resid_1d:
 			ax.grid(True)
 			axes.append(ax)
 			if max(hist0) > peakval: peakval = max(hist0)
-			ax.get_yaxis().set_major_locator(mpl.ticker.MaxNLocator(nbins=6,prune='both'))
+			ax.get_yaxis().set_major_locator(MaxNLocator(nbins=6,prune='both'))
 			ax.axes.set_yticklabels([])
 			if p != len(analyses)-1:
 				ax.set_xticklabels([])
