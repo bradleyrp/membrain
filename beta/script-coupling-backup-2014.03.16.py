@@ -99,7 +99,7 @@ if dotest == 'v2002.t3.t4.v614':
 	#---load colors in the same order as analyses_names
 	#---previous v614 hypo [0.005,2./5,2./5,10,10,0]
 	clist = [(brewer2mpl.get_map('Set1', 'qualitative', 8).mpl_colors)[i] for i in [0,2,1,3,4,5,6,7,]]
-	routine = ['load','calc','plot1d','plot2d','plotphase','hyposweep'][1:2]
+	routine = ['load','calc','plot1d','plot2d','plotphase','hyposweep'][-1]
 	index_md = 0
 	if 'hyposweep' in routine:
 		hypo_list = [[i,1./2,1./2,10,10,0] for i in arange(0.1,1.0,0.05)]
@@ -132,11 +132,6 @@ def fftwrap(dat,redundant=1):
 	'''This function wraps the standard discrete FFT for a system with possible-redundant rows.'''
 	trim = -1 if redundant == 1 else None 
 	return fft.fftshift(fft.fft2(array(dat)[:trim,:trim]))
-
-def ifftwrap(dat,redundant=1):
-	'''This function wraps the standard discrete IFFT for a system with possible-redundant rows.'''
-	trim = -1 if redundant == 1 else None 
-	return fft.fftshift(fft.ifft2(array(dat)[:trim,:trim]))
 	
 def autocorr(dat,direct=0,lenscale=None):
 	'''Standard procedure for turning a possibly even grid into an odd one with a distinct center.'''

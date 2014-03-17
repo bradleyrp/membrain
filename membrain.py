@@ -1082,6 +1082,7 @@ class MembraneSet:
 		reverse=0,diff=False,whichind=2):
 		'''Turns a regular set of points in 3-space into a 2D matrix.'''
 		#---Nb this is the source of the transpose error, which needs fixed.
+		#---Nb it looks like I fixed this but didn't write it down until afterwards.
 		#---Modifications in the following section for compatibility with the general interpolation function.
 		#---Nb "diff" describes whether we are handling redundant points. Needs explained.
 		#---Nb I removed all references to diff in the process of fixing script-meso-coupling code.
@@ -1141,6 +1142,7 @@ def unpickle(filename):
 		fp.close()
 		return x
 	else:
+		print 'status: seeking '+filename
 		print 'status: file does not exist'
 		return
 	

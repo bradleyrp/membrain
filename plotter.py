@@ -42,6 +42,9 @@ from numpy.linalg import norm
 import matplotlib.gridspec as gridspec
 from mpl_toolkits.axes_grid1 import make_axes_locatable
 
+#---inset axes
+from mpl_toolkits.axes_grid1.inset_locator import inset_axes
+
 #---PLOTTERS
 #-------------------------------------------------------------------------------------------------------------
 
@@ -291,6 +294,7 @@ def plotter_undulate(mset,qmagfilter=None,inset2d=True,inset2d2=True,ax=None,per
 		specfilter = array(filter(lambda x: x[0] >= qmagfilter[0] and x[0] <= qmagfilter[1],
 			mset.undulate_peri_spec1d))
 	[bz,az] = numpy.polyfit(log(specfilter[:,0]),log(specfilter[:,1]),1)
+	print bz
 	area = double(mean([mset.vec(i)[0]*mset.vec(i)[1] for i in mset.surf_index])/mset.lenscale**2)
 	#---calculate kappa assuming correct q4 scaling
 	leftcom = [mean(log(specfilter[:,0])),mean(log(specfilter[:,1]))]
@@ -324,7 +328,7 @@ def plotter_undulate(mset,qmagfilter=None,inset2d=True,inset2d2=True,ax=None,per
 	#---inset
 	if inset2d:
 		axins = mpl_toolkits.axes_grid.inset_locator.inset_axes(ax,width="45%",height="45%",loc=1)
-		plotter2d(axins,mset,tickshow=True,label_style='q')
+		plotter2d(axins,mset,tickshow=True,label_style='q',cmap=mpl.cm.jet,lognorm=True)
 		if inset2d2:
 			i2wid = 1
 			axins2 = mpl_toolkits.axes_grid.inset_locator.inset_axes(axins,width="30%",height="30%",loc=1)

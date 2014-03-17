@@ -47,10 +47,25 @@ analysis_descriptors = {
 		'structure_pkl':
 			'pkl.structures.membrane-v530.a4-surfacer.u5-sim-trestles-md.part0006.30000-100000-100.pkl',
 		'ionname':'NA'},
+<<<<<<< HEAD
 		}
 
 analysis_names = ['v532-20000-58000-100']
 routine = ['postproc','computexyz',][0:2]
+=======
+	'v511-30000-80000-100':
+		{'sysname':'membrane-v511',
+		'sysname_lookup':'membrane-v511-ions',
+		'trajsel':'s6-kraken-md.part0009.30000-80000-100.ions.xtc',
+		'structure_pkl':
+			'pkl.structures.membrane-v511.a2-surfacer.s6-kraken-md.part0009.30000-80000-100.pkl',
+		'ionname':'Cal'}}
+analysis_names = ['v532-20000-58000-100','v530-30000-100000-100','v531-20000-62000-100'][-1:]
+routine = ['postproc','computexyz',][0:1]
+plot_suppress = True
+#---method parameters
+upto = 500 #---how far to only look at the diffusion curves
+>>>>>>> 0665dc026419c014de4f69c85ca575090c4d6473
 
 #---method parameters
 upto = 500 #---how far to only look at the diffusion curves # deprecated

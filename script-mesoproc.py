@@ -92,9 +92,25 @@ analysis_descriptors = {
 		'plotqe':True,
 		'removeavg':False,
 		'fitlims':None,
+		'forcekappa':True},
+	'v009':
+		{'simtype':'meso',
+		'shortname':'meso(bare)',
+		'testname':'v009',
+		'locate':\
+			'/home/rpb/compbio-alt/meso-v009-stationary-field-30x30-bare/serial-code/equilibrate/',
+		'start':400,
+		'end':700,
+		'nbase':30,
+		'hascurv':False,
+		'hypo':None,
+		'plot_ener_err':True,
+		'plotqe':True,
+		'removeavg':False,
+		'fitlims':[16,4],
 		'forcekappa':True}}
 
-analyses_names = ['v2002-t4','v2002-t3','v2002-t1','v2002-t2'][0:1]
+analyses_names = ['v2002-t4','v2002-t3','v2002-t1','v2002-t2','v009'][-1:]
 
 #---MAIN
 #-------------------------------------------------------------------------------------------------------------

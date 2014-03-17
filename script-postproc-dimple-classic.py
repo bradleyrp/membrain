@@ -20,7 +20,7 @@ location = ''
 execfile('locations.py')
 
 #---analysis plan
-analysis_plan = slice(-6,None)
+analysis_plan = slice(-2,None)
 analysis_descriptors = [
 	('pkl.structures.membrane-v701.md.part0003.60000-160000-200.pkl',slice(None),None,-1,False,''),
 	('pkl.structures.membrane-v700.md.part0002.100000-200000-200.pkl',slice(None),None,-1,False,''),
@@ -67,7 +67,13 @@ analysis_descriptors = [
 	('pkl.structures.membrane-v550.md.part0006.300000-400000-200.pkl',slice(None),
 		'pkl.structures.membrane-v614-stress.md.part0002.rerun.pkl',1,[2,0],'.prot-v614.shift-2-0'),
 	('pkl.structures.membrane-v550.md.part0006.300000-400000-200.pkl',slice(None),
-		'pkl.structures.membrane-v614-stress.md.part0002.rerun.pkl',1,[0,2],'.prot-v614.shift-0-2')]
+		'pkl.structures.membrane-v614-stress.md.part0002.rerun.pkl',1,[0,2],'.prot-v614.shift-0-2'),
+	('pkl.structures.membrane-v614.s9-lonestar.md.part0004.120000-220000-200.pkl',
+		slice(None),None,-1,False,'.s9.120000-220000-200'),
+	('pkl.structures.membrane-v614.s6-sim-lonestar.md.part0002.40000-140000-200.pkl',
+		slice(None),None,-1,False,'.s6.40000-140000-200'),
+	('pkl.structures.membrane-v614-stress.md.part0002.rerun.pkl',
+		slice(None),None,-1,False,'.stress.part0002.rerun')]
 	
 '''
 NOTES NOTES NOTES
@@ -83,9 +89,6 @@ whether to look just at the Hmaxs or the whole distribution?
 whether to include dimples with centers in the right region, or anywhere?
 if we don't want points in the shadow, then can we constrain the optimizer?
 what position, size, shape should the shadow take when we study the control?
-
-current plan:
-
 '''
 
 #---parameters
@@ -95,7 +98,7 @@ cutoff_distance = 15.
 special_inversion_test = False
 special_dummy_test = False
 special_phase_test = False
-special_shift_test = True
+special_shift_test = False
 
 #---FUNCTIONS
 #-------------------------------------------------------------------------------------------------------------
@@ -143,6 +146,18 @@ def lateral_discretize(fr,result='area'):
 	else:
 		return [float(sum(surf_discrete==1)),float(sum(surf_discrete==-1)),
 			float(sum(surf_discrete+buf==2)),float(sum(surf_discrete+buf==0)),float(sum(buf==1))]
+
+extra_locs = [
+	'./','structures-broken-transposer-error/',
+	'backup-2013.20.21-enth-review-pickles/']
+def unpickle_special(name):
+	'''Custom un-pickle code to search for previous pickles.'''
+	mset = None
+	for loc in extra_locs:
+		mset = unpickle(pickles+loc+name)
+		if mset != None: break
+	print mset
+	return mset
 	
 #---MAIN
 #-------------------------------------------------------------------------------------------------------------
@@ -151,26 +166,22 @@ def lateral_discretize(fr,result='area'):
 for ad in analysis_descriptors[analysis_plan]:
 	(startpickle,protein_subset_slice,protein_pickle,expected_direction,testshift,suffix) = ad
 	sysname = startpickle[24:-4]
-
 	#---load
-	mset = unpickle(pickles+startpickle)
+	mset = unpickle_special(startpickle)
 	print 'loaded '+startpickle
 	result_data_collection = []
-
 	#---find protein points
 	if protein_pickle == None:
 		proteins_all = array(mset.protein)
 		proteins = proteins_all[:,protein_subset_slice]
 	else:
-		mset_protein = unpickle(pickles+protein_pickle)
+		mset_protein = unpickle_special(protein_pickle)
 		proteins_all = array(mset_protein.protein)
 		proteins = proteins_all[:,protein_subset_slice]
-
 	#---define box vectors for grid-to-real distance conversions
 	griddims = mset.griddims[0]
 	vecs = np.mean(mset.vecs,axis=0)
 	cutoff = cutoff_distance*10/(vecs[0]/mset.griddims[0])
-
 	#---frame selection header
 	end = None
 	start = None
@@ -185,30 +196,23 @@ for ad in analysis_descriptors[analysis_plan]:
 		skip = int(float(nframes)/framecount)
 		skip = 1 if skip < 1 else skip
 	print 'frame count = '+str(end)
-	
 	#---loop over possible surface point selection filters
 	for zfilterdir in [-1,1,0]:
 		#---fit and save
-
 		#---DEPRECATED
 		#[params,maxhs,maxhxys,target_zones,which_frames] = batch_dimple_fitting(skip=None,
 		#	framecount=framecount)
-		
 		#---should you fix the vecs so it's framewise? and change mset.griddims to griddims for clarity
-
 		#---declare
 		params = []
 		maxhs = []
 		maxhxys = []
 		target_zones = []
 		residsum = []
-		
 		#---loop over frames
 		for fr in range(start,end,skip):
 			print 'Fitting frame '+str(fr)
-		
 			#---MAJOR CODE BLOCK FOLLOWS
-
 			#---frame-specific cutoff
 			griddims = mset.griddims
 			#---tesselate (via PBCs) the original surface
@@ -235,7 +239,7 @@ for ad in analysis_descriptors[analysis_plan]:
 			label_im_neg, nb_labels = ndimage.label(surfneg)
 			surf_discrete = label_im_poz - label_im_neg
 			#---protein shadow selection
-			prot_disc_pts = [[int(round(pt[0]/vecs[0]*(griddims[0]-1))),g
+			prot_disc_pts = [[int(round(pt[0]/vecs[0]*(griddims[0]-1))),
 				int(round(pt[1]/vecs[1]*(griddims[1]-1)))] for pt in proteins[fr%len(proteins)]]
 			#---the following is equivalent
 			#protpos = array(where(array(mset.rezipgrid(proteins[fr%len(proteins)]))!=0.0)).T

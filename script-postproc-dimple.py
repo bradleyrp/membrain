@@ -101,6 +101,14 @@ analysis_descriptors = {
 		'protein_pkl':None,
 		'topogcorr_pkl':'pkl.topogcorr.membrane-v614-s9-lonestar-120000-220000-200.pkl',
 		'expected_direction':1},
+	'v614-40000-140000-200':
+		{'sysname':'membrane-v614','sysname_lookup':None,
+		'trajsel':'s6-sim-lonestar/md.part0002.40000-140000-200.xtc',
+		'label':r'$\mathrm{{ENTH}\ensuremath{\times}4}$',
+		'nprots':4,
+		'whichframes':slice(None,None),
+		'protein_pkl':None,
+		'expected_direction':1},
 	'v612-75000-175000-200':
 		{'sysname':'membrane-v612','sysname_lookup':None,
 		'trajsel':'t4-lonestar/md.part0007.75000-175000-200.xtc',
@@ -109,7 +117,15 @@ analysis_descriptors = {
 		'protein_pkl':None,
 		'whichframes':slice(None,None),
 		'expected_direction':1},
-	'v550-400000-500000-160':
+	'v612-10000-80000-200':
+		{'sysname':'membrane-v612','sysname_lookup':None,
+		'trajsel':'s9-trestles/md.part0003.10000-80000-200.xtc',
+		'label':r'$\mathrm{{ENTH}\ensuremath{\times}1}$',
+		'nprots':1,
+		'protein_pkl':None,
+		'whichframes':slice(None,None),
+		'expected_direction':1},
+	'v550-300000-400000-200':
 		{'sysname':'membrane-v550','sysname_lookup':None,
 		'trajsel':'s0-trajectory-full/md.part0006.300000-400000-200.xtc',
 		'label':r'$\mathrm{control}$',
@@ -118,25 +134,23 @@ analysis_descriptors = {
 		'protein_pkl':'pkl.structures.membrane-v612.t4-lonestar.md.part0007.75000-175000-200.pkl',
 		'custom_protein_shifts':['peak','valley'],
 		'expected_direction':1},
-	'v614-??-???':
+	'v550-400000-500000-160':
 		{'sysname':'membrane-v550','sysname_lookup':None,
-		'trajsel':'s0-trajectory-full/md.part0006.300000-400000-200.xtc',
+		'trajsel':'v1-lonestar/md.part0010.400000-500000-160.xtc',
 		'label':r'$\mathrm{control}$',
 		'nprots':1,
 		'whichframes':slice(0,500),
 		'protein_pkl':'pkl.structures.membrane-v612.t4-lonestar.md.part0007.75000-175000-200.pkl',
 		'custom_protein_shifts':['peak','valley'],
 		'expected_direction':1}}
-analysis_names = ['v614-120000-220000-200','v612-75000-175000-200','v550-400000-500000-160'][:]
-
-'''
-	#(startpickle,protein_subset_slice,protein_pickle,expected_direction,testshift,suffix) = ad
-	#---OLD PICKLES MIGHT BE USEFUL
-	('pkl.structures.membrane-v612-stress.md.part0003.pkl',slice(None),None,1,False,''),
-	('pkl.structures.membrane-v614-stress.md.part0002.rerun.pkl',slice(None),None,1,False,''),
-	('pkl.structures.membrane-v550.md.part0006.300000-400000-200.pkl',slice(None),
-		'pkl.structures.membrane-v614-stress.md.part0002.rerun.pkl',1,False,'.prot-v614'),
-'''
+analysis_names = [
+	'v614-120000-220000-200',
+	'v612-75000-175000-200',
+	'v614-40000-140000-200',
+	'v612-10000-80000-200',
+	'v550-400000-500000-160',
+	'v550-300000-400000-200'
+	][-2:]
 
 #---FUNCTIONS
 #-------------------------------------------------------------------------------------------------------------
