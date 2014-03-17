@@ -1,4 +1,4 @@
-#!/usr/bin/python -i
+#!/usr/bin/python
 
 '''
 This script is the classic version of the second-step (reproc) of the dimple-fitting procedure, raised from 
@@ -76,25 +76,31 @@ analysis_descriptors = [
 		r'$\textbf{{EXO70}\ensuremath{\times}2{\small (anti)}}$',1,None),
 	('pkl.dimple.v550.md.part0006.300000-400000-200.dummytest.pkl',(clrs[6],clrs[7]),
 		r'$\textbf{control, invert}$',0,None),
-		 pkl.dimple.v614.s9-lonestar.md.part0004.120000-220000-200.s9.120000-220000-200.pkl]
+	('pkl.dimple.v614.s9-lonestar.md.part0004.120000-220000-200.s9.120000-220000-200.pkl',(clrs[0],clrs[1]),
+		r'$\textbf{{ENTH}\ensuremath{\times}4\,s9}$',1,None),
+	('pkl.dimple.v614.s6-sim-lonestar.md.part0002.40000-140000-200.s6.40000-140000-200.pkl',(clrs[0],clrs[1]),
+		r'$\textbf{{ENTH}\ensuremath{\times}4\,s6}$',1,None),
+	('pkl.dimple.v614-stress.md.part0002.rerun.stress.part0002.rerun.pkl',(clrs[0],clrs[1]),
+		r'$\textbf{{ENTH}\ensuremath{\times}4\,p2}$',1,None)]
 
 #---methods
-do_stacked_plot = False
+do_stacked_plot = True
 do_hmax_vs_sigmas = False
 do_errorlook = False
 do_errorlook_sigma = False
 do_sigma_vs_hmax = False
 do_resid_1d = False
-do_pubplot = True
+do_pubplot = False
 		
 #---pre-made analysis routines
-plotspecs = 'enthpub'
+plotspecs = 'both'
 if plotspecs == 'both':
 	analysis_plan = slice(None,-1)
-	figoutnamebase = 'fig-dimple-master-summary-ENTH-EXO70'
+	figoutnamebase = 'fig-dimple-master-summary-ENTH-EXO70-classic-check2'
 	figsize = (14,16)
-	analysis_plan = [0,1,2,3,4,9,10,11,12,13,14,15,16,17,18,19,20]
-	#analysis_plan = [0,1,2,3,4]
+	analysis_plan = [0,1,2,3,4,9,10,11,12,13,14,15,16,17,18,19,20,23]
+	analysis_plan = [0,1,2,3,4]
+	analysis_plan = [0,1,2,3,4,9,10,11,12,13,23,24,25]
 	analyses = [analysis_descriptors[i] for i in analysis_plan]
 	appor = range(len(analysis_plan))
 elif plotspecs == 'enth':
@@ -138,6 +144,18 @@ def gauss2d(params,x,y):
 	z0 = 0
 	return z0+c0*exp(-((x-x0)*cos(th)+(y-y0)*sin(th))**2/2./sx**2)*exp(-(-(x-x0)*sin(th)+
 		(y-y0)*cos(th))**2/2./sy**2)
+		
+extra_locs = [
+	'./','structures-broken-transposer-error/',
+	'backup-2013.20.21-enth-review-pickles/']
+def unpickle_special(name):
+	'''Custom un-pickle code to search for previous pickles.'''
+	mset = None
+	for loc in extra_locs:
+		mset = unpickle(pickles+loc+name)
+		if mset != None: break
+	print mset
+	return mset
 
 #---MAIN
 #-------------------------------------------------------------------------------------------------------------
@@ -146,12 +164,19 @@ def gauss2d(params,x,y):
 results_stack = []
 for pnum in range(len(analyses)):
 	results_stack.append(pickle.load(open(pickles+analyses[pnum][0],'r')))
-	
+	#---hack to fix plot on v614 additions
+	if analyses[pnum][0] in [
+		'pkl.dimple.v614.s9-lonestar.md.part0004.120000-220000-200.s9.120000-220000-200.pkl',
+		'pkl.dimple.v614.s6-sim-lonestar.md.part0002.40000-140000-200.s6.40000-140000-200.pkl',
+		'pkl.dimple.v614-stress.md.part0002.rerun.stress.part0002.rerun.pkl']:
+		for j in range(3):
+			results_stack[-1][j].notes[([i[0] 
+				for i in results_stack[-1][0].notes].index('expected_direction'))][1] = 1
+
 #---publication-style plots, ENTH results
 if do_pubplot:
 	#---this is custom plot for IET manuscript
 	#---note overall grid is really 3 rows (systems) and 5 columns (3 for curvs, 2 for area)
-
 	#---plots
 	fig = plt.figure(figsize=figsize)
 	ax_hmax = []
@@ -182,7 +207,6 @@ if do_pubplot:
 	gs11.update(left=0.62,right=0.98,top=0.333-0.06,bottom=0.02,wspace=0.0,hspace=0.0)	
 	ax = plt.subplot(gs11[0,0]);ax_area.append(ax)
 	ax = plt.subplot(gs11[0,1]);ax_area_distn.append(ax)
-
 	#---plot maximum mean curvatures	
 	maxpeak = 0
 	for p in range(len(analyses)):
@@ -226,14 +250,13 @@ if do_pubplot:
 			if max(hist0) > maxpeak: maxpeak = max(hist0)
 			meanslist[order[o]] = mean(validhs)
 			valid_frames[order[o]] = len(validhis)
-		'''
-		textline = r'$\left\langle H_{max}\right\rangle =\textrm{('+str('%3.3f'%meanslist[0])+','+\
-			str('%3.3f'%meanslist[1])+','+str('%3.3f'%meanslist[2])+')}$'+\
-			'\n['+str('%d'%valid_frames[0])+','+str('%d'%valid_frames[1])+\
-			','+str('%d'%valid_frames[2])+'] of '+str(len(maxhs))+'  '
-		thisaxis.text(0.98,0.9,textline,transform=thisaxis.transAxes,fontsize=12,
-			horizontalalignment='right',verticalalignment='top')
-		'''
+		if 0:
+			textline = r'$\left\langle H_{max}\right\rangle =\textrm{('+str('%3.3f'%meanslist[0])+','+\
+				str('%3.3f'%meanslist[1])+','+str('%3.3f'%meanslist[2])+')}$'+\
+				'\n['+str('%d'%valid_frames[0])+','+str('%d'%valid_frames[1])+\
+				','+str('%d'%valid_frames[2])+'] of '+str(len(maxhs))+'  '
+			thisaxis.text(0.98,0.9,textline,transform=thisaxis.transAxes,fontsize=12,
+				horizontalalignment='right',verticalalignment='top')
 		thisaxis.set_ylabel(name,rotation='horizontal')
 	for a in range(len(ax_hmax)):
 		ax = ax_hmax[a]
@@ -254,7 +277,6 @@ if do_pubplot:
 		else:
 			ax.set_xticks(arange(maxhrange[0],maxhrange[1]+.0001,maxhstep))
 			ax.set_xticklabels([])
-	
 	#---plot extents of curvature
 	axes_sigmas = []
 	maxpeak = 0
@@ -306,29 +328,19 @@ if do_pubplot:
 			ax.set_xlabel('$\mathsf{\sigma_a,\sigma_b\,(nm)}$',fontsize=14)
 		else:
 			ax.set_xticklabels([])		
-		'''
-		textline = 'means: ['+str('%3.1f'%sigmeans[a][0])+','+str('%3.1f'%sigmeans[a][1])+\
-			']\n'+'modes: ['+str('%3.1f'%sigmodes[a][0])+','+str('%3.1f'%sigmodes[a][1])+']'+\
-			'\n['+str('%d'%valid_frames[a][0])+','+str('%d'%valid_frames[a][1])+'] of '+\
-			str(total_frames[a])+'  '
-		ax.text(0.98,0.9,textline,transform=ax.transAxes,fontsize=12,horizontalalignment='right',
-			verticalalignment='top')	
-		'''
-
+		if 0:
+			textline = 'means: ['+str('%3.1f'%sigmeans[a][0])+','+str('%3.1f'%sigmeans[a][1])+\
+				']\n'+'modes: ['+str('%3.1f'%sigmodes[a][0])+','+str('%3.1f'%sigmodes[a][1])+']'+\
+				'\n['+str('%d'%valid_frames[a][0])+','+str('%d'%valid_frames[a][1])+'] of '+\
+				str(total_frames[a])+'  '
+			ax.text(0.98,0.9,textline,transform=ax.transAxes,fontsize=12,horizontalalignment='right',
+				verticalalignment='top')	
 	#---plot areas
 	maxpeak = 0
 	numframes = []
 	for p in range(len(analyses)):
 		thisaxis = ax_area[p]
-		#---hack
-		extra_locs = ['./','structures-broken-transposer-error/','backup-2013.20.21-enth-review-pickles/']
-		i = 0
-		mset = None
-		for loc in extra_locs:
-			mset = unpickle(pickles+loc+results_stack[p][2].getnote('startpickle'))
-			if mset != None: break
-		print mset
-		#---end hack
+		mset = unpickle_special(results_stack[p][2].getnote('startpickle'))
 		vecs = mean(mset.vecs,axis=0)
 		area_per_tile = product(vecs[0:2])/100./((mset.griddims[0]-1)*(mset.griddims[1]-1))
 		target_zones = results_stack[p][2].get(['type','target_zones'])
@@ -381,22 +393,13 @@ if do_pubplot:
 		#---modification for extra axis here
 		elif a != 1:
 			ax.set_xticklabels([])		
-
 	#---plot area histograms
 	minval_areas = 0
 	maxval_areas = maxpeak
 	maxfreq = 0
 	for p in range(len(analyses)):
 		thisaxis = ax_area_distn[p]
-		#---hack
-		extra_locs = ['./','structures-broken-transposer-error/','backup-2013.20.21-enth-review-pickles/']
-		i = 0
-		mset = None
-		for loc in extra_locs:
-			mset = unpickle(pickles+loc+results_stack[p][2].getnote('startpickle'))
-			if mset != None: break
-		print mset
-		#---end hack
+		mset = unpickle_special(results_stack[p][2].getnote('startpickle'))
 		vecs = mean(mset.vecs,axis=0)
 		area_per_tile = product(vecs[0:2])/100./((mset.griddims[0]-1)*(mset.griddims[1]-1))
 		target_zones = results_stack[p][2].get(['type','target_zones'])
@@ -458,25 +461,22 @@ if do_pubplot:
 			ax.set_xlabel('frequency',fontsize=14)
 		else:
 			ax.set_xticklabels([])
-
 	#---extra frame counter since frame counts different
 	ax = ax_area[1]
 	ax.get_xaxis().set_major_locator(MaxNLocator(prune='both',nbins=4))
 	ax.set_xlabel('frame')
-	
 	#---shared area label
 	fig.text(0.78,0.995,r'$\textbf{fitted areas}$',ha='center',va='bottom',rotation='horizontal',fontsize=16)
-	
 	#---extra legend for areas
 	outsidelegendax = ax_area_distn[-1]
 	axpos = outsidelegendax.get_position()
 	outlegend = outsidelegendax.legend(loc='right',prop={'size':12,'weight':'bold'})
 	for legobj in outlegend.legendHandles:
 		legobj.set_linewidth(3.0)
-
 	#---finalize	
 	if do_resid_filter:
-		figoutname = figoutnamebase+'-rmsd-filter-'+str(resid_filter)+'A-maxhfilter-'+str(maxhfilter[0])+'-'+str(maxhfilter[1])+'.png'
+		figoutname = figoutnamebase+'-rmsd-filter-'+str(resid_filter)+'A-maxhfilter-'+\
+			str(maxhfilter[0])+'-'+str(maxhfilter[1])+'.png'
 	else:
 		figoutname = figoutnamebase+'-maxhfilter-'+str(maxhfilter[0])+'-'+str(maxhfilter[1])+'.png'
 	plt.savefig(pickles+figoutname,dpi=500,bbox_inches='tight')
@@ -684,7 +684,7 @@ if do_stacked_plot:
 			else:
 				thisaxis = fig.add_subplot(gs[appor[p],4])
 				repeat = False
-			mset = unpickle(pickles+results_stack[p][2].getnote('startpickle'))
+			mset = unpickle_special(results_stack[p][2].getnote('startpickle'))
 			vecs = mean(mset.vecs,axis=0)
 			area_per_tile = product(vecs[0:2])/100./((mset.griddims[0]-1)*(mset.griddims[1]-1))
 			target_zones = results_stack[p][2].get(['type','target_zones'])
@@ -745,7 +745,7 @@ if do_stacked_plot:
 				thisaxis = axes_area_hists[-1]
 			else:
 				thisaxis = fig.add_subplot(gs[appor[p],5])
-			mset = unpickle(pickles+results_stack[p][2].getnote('startpickle'))
+			mset = unpickle_special(results_stack[p][2].getnote('startpickle'))
 			vecs = mean(mset.vecs,axis=0)
 			area_per_tile = product(vecs[0:2])/100./((mset.griddims[0]-1)*(mset.griddims[1]-1))
 			target_zones = results_stack[p][2].get(['type','target_zones'])
@@ -810,7 +810,8 @@ if do_stacked_plot:
 		plt.subplots_adjust(wspace = 0)
 	plt.tight_layout()
 	axpos = outsidelegendax.get_position()
-	outlegend = outsidelegendax.legend(loc='lower center',bbox_to_anchor=((axpos.x0+axpos.x1)/2.,axpos.y0/2.*0),
+	outlegend = outsidelegendax.legend(loc='lower center',
+		bbox_to_anchor=((axpos.x0+axpos.x1)/2.,axpos.y0/2.*0),
 		ncol=2,prop={'size':12,'weight':'bold'},bbox_transform=gcf().transFigure)
 	for legobj in outlegend.legendHandles:
 		legobj.set_linewidth(3.0)
@@ -842,7 +843,8 @@ if do_stacked_plot:
 			print 'mean sigmay = '+str(mean(sigma_y))
 			print 'no. frames = '+str(len(validhs))
 	if do_resid_filter:
-		figoutname = figoutnamebase+'-rmsd-filter-'+str(resid_filter)+'A-maxhfilter-'+str(maxhfilter[0])+'-'+str(maxhfilter[1])+'.png'
+		figoutname = figoutnamebase+'-rmsd-filter-'+str(resid_filter)+'A-maxhfilter-'+\
+			str(maxhfilter[0])+'-'+str(maxhfilter[1])+'.png'
 	else:
 		figoutname = figoutnamebase+'-maxhfilter-'+str(maxhfilter[0])+'-'+str(maxhfilter[1])+'.png'
 	plt.savefig(pickles+figoutname,dpi=500,bbox_inches='tight')
@@ -902,7 +904,7 @@ if do_hmax_vs_sigmas:
 	plt.savefig(pickles+'fig-dimple-hmax-vs-sigmas-filter-0.01-0.1.png',dpi=500,bbox_inches='tight')
 	plt.show()
 
-#---compare the hmax and residuals
+#---compare the hmax and residuals (2D histogram plots)
 if do_errorlook:
 	ticknums = 5
 	rounderx = 2
@@ -967,7 +969,7 @@ if do_errorlook:
 	plt.savefig(pickles+'fig-dimple-sigma-vs-rmsd.png',dpi=500,bbox_inches='tight')
 	plt.show()
 	
-#---compare the extents and residuals
+#---compare the extents and residuals (2D histogram plots)
 if do_errorlook_sigma:
 	ticknums = 5
 	rounderx = 2
@@ -1039,7 +1041,7 @@ if do_errorlook_sigma:
 	plt.savefig(pickles+'fig-dimple-sigma-vs-rmsd.png',dpi=500,bbox_inches='tight')
 	plt.show()
 	
-#---compare the extents and curvatures
+#---compare the extents and curvatures (2D histogram plots)
 if do_sigma_vs_hmax:
 	ticknums = 5
 	rounderx = 2

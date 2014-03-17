@@ -65,16 +65,21 @@ def parse_locations_file(basedir,locations):
 	fp.close()
 	return [systems,structures,trajectories]
 	
-def trajectory_lookup(analysis_descriptors,aname,globs):
+def trajectory_lookup(analysis_descriptors,aname,globs,
+	keytrajsel='trajsel',keysysname='sysname_lookup'):
 	'''Return the correct trajectory and structure files, given a dictionary and key.'''
 	#---Since we are in an imported module (membrainrunner.py), we have to get globals for the lookup
 	structures = globs['structures']
 	systems = globs['systems']
 	trajectories = globs['trajectories']
 	#---Also lookup entries from the dictionary
-	if 'sysname_lookup' not in analysis_descriptors[aname].keys(): sysname_lookup = None
-	else: sysname_lookup = (analysis_descriptors[aname])['sysname_lookup']
-	trajsel = (analysis_descriptors[aname])['trajsel']
+	print keysysname
+	print analysis_descriptors[aname].keys()
+	if keysysname not in analysis_descriptors[aname].keys(): print 'donk'
+	if keysysname not in analysis_descriptors[aname].keys(): sysname_lookup = None
+	else: sysname_lookup = (analysis_descriptors[aname])[keysysname]
+	print (analysis_descriptors[aname])[keysysname]
+	trajsel = (analysis_descriptors[aname])[keytrajsel]
 	#---If sysname isn't defined, lookup the proper sysname from the dictionary
 	if sysname_lookup == None: sysname_lookup = (analysis_descriptors[aname])['sysname']
 	grofile = structures[systems.index(sysname_lookup)]
