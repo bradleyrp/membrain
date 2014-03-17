@@ -67,8 +67,9 @@ analysis_descriptors = {
 	}
 	
 		
-analysis_names = ['v534-50000-55000-100']
-routine = ['compute','plot','unpickle'][0:2]
+#analysis_names = ['v509-40000-90000-1000','v510-40000-75000-1000', 'v511-40000-88000-1000', 'v533-30000-35000-100', 'v534-50000-55000-100']
+analysis_names = ['v509-40000-90000-1000']
+routine = ['compute','plot','unpickle'][1:3]
 
 
 #---MAIN
@@ -135,6 +136,8 @@ for aname in analysis_names:
 			head_angle = [float(i) for i in tmp]
 			sysname = analysis_descriptors[aname]["sysname"]
 			name = analysis_descriptors[aname]["name"]
+#		H, xedges, yedges = histogram2d(head_angle,head_area,bins=41,normed=True,range=((60,180),(45,90)))
+		# If I set the range to cover the range of data for all systems, then data which is compressed for one system looks weird. (?)
 		H, xedges, yedges = histogram2d(head_angle,head_area,bins=41,normed=True)
 		midx = (xedges[1:]+xedges[:-1])/2
 		midy = (yedges[1:]+yedges[:-1])/2
@@ -150,8 +153,10 @@ for aname in analysis_names:
 		xcenters = xedges[:-1] + 0.5 * (xedges[1:] - xedges[:-1])
 		ycenters = yedges[:-1] + 0.5 * (yedges[1:] - yedges[:-1])
 		im.set_data(xcenters, ycenters, H)
-		ax.set_xlim(xedges[0], xedges[-1])
-		ax.set_ylim(yedges[0], yedges[-1])
+#		ax.set_xlim(xedges[0], xedges[-1])
+#		ax.set_ylim(yedges[0], yedges[-1])
+		ax.set_ylim(45,95)
+		ax.set_xlim(60,180)
 		ax.images.append(im)
 		X, Y = np.meshgrid(xedges, yedges)
 		plot = ax.pcolormesh(X, Y, H, figure=fig, visible=True)
