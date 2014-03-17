@@ -19,6 +19,13 @@ analysis_descriptors = {
 		'structure_pkl':
 			'pkl.structures.membrane-v514.a2-surfacer.s3-sim-compbio-md.part0004.10000-29000-100.pkl',
 		'ionname':'NA'},
+	'v515-10000-30000-100':
+		{'sysname':'membrane-v515',
+		'sysname_lookup':'membrane-v515-ions',
+		'trajsel':'s2-sim-compbio-md.part0004.10000-30000-100.ions.xtc',
+		'structure_pkl':
+			'pkl.structures.membrane-v515.a2-surfacer.s2-sim-compbio-md.part0004.10000-30000-100.pkl',
+		'ionname':'NA'},
 	'v532-20000-58000-100':
 		{'sysname':'membrane-v532',
 		'sysname_lookup':'membrane-v532-ions',
@@ -40,21 +47,13 @@ analysis_descriptors = {
 		'structure_pkl':
 			'pkl.structures.membrane-v530.a4-surfacer.u5-sim-trestles-md.part0006.30000-100000-100.pkl',
 		'ionname':'NA'},
-	'v511-30000-80000-100':
-		{'sysname':'membrane-v511',
-		'sysname_lookup':'membrane-v511-ions',
-		'trajsel':'s6-kraken-md.part0009.30000-80000-100.ions.xtc',
-		'structure_pkl':
-			'pkl.structures.membrane-v511.a2-surfacer.s6-kraken-md.part0009.30000-80000-100.pkl',
-		'ionname':'Cal'}}
+		}
+
 analysis_names = ['v532-20000-58000-100']
-routine = ['postproc','computexyz',][0:1]
-plot_suppress = True
-#---method parameters
-upto = 500 #---how far to only look at the diffusion curves
+routine = ['postproc','computexyz',][0:2]
 
 #---method parameters
-upto = 500 #---how far to only look at the diffusion curves
+upto = 500 #---how far to only look at the diffusion curves # deprecated
 timelimit = 2*10**2 #---maximum ps for fitting which depends on occupancy because displacements shrink
 occupancy = 1. #---occupancy rate for consideration of the displacement
 bwid = 5 #---angstrom width of slices where default is 10 and zonesub must be none
@@ -62,7 +61,7 @@ flush_bin_edges = True #---new flush bin edges method is recommended
 if not flush_bin_edges: #---never define zonesub manually of using flush method
 	zonesub = [1,2,3,4,5,6,7,8,14,15,16,17,18,19,20,21] #---custom selection of zones
 	zonesub = None #---only set this manually if flush_bin_edges is turned off
-dtlimit = 350 #---time maximum for computation, above which we don't include the data to save memory
+dtlimit = 500 #---time maximum for computation, above which we don't include the data to save memory
 ion_drop_thresh = 0.001 #---threshold ion occupancy for analysis
 sideslices = 6 #---number of slices to include on each side
 
@@ -73,8 +72,6 @@ edgeprop = 2.
 
 #---MAIN
 #-------------------------------------------------------------------------------------------------------------
-if plot_suppress:
-	mpl.use('Agg')
 
 #---decomposing the diffusion by calculating it only from movements that are mostly in a particular z-slice
 if 'compute' in routine or 'computexyz' in routine or 'mastermsd_zones' not in globals():
@@ -404,9 +401,9 @@ if 'postproc' in routine:
 		fig = plt.figure()
 		ax = plt.subplot(111)
 		tmp = [array(i) for i in diffusexy]
-		diffusexy = [i*10**6 for i in tmp]
+		diffusexy = [i*10**4 for i in tmp]
 		tmp = [array(i) for i in diffusez]
-		diffusez = [i*10**6 for i in tmp]		
+		diffusez = [i*10**4 for i in tmp]		
 		xlims = (min([array(i)[array(i)>0].min() for i in diffusexy if i != []])/edgeprop,
 			max([array(i)[array(i)>0].max() for i in diffusexy if i != []])*edgeprop)
 		ylims = (min([array(i)[array(i)>0].min() for i in diffusez if i != []])/edgeprop,

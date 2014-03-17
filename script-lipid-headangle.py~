@@ -41,6 +41,6 @@ if 1:
 			angles.append([arccos(np.dot(pts[i]-pts[i+1],pts[i+2]-pts[i+1])/np.linalg.norm(pts[i]-pts[i+1])/np.linalg.norm(pts[i+2]-pts[i+1])) for i in range(0,120,3)])
 	
 
-		hist0 = numpy.histogram([i for j in 180./pi*array(angles) for i in j],bins=40)
-		plt.plot(hist0[1][:-1],1*hist0[0],'o-')
-		plt.show()
+	hist0 = numpy.histogram([i for j in 180./pi*array(angles) for i in j],bins=40)
+	plt.plot(hist0[1][:-1],1*hist0[0],'o-')
+	plt.show()

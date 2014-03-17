@@ -1,12 +1,9 @@
 #!/usr/bin/python -i
 
 from membrainrunner import *
-
 from scipy import spatial
+from scipy import linalg
 
-#---Analysis parameters
-skip = None
-framecount = None
 location = ''
 execfile('locations.py')
 
@@ -15,82 +12,112 @@ director_symmetric = ['name P','name C218','name C318']
 director_asymmetric = ['(name P and not resname CHL1) or (name C3 and resname CHL1)',
 		'(name C218 and not resname CHL1) or (name C25 and resname CHL1)']
 selector = '(name P and not resname CHL1) or (name C3 and resname CHL1)'
+headspan = ['resname PI2P and (name OP52 or name OP53 or name OP54 or name OP42 or name OP43 or name OP44)',
+		'resname PI2P and (name OP52 or name OP53 or name OP54 or name OP32 or name OP33 or name OP34)']
+headangle = 'resname PI2P and (name C2 or name P or name C14)'
 
 #---Analysis plan
-analysis_plan = slice(0,2)
-analysis_descriptors = [
-#	(['membrane-v534'],['Cal'],['POPC','CHL1','DOPE','DOPS','P35P'],
-#		'all',director_asymmetric,slice(-1,None),
-#		'resname P35P and (name OP52 or name OP53 or name OP54 or name OP32 or name OP33 or name OP34)',
-#		'P35P'),
-#	(['membrane-v533'],['Mg'],['POPC','CHL1','DOPE','DOPS','P35P'],
-#		'all',director_asymmetric,slice(-1,None),
-#		'resname P35P and (name OP52 or name OP53 or name OP54 or name OP32 or name OP33 or name OP34)',
-#		'P35P'),
-	(['membrane-v531-headspan'],['Mg'],['PI2P'],
-		'all',director_asymmetric,slice(-1,None),
-		'resname PI2P and (name OP52 or name OP53 or name OP54 or name OP42 or name OP43 or name OP44)',
-		'PI2P'),
-	(['membrane-v532-headspan'],['Cal'],['PI2P'],
-		'all',director_asymmetric,slice(-1,None),
-		'resname PI2P and (name OP52 or name OP53 or name OP54 or name OP42 or name OP43 or name OP44)',
-		'PI2P')]
+analysis_descriptors = {
+	'v509-40000-90000-1000':
+		{'sysname':'membrane-v509',
+		'sysname_lookup':'membrane-v509-spanangle',
+		'trajsel':'s6-kraken-md.part0018.40000-90000-1000.spanangle.xtc',
+		'headspan':'resname PI2P and (name OP52 or name OP53 or name OP54 or name OP42 or name OP43 or name OP44)',
+		'headangle':'resname PI2P and (name C2 or name P or name C14)',
+		'ionname':'Na',
+		'name': 'PtdIns(4,5)P$_2$ with Na$^+$'},
+	'v510-40000-75000-1000':
+		{'sysname':'membrane-v510',
+		'sysname_lookup':'membrane-v510-spanangle',
+		'trajsel':'s8-kraken-md.part0021.40000-75000-1000.spanangle.xtc',
+		'headspan':'resname PI2P and (name OP52 or name OP53 or name OP54 or name OP42 or name OP43 or name OP44)',
+		'headangle':'resname PI2P and (name C2 or name P or name C14)',
+		'ionname':'Mg',
+		'name': 'PtdIns(4,5)P$_2$ with Mg$^{2+}$'},
+	'v511-40000-88000-1000':
+		{'sysname':'membrane-v511',
+		'sysname_lookup':'membrane-v511-spanangle',
+		'trajsel':'s8-kraken-md.part0021.40000-88000-1000.spanangle.xtc',
+		'headspan':'resname PI2P and (name OP52 or name OP53 or name OP54 or name OP42 or name OP43 or name OP44)',
+		'headangle':'resname PI2P and (name C2 or name P or name C14)',
+		'ionname':'Cal',
+		'name': 'PtdIns(4,5)P$_2$ with Ca$^{2+}$'}
+	}
+		
+analysis_names = ['v509-40000-90000-1000','v510-40000-75000-1000','v511-40000-88000-1000']
+routine = ['compute','plot',][0:2]
+
 
 #---MAIN
-#-------------------------------------------------------------------------------------------------------------
 
-#---Compute P35P spans
-tf_areas = []
-starttime = time.time()
-#---loop over analysis descriptors
-for ad in analysis_descriptors[analysis_plan]:
-	(tests,ionnames,residues,selector,director,trajno,selstring,targetresname) = ad
-	#---loop over tests within the descriptor
-	for testno in range(len(tests)):
-		#---loop over specified trajectories
-		for traj in trajectories[systems.index(tests[testno])][trajno]:
-			mset = MembraneSet()
-			gro = structures[systems.index(tests[testno])]
-			basename = traj.split('/')[-1][:-4]
-			print 'Accessing '+basename+'.'
-			mset.load_trajectory((basedir+'/'+gro,basedir+'/'+traj),resolution='aamd')
-			mset.identify_monolayers(director,startframeno=0)
-			mset.identify_residues(residues)
-			result_data = MembraneData('cells')
-			#---frame selection header
-			end = None
-			start = None
-			if framecount == None:
-				if end == None: end = mset.nframes
-				if start == None: start = 0
-				if skip == None: skip = 1
-			else:
-				start = 0
-				end = mset.nframes
-				skip = int(float(mset.nframes)/framecount)
-				skip = 1 if skip < 1 else skip
-			u_tf = mset.universe
-			frameskip = 1
-			tf_distance = []
-			target_residues_abs = mset.monolayer_by_resid[0][mset.resnames.index(targetresname)]
-			target_residues_abs = range(40)
-			for frame in mset.universe.trajectory[::frameskip]:
-				print frame
-				selection = [mset.universe.residues[i].selectAtoms(selstring).coordinates() for i in target_residues_abs]
-				tf_distance.append([max(spatial.distance.pdist(selection[i])) for i in range(40)])
-			tf_areas.append([j*j for i in tf_distance for j in i])
-			if erase_when_finished:
-				del mset
+for aname in analysis_names:
+	if 'compute' in routine:
+		for i in analysis_descriptors[aname]: vars()[i] = (analysis_descriptors[aname])[i]
+		#---load
+		print 'status: loading trajectory'
+		grofile,trajfile = trajectory_lookup(analysis_descriptors,aname,globals())
+		# Needs a -pbc nojump trajectory.
+		traj = trajfile[0]
+		mset.load_trajectory((basedir+'/'+grofile,basedir+'/'+traj),resolution='aamd')
+		checktime()
+		clock = []
+		head_area = []
+		head_angle = []
+		
+		area_select = mset.universe.selectAtoms(headspan)
+		residues = mset.universe.selectAtoms('resname PI2P').resids()		
+#		angle_select = mset.universe.selectAtoms(headangle)
+		whichframes = range(len(mset.universe.trajectory))
+		for fr in whichframes:
+			mset.gotoframe(fr)		
+			for res in residues:
+				# Need to unwrap.
+				coords = mset.universe.selectAtoms('resid '+str(res)+' and '+headspan)
+				head_size = (max(spatial.distance.pdist(coords.coordinates())))
+				head_area.append(head_size*head_size)
+				coords = mset.universe.selectAtoms('resid '+str(res)+' and '+headangle).coordinates()
+				angle = (arccos(np.dot(coords[0]-coords[1],coords[2]-coords[1])/np.linalg.norm(coords[0]-coords[1])/np.linalg.norm(coords[2]-coords[1])))
+				head_angle.append(angle*(180./3.1415926))
+			clock.append(mset.universe.trajectory[fr].time)
 
-pickle.dump(tf_areas,open(pickles+'pkl.headspan.v531.v532.part0010.25500-27500-4.pkl','w'))
 
-if 0:
-	fig = plt.figure()
-	ax = plt.subplot(111)
-	for sys in range(len(tf_areas)):
-		hist0 = numpy.histogram(tf_areas[sys],bins=50)
-		c = clrs[sys%len(clrs)]
-		ax.plot(hist0[1][1:],hist0[0],'o-',lw=2,color=c)
-	#plt.savefig('/home/rpb/tmp.png')
-	plt.show()
+	if 'plot' in routine:
+		font = {'family' : 'sans-serif',
+			'size'   : 22}
+		mpl.rc('font', **font)
+		mpl.rc('text', usetex=True)
+		mpl.rc('text.latex', preamble='\usepackage{sfmath}')
+		mpl.rcParams['text.latex.preamble'] = [r'\usepackage{sfmath}',r'\usepackage{amsmath}',
+							r'\usepackage{siunitx}',r'\sisetup{detect-all}',
+						        r'\usepackage{helvet}',r'\usepackage{sansmath}',
+						        r'\sansmath', r'\usepackage{upgreek}']
+		mpl.rcParams['xtick.major.pad'] = 8
+		mpl.rcParams['ytick.major.pad'] = 8
+		fig = plt.figure(figsize=(11,8.5))
+		gs = gridspec.GridSpec(1,1,wspace=0.0,hspace=0.05)
+		ax = fig.add_subplot(gs[0])
+	#	ax1.hist2d(head_angle, head_area)
 
+		H, xedges, yedges = histogram2d(head_angle,head_area,bins=41,normed=True)
+		midx = (xedges[1:]+xedges[:-1])/2
+		midy = (yedges[1:]+yedges[:-1])/2
+		extent = [xedges[1], xedges[-1], yedges[1], yedges[-1]]
+		cmap = mpl.cm.jet
+		cmap.set_bad(cmap(0),1.)
+	#	ax.imshow(array(H).T, extent=None, interpolation='nearest',aspect='equal',origin='lower',norm=None,cmap=cmap)
+		ax.set_title(name)
+		ax.set_xlabel('Head-tail angle (degrees)}$')
+		ax.set_ylabel(r'Molecular area (\AA$^2$)')
+
+		im = mpl.image.NonUniformImage(ax, interpolation='nearest')	
+		xcenters = xedges[:-1] + 0.5 * (xedges[1:] - xedges[:-1])
+		ycenters = yedges[:-1] + 0.5 * (yedges[1:] - yedges[:-1])
+		im.set_data(xcenters, ycenters, H)
+		ax.set_xlim(xedges[0], xedges[-1])
+		ax.set_ylim(yedges[0], yedges[-1])
+		ax.images.append(im)
+		X, Y = np.meshgrid(xedges, yedges)
+		plot = ax.pcolormesh(X, Y, H, figure=fig, visible=True)
+		plt.colorbar(plot)
+		plt.savefig(pickles+'fig-'+sysname.split('-')[-1]+'-size-angle-correlation.png',dpi=300,bbox_inches='tight')
+#		plt.show()

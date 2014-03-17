@@ -263,5 +263,5 @@ if 'plot' in routine:
 	ax1.set_xlabel(r'Distance above interpolated membrane surface (\AA)',fontsize=22)
 	gs.tight_layout(fig, rect=[0.03, 0.0, 1, 1]) # Leave space for the common y-label.
 #	plt.show()
-	fig.save(pickles+'fig-'+sysname.split('-')[-1]+'-roundz-analysis.png',dpi=300)
+	plt.savefig(pickles+'fig-'+sysname.split('-')[-1]+'-roundz-analysis.png',dpi=300)
 

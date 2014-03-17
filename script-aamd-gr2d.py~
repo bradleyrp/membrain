@@ -22,7 +22,7 @@ sel_aamd_surfacer = ['name P','(name C2 and not resname CHL1)']
 
 #---analysis plan
 analysis_descriptors = [
-	(['membrane-v531-gr2d'],'all',director_asymmetric,[-1],
+	(['membrane-v531-gr2d'],'all',director_asymmetric,[-2,-1],
 		[['resname POPC and name P','resname POPC and name P','POPC-POPC']],'v531.POPC-POPC'),
 #	(['membrane-v532'],'all',director_asymmetric,[-2,-1],
 #		[['resname POPC and name P','resname POPC and name P','POPC-POPC']],'v532.POPC-POPC')

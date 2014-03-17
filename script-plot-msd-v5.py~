@@ -40,6 +40,8 @@ fig = plt.figure(figsize=(11,8.5))
 gs = gridspec.GridSpec(1,1)
 ax = plt.subplot(gs[0])
 
+# This variant plots the PI2P diffusion curves on top of each other.
+
 last_delta = []
 for sys in range(0,3):
 #	ax = plt.subplot(gs[sys])
@@ -84,8 +86,8 @@ ax.set_xlabel('Time (ns)',fontsize=22)
 #gs.tight_layout(fig, rect=[0.03, 0.0, 1, 1]) # Leave space for the common y-label.
 plt.show()
 #plt.savefig('/tmp/tmp6.png',dpi=300)
-plt.close()
-plt.figure()
-plt.hist(log10(last_delta), color = 'blue') 
+#plt.close()
+#plt.figure()
+#plt.hist(log10(last_delta), color = 'blue') 
 #plt.savefig('/tmp/tmp7.png',dpi=300)
-plt.close()
+#plt.close()

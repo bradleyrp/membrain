@@ -13,6 +13,7 @@ import matplotlib.gridspec as gridspec
 from matplotlib.ticker import MaxNLocator
 from scipy import optimize
 
+
 font = {'family' : 'sans-serif',
         'size'   : 22}
 mpl.rc('font', **font)
@@ -100,6 +101,6 @@ for ad in range(0,3):
 	
 fig.text(0, 0.5, "MSD (nm$^2$)", rotation="vertical", va="center",fontsize=22)	
 gs.tight_layout(fig, rect=[0.03, 0.0, 1, 1]) # Leave space for the common y-label.
-plt.show()
-#plt.savefig('/home/davids/Science/p1-bilayers/Analysis/Lipid-diffusion/v509v510v511-powerlaw.png',dpi=300)
-#plt.close()
+#plt.show()
+plt.savefig('/home/davids/repo-pickles/fig-v509v510v511-powerlaw.png',dpi=300)
+plt.close()
