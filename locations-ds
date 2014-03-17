@@ -74,3 +74,11 @@ name=membrane-v511-spanangle
 struct=membrane-v511/a4-spanangle/system.spanangle.gro
 membrane-v511/a4-spanangle/s8-kraken-md.part0021.40000-88000-1000.spanangle.xtc
 
+name=membrane-v533-spanangle
+struct=membrane-v533/a2-spanangle/system.spanangle.gro
+membrane-v533/a2-spanangle/s3-sim-kraken-md.part0011.30000-35000-100.spanangle.xtc
+
+name=membrane-v534-spanangle
+struct=membrane-v534/a1-spanangle/system.spanangle.gro
+membrane-v534/a1-spanangle/s5-trestles-md.part0017.50000-55000-100.spanangle.xtc
+
