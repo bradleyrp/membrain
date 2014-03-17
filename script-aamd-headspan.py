@@ -41,11 +41,11 @@ analysis_descriptors = {
 		'headspan':'resname PI2P and (name OP52 or name OP53 or name OP54 or name OP42 or name OP43 or name OP44)',
 		'headangle':'resname PI2P and (name C2 or name P or name C14)',
 		'ionname':'Cal',
-		'name': 'PtdIns(4,5)P$_2$ with Ca$^{2+}$'}
+		'name': 'PtdIns(4,5)P$_2$ with Ca$^{2+}$'},
 	}
 		
 analysis_names = ['v509-40000-90000-1000','v510-40000-75000-1000','v511-40000-88000-1000']
-routine = ['compute','plot',][0:2]
+routine = ['compute','plot',][0:1]
 
 
 #---MAIN
@@ -63,22 +63,28 @@ for aname in analysis_names:
 		clock = []
 		head_area = []
 		head_angle = []
-		
-		area_select = mset.universe.selectAtoms(headspan)
+		result_data_angle = MembraneData('headangle')
+		result_data_area = MembraneData('headspan')		
+
 		residues = mset.universe.selectAtoms('resname PI2P').resids()		
 #		angle_select = mset.universe.selectAtoms(headangle)
 		whichframes = range(len(mset.universe.trajectory))
 		for fr in whichframes:
 			mset.gotoframe(fr)		
 			for res in residues:
-				# Need to unwrap.
 				coords = mset.universe.selectAtoms('resid '+str(res)+' and '+headspan)
 				head_size = (max(spatial.distance.pdist(coords.coordinates())))
 				head_area.append(head_size*head_size)
 				coords = mset.universe.selectAtoms('resid '+str(res)+' and '+headangle).coordinates()
 				angle = (arccos(np.dot(coords[0]-coords[1],coords[2]-coords[1])/np.linalg.norm(coords[0]-coords[1])/np.linalg.norm(coords[2]-coords[1])))
 				head_angle.append(angle*(180./3.1415926))
+				# For pickling.
+				result_data_angle.append(mset.universe.trajectory[fr].time,str(res),angle*(180./3.1415926))
+				result_data_area.append(mset.universe.trajectory[fr].time,str(res),head_size*head_size)
 			clock.append(mset.universe.trajectory[fr].time)
+		mset.store.append(result_data_angle)
+		mset.store.append(result_data_area)
+		pickle.dump(mset,open(pickles+'pkl.headspan-headangle.'+aname+'.pkl','w'))
 
 
 	if 'plot' in routine:
