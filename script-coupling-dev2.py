@@ -8,13 +8,13 @@ getgrid = array([[[i,j] for j in linspace(0,vecs[1]/mset.lenscale,n)] for i in l
 if 'tmp' not in globals(): tmp = array(msets[0].surf)
 msets[0].surf = []
 for i in range(len(tmp)):
-	msets[0].surf.append(1*tmp[i])
+	msets[index_md].surf.append(1*tmp[i])
 maxpos = unravel_index((mean(msets[0].surf,axis=0)/msets[0].lenscale).argmax(),msets[0].griddims)
 maxposgrid = [maxpos[i]/vecs[i]*msets[0].griddims[i] for i in range(2)]
 hypo = [0.04,0.4,0.5,20,8,0]
 params = [0,hypo[0],vecs[0]*hypo[1]/mset.lenscale,vecs[1]*hypo[2]/mset.lenscale,hypo[3],hypo[4],hypo[5]]
-c0hypo = 2*array([[gauss2d(params,getgrid[i,j,0],getgrid[i,j,1]) for j in range(n)] for i in range(m)])
-mscs[0].calculate_mode_coupling(msets[index_md],[c0hypo for i in range(len(mset.surf))])
+c0hypo = array([[gauss2d(params,getgrid[i,j,0],getgrid[i,j,1]) for j in range(n)] for i in range(m)])
+mscs[index_md].calculate_mode_coupling(msets[index_md],[c0hypo for i in range(len(mset.surf))])
 
 #---figure
 fig = plt.figure()
@@ -22,12 +22,13 @@ gs = gridspec.GridSpec(3,4,wspace=0.0,hspace=0.0)
 
 #---plot curvature field
 extrem = max([mscs[i].t1d[1][:,1].max() for i in range(2)])
+extrem = 0.1
 ax = plt.subplot(gs[0,0])
-ax.imshow(mean(mscs[0].c0s,axis=0),vmax=10*extrem,vmin=0.,cmap=mpl.cm.binary)
+ax.imshow(mean(mscs[0].c0s,axis=0),vmax=extrem,vmin=0.,cmap=mpl.cm.binary)
 ax.set_title('CGMD')
 ax = plt.subplot(gs[0,1])
 ax.set_title('MESO')
-im = ax.imshow(mean(mscs[1].c0s,axis=0),vmax=10*extrem,vmin=0.,cmap=mpl.cm.binary)
+im = ax.imshow(mean(mscs[1].c0s,axis=0),vmax=extrem,vmin=0.,cmap=mpl.cm.binary)
 axins = inset_axes(ax,width="5%",height="100%",loc=3,
 	bbox_to_anchor=(1.,0.,1.,1.),
 	bbox_transform=ax.transAxes,

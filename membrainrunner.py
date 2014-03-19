@@ -73,12 +73,8 @@ def trajectory_lookup(analysis_descriptors,aname,globs,
 	systems = globs['systems']
 	trajectories = globs['trajectories']
 	#---Also lookup entries from the dictionary
-	print keysysname
-	print analysis_descriptors[aname].keys()
-	if keysysname not in analysis_descriptors[aname].keys(): print 'donk'
 	if keysysname not in analysis_descriptors[aname].keys(): sysname_lookup = None
 	else: sysname_lookup = (analysis_descriptors[aname])[keysysname]
-	print (analysis_descriptors[aname])[keysysname]
 	trajsel = (analysis_descriptors[aname])[keytrajsel]
 	#---If sysname isn't defined, lookup the proper sysname from the dictionary
 	if sysname_lookup == None: sysname_lookup = (analysis_descriptors[aname])['sysname']

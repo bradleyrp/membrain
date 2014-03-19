@@ -189,8 +189,8 @@ class ModeCouple():
 		hqsa = autocorr(hqs,direct=0,lenscale=mset.lenscale)
 		hqsb = autocorr(hqs,direct=1,lenscale=mset.lenscale)
 		center = [cm,cn]
-		cqsa = autocorr(cqs,direct=0,lenscale=mset.lenscale)
-		cqsb = autocorr(cqs,direct=1,lenscale=mset.lenscale)
+		cqsa = autocorr(cqs,direct=0,lenscale=1.0)
+		cqsb = autocorr(cqs,direct=1,lenscale=1.0)
 		qmagst = qmags[0:(-1 if m%2==0 else None),0:(-1 if n%2==0 else None)]
 		mt,nt = shape(hqsa[0])
 		area = double(mean([mset.vec(i)[0]*mset.vec(i)[1] for i in mset.surf_index])/mset.lenscale**2)
@@ -445,8 +445,8 @@ if 'calc' in routine:
 		msc = ModeCouple()
 		msc.calculate_mode_coupling(msets[m],collect_c0s[m])
 		mscs.append(msc)
-	#hypo = (analysis_descriptors['v614'])['hypo']
-	spectrum_summary(hypotext=False)
+	hypo = (analysis_descriptors['v614'])['hypo']
+	spectrum_summary(hypotext=True)
 		
 #---calculate mode couplings according to testable hypotheses
 if 'hyposweep' in routine:

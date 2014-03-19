@@ -75,6 +75,10 @@ class MembraneData:
 		elif self.calctype == 'ionskate':
 			self.struct = {'type':0,'zone':1,'ion':2,'deltat':3,'start_frame':4}
 			self.struct_opts = {'type': {'mastermsd_zones':0,'distsxy':1,'distsz':2}}
+		#---type: updated/advanced dimple fitting
+		elif self.calctype == 'dimple2':
+			self.struct = {'frame':0,'type':1}
+			self.struct_opts = {'type' : {'params':0,'maxhs':1,'maxhxys':2,'target_zones':3,'frameno':4}}
 		#---default values for label if no extra descriptors
 		if label != None:
 			self.description = label

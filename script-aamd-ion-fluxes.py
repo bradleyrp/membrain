@@ -140,4 +140,37 @@ if 'compute' in routine:
 				tmat[disctrajt[fr][i],disctrajt[fr+1][i]] += 1
 		#---plot the transition matrix
 		plt.imshow(tmat,interpolation='nearest',origin='lower');plt.show()
-		
+#---bleeding edge code makes an ugly plot of residence distribution times
+nbins = 100
+bincount = len(binedges[0])-1
+jumptimes = [where((disctraj[i,1:]-disctraj[i,:-1])!=0)[0] for i in range(len(disctraj))]
+jumpdurations = [jumptimes[i][1:]-jumptimes[i][:-1] for i in range(len(jumptimes))]
+maxresid = max([max(i) for i in jumpdurations])
+jumphists = [histogram(jumpdurations[i],range=(0,maxresid),bins=nbins)[0] for i in range(len(jumpdurations))]
+jumpbins = [disctraj[i][jumptimes[i][:-1]] for i in range(len(disctraj))]
+residences = [[] for i in range(bincount)]
+for k in range(len(jumpbins)):
+	for i in range(len(jumpbins[k])):
+		residences[jumpbins[k][i]].append(jumpdurations[k][i])
+maxresid = max([max(i) for i in residences if i != []])
+resdists = [histogram(residences[i],range=(0,maxresid),bins=nbins)[0] for i in range(len(residences)) if i != []]	
+#---accounting
+binlabels = [int(round(i)) for i in (mean(binedges,axis=0)[1:]+mean(binedges,axis=0)[:-1])/2.]
+maxz = binedges[0][-1]
+meanz = mean(mean(monoz,axis=0))
+#tmp = [(i-meanz)+maxz*((i-meanz)<0)-maxz*((i-meanz)>maxz) for i in binlabels]
+howfar = [i-meanz-maxz*((i-meanz)>maxz/2.) for i in binlabels]
+#---plot
+ax = plt.subplot(111)
+for r in range(len(resdists)):
+	dat = resdists[r]
+	if howfar[r] > 0.: c = 'b'
+	else: c = 'r'
+	ax.plot(dat,c=c,lw=2,label=binlabels[r],
+		alpha=(1-abs(howfar[r])/max(abs(array(howfar)))/1.1))
+ax.set_xlim((1,100))
+ax.set_xscale('log')
+ax.set_yscale('log')
+ax.set_title('residence time distributions v509')
+#ax.legend(loc=1)
+plt.show()
