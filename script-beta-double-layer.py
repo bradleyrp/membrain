@@ -214,6 +214,116 @@ if 'computex' in routine:
 #			plt.grid(True);plt.hist(array(roundz).flatten(),range=(0,nzones),bins=nzones);plt.show()
 			nzonessub = len(zonesub)
 			#---Nb you could easily derive another zone selection and put it here
+<<<<<<< HEAD:script-aamd-ice-skate-roundz-analysis.py~
+		#---updated for subsetting the zones to save memory when using small bin widths
+		if zonesub != None and not flush_bin_edges:
+			nzones = len(zonesub)
+		elif zonesub == None and not flush_bin_edges:
+			nzones = ptp(roundz)
+		#---select subset of ions if desired
+		ionsel = slice(0,nions)
+		nions = len(range(nions)[ionsel])
+		#---if you ask for xyz diffusion, it skips the z-decomposition entirely
+		if 'computexyz' in routine:
+			print 'status: precomputing displacement array, xyz'
+			dimslice = slice(0,3)
+			distsxyz = [[norm(ionstraj[ionsel,i+d,dimslice]-ionstraj[ionsel,i,dimslice],axis=1)**2 
+				for i in range(nframes-d)] 
+				for d in range(dtlimit)]
+			checktime()
+		else:
+			#---pre-compute a master array of all displacements
+			#---Nb the apply_along_axis code is brutally slow so upgrade to numpy 1.8 on dirac
+			print 'status: precomputing displacement array, xy'
+			dimslice = slice(0,2)
+			distsxy = [[norm(ionstraj[ionsel,i+d,dimslice]-ionstraj[ionsel,i,dimslice],axis=1)**2 
+				for i in range(nframes-d)] 
+				for d in range(dtlimit)]
+			checktime()
+			print 'status: precomputing displacement array, z'
+			dimslice = slice(2,3)
+			distsz = [[norm(ionstraj[ionsel,i+d,dimslice]-ionstraj[ionsel,i,dimslice],axis=1)**2 
+				for i in range(nframes-d)] 
+				for d in range(dtlimit)]
+			checktime()
+			#---loop over zones
+			if zonesub == None:
+				zonesub = range(nzones)
+			mastermsd_zones = []
+			for z in zonesub:
+				print 'status: zone = '+str(z)
+				inzone = (roundz == z).T
+				inzonesliced = [[mean(inzone[i:i+d+1],axis=0) for i in range(nframes-d)] 
+					for d in range(dtlimit)]
+				bigmask = [numpy.ma.masked_greater_equal(inzonesliced[i],occupancy) for i in range(dtlimit)]
+				#---Nb we have removed the fix to the feature in which mask returns array(0) to save memory
+				if 0: mastermsd = [(array((1*ma.mask_rows(bigmask[i]).mask+1*ma.mask_cols(bigmask[i]).mask)) 
+					if shape(bigmask[i].mask) != () else zeros(bigmask[i].shape)) for i in range(dtlimit)]
+				mastermsd = [array((1*ma.mask_rows(bigmask[i]).mask+1*ma.mask_cols(bigmask[i]).mask)) 
+					for i in range(dtlimit)]
+				mastermsd_zones.append(mastermsd)
+				checktime()
+				#---Nb memory flat after a single zone if you delete as follows
+				del inzone,inzonesliced,bigmask,mastermsd
+			#---Nb currently disabled due to excessive sizes
+			if 0:
+				#---record times
+				times = [mean([clock[i+d]-clock[i] for i in range(nframes-d)]) for d in range(dtlimit)]
+				#---package the results
+				result_data = MembraneData('ionskate')
+				#---Nb data are packaged as type (distsxy,distsz,mastermsdzones)
+				#---Nb the mastermsd_zones type goes by zone, ion, delta-t, start frame
+				result_data.data = [mastermsd_zones,distsxy,distsz]
+				result_data.addnote(['times',times])
+				result_data.addnote(['occupancy',occupancy])
+				result_data.addnote(['zones',zones])
+				result_data.addnote(['ionsel',ionsel])
+				#---pickle the results
+				pickledump(result_data,resultpkl,directory=pickles)	
+
+
+if 'plot' in routine:
+	from mpl_toolkits.axes_grid1 import make_axes_locatable
+	from mpl_toolkits.axes_grid1.inset_locator import inset_axes
+	import matplotlib.gridspec as gridspec
+	from matplotlib.ticker import MaxNLocator
+	from scipy import optimize
+
+	font = {'family' : 'sans-serif',
+		'size'   : 22}
+	mpl.rc('font', **font)
+	mpl.rc('text', usetex=True)
+	mpl.rc('text.latex', preamble='\usepackage{sfmath}')
+	mpl.rcParams['text.latex.preamble'] = [r'\usepackage{sfmath}',r'\usepackage{amsmath}',
+						r'\usepackage{siunitx}',r'\sisetup{detect-all}',
+				                r'\usepackage{helvet}',r'\usepackage{sansmath}',
+				                r'\sansmath', r'\usepackage{upgreek}']
+	mpl.rcParams['xtick.major.pad'] = 8
+	mpl.rcParams['ytick.major.pad'] = 8
+
+	fig = plt.figure(figsize=(11,8.5))
+	gs = gridspec.GridSpec(1,1,wspace=0.0,hspace=0.05)
+	ax1 = fig.add_subplot(gs[0])
+
+	hist, binedges = np.histogram(array(rewrapz[rewrapz > center]).flatten(),range=(center,center+50),bins=50)
+	mid = (binedges[1:]+binedges[:-1])/2
+	ax1.bar(mid-center,hist/420.,color=clrs[0], alpha=0.5, label="Na$^+$ above charged monolayer")
+	
+	hist, binedges = np.histogram(array(rewrapz[rewrapz < center]).flatten(),range=(center-50,center),bins=50)
+	mid = (binedges[1:]+binedges[:-1])/2
+	ax1.bar(center-mid,hist/420.,color=clrs[1], alpha=0.5, label="Na$^+$ above neutral monolayer")
+
+	ax1.grid(True)
+	ax1.legend(loc=1,fontsize=18)
+	plt.gca().yaxis.set_major_locator(MaxNLocator(prune='lower'))
+	ax1.set_title('Counterion distribution',fontsize=22)
+	ax1.set_ylabel('Average number',fontsize=22)
+	ax1.set_xlabel(r'Distance above interpolated membrane surface (\AA)',fontsize=22)
+	gs.tight_layout(fig, rect=[0.03, 0.0, 1, 1]) # Leave space for the common y-label.
+#	plt.show()
+	plt.savefig(pickles+'fig-'+sysname.split('-')[-1]+'-roundz-analysis.png',dpi=300)
+=======
+>>>>>>> 0665dc026419c014de4f69c85ca575090c4d6473:script-beta-double-layer.py
 
 '''
 ew = 80.10*8.854187 * 10**-12 #---F/m

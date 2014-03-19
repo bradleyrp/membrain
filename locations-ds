@@ -54,4 +54,31 @@ name=membrane-v531-headspan-late
 struct=membrane-v531/s5-sim-kraken/system-input.gro
 membrane-v531/s5-sim-kraken/md.part0022.xtc
 
+name=membrane-v530-gr2d
+struct=membrane-v530/a5-gr2d/system.atomP.gro
+membrane-v530/a5-gr2d/u5-sim-trestles-md.part0008.50000-55000-100.atomP.xtc
+
+name=membrane-v531-gr2d
+struct=membrane-v531/a8-gr2d/system.atomP.gro
+membrane-v531/a8-gr2d/s5-sim-kraken-md.part0020.58000-62000-100.atomP.xtc
+
+name=membrane-v509-spanangle
+struct=membrane-v509/a4-spanangle/system.spanangle.gro
+membrane-v509/a4-spanangle/s6-kraken-md.part0018.40000-90000-100.spanangle.xtc
+
+name=membrane-v510-spanangle
+struct=membrane-v510/a5-spanangle/system.spanangle.gro
+membrane-v510/a5-spanangle/s8-kraken-md.part0021.40000-75000-100.spanangle.xtc
+
+name=membrane-v511-spanangle
+struct=membrane-v511/a4-spanangle/system.spanangle.gro
+membrane-v511/a4-spanangle/s8-kraken-md.part0021.40000-88000-100.spanangle.xtc
+
+name=membrane-v533-spanangle
+struct=membrane-v533/a2-spanangle/system.spanangle.gro
+membrane-v533/a2-spanangle/s4-sim-kraken-md.part0015.40000-54000-100.spanangle.xtc
+
+name=membrane-v534-spanangle
+struct=membrane-v534/a1-spanangle/system.spanangle.gro
+membrane-v534/a1-spanangle/s4-sim-kraken-md.part0013.40000-60000-100.spanangle.xtc
 

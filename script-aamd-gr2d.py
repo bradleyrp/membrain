@@ -8,6 +8,7 @@ from membrainrunner import *
 #---method
 skip = None
 framecount = 200
+framecount = None # Pickle will have same slicing as gmx-time-slice
 framecount_force_exact = True
 location = ''
 execfile('locations.py')
@@ -21,11 +22,12 @@ sel_aamd_surfacer = ['name P','(name C2 and not resname CHL1)']
 
 #---analysis plan
 analysis_descriptors = [
-	(['membrane-v531'],'all',director_asymmetric,[-2,-1],
-		[['resname PI2P and name P','resname PI2P and name P','PIP2-PIP2']],'v531.PIP2-PIP2'),
-	(['membrane-v532'],'all',director_asymmetric,[-2,-1],
-		[['resname PI2P and name P','resname PI2P and name P','PIP2-PIP2']],'v532.PIP2-PIP2')]
-analyses = [analysis_descriptors[i] for i in [-1,-2]]
+	(['membrane-v531-gr2d'],'all',director_asymmetric,[-1],
+		[['resname POPC and name P','resname POPC and name P','POPC-POPC']],'v531.POPC-POPC'),
+#	(['membrane-v532'],'all',director_asymmetric,[-2,-1],
+#		[['resname POPC and name P','resname POPC and name P','POPC-POPC']],'v532.POPC-POPC')
+	]
+analyses = [analysis_descriptors[i] for i in [-1]]
 
 #---MAIN
 #-------------------------------------------------------------------------------------------------------------
