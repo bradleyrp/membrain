@@ -3,6 +3,7 @@
 from membrainrunner import *
 from scipy import spatial
 from scipy import linalg
+import scipy.optimize as so
 
 location = ''
 execfile('locations.py')
@@ -18,58 +19,98 @@ headangle = 'resname PI2P and (name C2 or name P or name C14)'
 
 #---Analysis plan
 analysis_descriptors = {
-	'v509-40000-90000-1000':
+	'v509-40000-90000-100':
 		{'sysname':'membrane-v509',
 		'sysname_lookup':'membrane-v509-spanangle',
-		'trajsel':'s6-kraken-md.part0018.40000-90000-1000.spanangle.xtc',
+		'trajsel':'s6-kraken-md.part0018.40000-90000-100.spanangle.xtc',
 		'resname':'PI2P',
 		'headspan':'(name OP52 or name OP53 or name OP54 or name OP42 or name OP43 or name OP44)',
 		'headangle':'(name C2 or name P or name C14)',
 		'ionname':'Na',
 		'name': 'PtdIns(4,5)P$_2$ with Na$^+$'},
-	'v510-40000-75000-1000':
+	'v510-40000-75000-100':
 		{'sysname':'membrane-v510',
 		'sysname_lookup':'membrane-v510-spanangle',
-		'trajsel':'s8-kraken-md.part0021.40000-75000-1000.spanangle.xtc',
+		'trajsel':'s8-kraken-md.part0021.40000-75000-100.spanangle.xtc',
 		'resname':'PI2P',
 		'headspan':'(name OP52 or name OP53 or name OP54 or name OP42 or name OP43 or name OP44)',
 		'headangle':'(name C2 or name P or name C14)',
 		'ionname':'Mg',
 		'name': 'PtdIns(4,5)P$_2$ with Mg$^{2+}$'},
-	'v511-40000-88000-1000':
+	'v511-40000-88000-100':
 		{'sysname':'membrane-v511',
 		'sysname_lookup':'membrane-v511-spanangle',
-		'trajsel':'s8-kraken-md.part0021.40000-88000-1000.spanangle.xtc',
+		'trajsel':'s8-kraken-md.part0021.40000-88000-100.spanangle.xtc',
 		'resname':'PI2P',
 		'headspan':'(name OP52 or name OP53 or name OP54 or name OP42 or name OP43 or name OP44)',
 		'headangle':'(name C2 or name P or name C14)',
-		'ionname':'Cal',
+		'ionname':'Ca',
 		'name': 'PtdIns(4,5)P$_2$ with Ca$^{2+}$'},
-	'v533-30000-35000-100':
+	'v533-40000-54000-100':
 		{'sysname':'membrane-v533',
 		'sysname_lookup':'membrane-v533-spanangle',
-		'trajsel':'s3-sim-kraken-md.part0011.30000-35000-100.spanangle.xtc',
+		'trajsel':'s4-sim-kraken-md.part0015.40000-54000-100.spanangle.xtc',
 		'resname':'P35P',
 		'headspan':'(name OP52 or name OP53 or name OP54 or name OP32 or name OP33 or name OP34)',
 		'headangle':'(name C2 or name P or name C14)',
 		'ionname':'Mg',
 		'name': 'PtdIns(3,5)P$_2$ with Mg$^{2+}$'},
-	'v534-50000-55000-100':
+	'v534-40000-60000-100':
 		{'sysname':'membrane-v534',
 		'sysname_lookup':'membrane-v534-spanangle',
-		'trajsel':'s5-trestles-md.part0017.50000-55000-100.spanangle.xtc',
+		'trajsel':'s4-sim-kraken-md.part0013.40000-60000-100.spanangle.xtc',
 		'resname':'P35P',
 		'headspan':'(name OP52 or name OP53 or name OP54 or name OP32 or name OP33 or name OP34)',
 		'headangle':'(name C2 or name P or name C14)',
 		'ionname':'Ca',
 		'name': 'PtdIns(3,5)P$_2$ with Ca$^{2+}$'},
-
 	}
 	
 		
-#analysis_names = ['v509-40000-90000-1000','v510-40000-75000-1000', 'v511-40000-88000-1000', 'v533-30000-35000-100', 'v534-50000-55000-100']
-analysis_names = ['v509-40000-90000-1000']
-routine = ['compute','plot','unpickle'][1:3]
+analysis_names = ['v509-40000-90000-100','v510-40000-75000-100', 'v511-40000-88000-100', 'v533-40000-54000-100', 'v534-40000-60000-100'][0:5]
+routine = ['compute','plot','unpickle','contour'][0:2]
+
+# These functions are from: https://gist.github.com/adrn/3993992
+def find_confidence_interval(x, pdf, confidence_level):
+	return pdf[pdf > x].sum() - confidence_level
+ 
+def density_contour(xdata, ydata, nbins_x, nbins_y, ax=None, **contour_kwargs):
+	""" Create a density contour plot.
+ 
+	Parameters
+	----------
+	xdata : numpy.ndarray
+	ydata : numpy.ndarray
+	nbins_x : int
+		Number of bins along x dimension
+	nbins_y : int
+		Number of bins along y dimension
+	ax : matplotlib.Axes (optional)
+		If supplied, plot the contour to this axis. Otherwise, open a new figure
+	contour_kwargs : dict
+		kwargs to be passed to pyplot.contour()
+	"""
+ 
+	H, xedges, yedges = np.histogram2d(xdata, ydata, bins=(nbins_x,nbins_y), normed=True)
+	x_bin_sizes = (xedges[1:] - xedges[:-1]).reshape((1,nbins_x))
+	y_bin_sizes = (yedges[1:] - yedges[:-1]).reshape((nbins_y,1))
+ 
+	pdf = (H*(x_bin_sizes*y_bin_sizes))
+ 
+	one_sigma = so.brentq(find_confidence_interval, 0., 1., args=(pdf, 0.68))
+	two_sigma = so.brentq(find_confidence_interval, 0., 1., args=(pdf, 0.95))
+	three_sigma = so.brentq(find_confidence_interval, 0., 1., args=(pdf, 0.99))
+	levels = [one_sigma, two_sigma, three_sigma]
+ 
+	X, Y = 0.5*(xedges[1:]+xedges[:-1]), 0.5*(yedges[1:]+yedges[:-1])
+	Z = pdf.T
+ 
+	if ax == None:
+		contour = plt.contour(X, Y, Z, levels=levels, origin="lower", **contour_kwargs)
+	else:
+		contour = ax.contour(X, Y, Z, levels=levels, origin="lower", **contour_kwargs)
+ 
+	return contour
 
 
 #---MAIN
@@ -77,6 +118,7 @@ routine = ['compute','plot','unpickle'][1:3]
 for aname in analysis_names:
 	head_area = []
 	head_angle = []
+	data_max = []
 	if 'compute' in routine:
 		for i in analysis_descriptors[aname]: vars()[i] = (analysis_descriptors[aname])[i]
 		#---load
@@ -86,7 +128,6 @@ for aname in analysis_names:
 		traj = trajfile[0]
 		mset.load_trajectory((basedir+'/'+grofile,basedir+'/'+traj),resolution='aamd')
 		checktime()
-		clock = []
 		result_data = MembraneData('spanangle')
 
 		residues = mset.universe.selectAtoms('resname '+resname).resids()
@@ -102,10 +143,10 @@ for aname in analysis_names:
 				head_angle.append(angle*(180./3.1415926))
 				# For pickling.
 				result_data.data.append([mset.universe.trajectory[fr].time,str(res),head_size*head_size,angle*(180./3.1415926)])
-			clock.append(mset.universe.trajectory[fr].time)
+			print "Frame "+str(fr)+" done"
 		mset.store.append(result_data)
 		pickle.dump(mset,open(pickles+'pkl.headspan-headangle.'+aname+'.pkl','w'))
-
+		checktime()
 
 	if 'plot' in routine:
 		font = {'family' : 'sans-serif',
@@ -122,7 +163,6 @@ for aname in analysis_names:
 		fig = plt.figure(figsize=(11,8.5))
 		gs = gridspec.GridSpec(1,1,wspace=0.0,hspace=0.05)
 		ax = fig.add_subplot(gs[0])
-	#	ax1.hist2d(head_angle, head_area)
 	
 		if 'unpickle' in routine:
 			mset = unpickle(pickles+'pkl.headspan-headangle.'+aname+'.pkl')
@@ -136,30 +176,34 @@ for aname in analysis_names:
 			head_angle = [float(i) for i in tmp]
 			sysname = analysis_descriptors[aname]["sysname"]
 			name = analysis_descriptors[aname]["name"]
-#		H, xedges, yedges = histogram2d(head_angle,head_area,bins=41,normed=True,range=((60,180),(45,90)))
-		# If I set the range to cover the range of data for all systems, then data which is compressed for one system looks weird. (?)
-		H, xedges, yedges = histogram2d(head_angle,head_area,bins=41,normed=True)
+		H, xedges, yedges = histogram2d(head_angle,head_area,bins=41,normed=True,range=((60,180),(45,100)))
 		midx = (xedges[1:]+xedges[:-1])/2
 		midy = (yedges[1:]+yedges[:-1])/2
 		extent = [xedges[1], xedges[-1], yedges[1], yedges[-1]]
-		cmap = mpl.cm.jet
-		cmap.set_bad(cmap(0),1.)
-	#	ax.imshow(array(H).T, extent=None, interpolation='nearest',aspect='equal',origin='lower',norm=None,cmap=cmap)
+		data_max.append(H.max)
+		ionname = analysis_descriptors[aname]["ionname"]
+		if ionname == 'Na':
+			cmap = mpl.cm.Greens
+		elif ionname == 'Mg':
+			cmap = mpl.cm.Reds
+		elif ionname == 'Ca':
+			cmap = mpl.cm.Blues
+		else:
+			cmap = mpl.cm.jet
+#		cmap.set_bad(cmap(0),1.)
+		im = ax.imshow(array(H).T, extent=(60,180,45,100), interpolation='nearest',aspect='auto',origin='lower',norm=None,cmap=cmap)
+		fig.colorbar(im) 
+#		im.set_clim(0,0.003)
 		ax.set_title(name)
 		ax.set_xlabel('Head-tail angle (degrees)}$')
 		ax.set_ylabel(r'Molecular area (\AA$^2$)')
-
-		im = mpl.image.NonUniformImage(ax, interpolation='nearest')	
-		xcenters = xedges[:-1] + 0.5 * (xedges[1:] - xedges[:-1])
-		ycenters = yedges[:-1] + 0.5 * (yedges[1:] - yedges[:-1])
-		im.set_data(xcenters, ycenters, H)
-#		ax.set_xlim(xedges[0], xedges[-1])
-#		ax.set_ylim(yedges[0], yedges[-1])
-		ax.set_ylim(45,95)
-		ax.set_xlim(60,180)
-		ax.images.append(im)
-		X, Y = np.meshgrid(xedges, yedges)
-		plot = ax.pcolormesh(X, Y, H, figure=fig, visible=True)
-		plt.colorbar(plot)
-		plt.savefig(pickles+'fig-'+sysname.split('-')[-1]+'-size-angle-correlation.png',dpi=300,bbox_inches='tight')
+#		plt.pcolor(xedges, yedges, H) # This is totally different than imshow.
 #		plt.show()
+		
+		plt.savefig(pickles+'fig-'+aname+'-size-angle-correlation.png',dpi=300,bbox_inches='tight')
+
+	if 'contour' in routine:
+		density_contour(head_angle, head_area, 41, 41)
+		plt.show()
+
+		
