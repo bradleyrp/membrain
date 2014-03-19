@@ -67,8 +67,8 @@ analysis_descriptors = {
 	}
 	
 		
-analysis_names = ['v509-40000-90000-100','v510-40000-75000-100', 'v511-40000-88000-100', 'v533-40000-54000-100', 'v534-40000-60000-100'][0:5]
-routine = ['compute','plot','unpickle','contour'][0:2]
+analysis_names = ['v509-40000-90000-100','v510-40000-75000-100', 'v511-40000-88000-100', 'v533-40000-54000-100', 'v534-40000-60000-100'][0:]
+routine = ['compute','plot','unpickle','contour'][0]
 
 # These functions are from: https://gist.github.com/adrn/3993992
 def find_confidence_interval(x, pdf, confidence_level):
@@ -119,6 +119,10 @@ for aname in analysis_names:
 	head_area = []
 	head_angle = []
 	data_max = []
+	mdat = []
+	result_data = []
+	result_data = MembraneData('spanangle')
+	mset = MembraneSet()
 	if 'compute' in routine:
 		for i in analysis_descriptors[aname]: vars()[i] = (analysis_descriptors[aname])[i]
 		#---load
@@ -128,7 +132,6 @@ for aname in analysis_names:
 		traj = trajfile[0]
 		mset.load_trajectory((basedir+'/'+grofile,basedir+'/'+traj),resolution='aamd')
 		checktime()
-		result_data = MembraneData('spanangle')
 
 		residues = mset.universe.selectAtoms('resname '+resname).resids()
 		whichframes = range(len(mset.universe.trajectory))
@@ -169,6 +172,8 @@ for aname in analysis_names:
 			mdat = mset.store[0]
 			head_angle.append(array(mdat.get(['headspan',0])[:,3]))
 			head_area.append(array(mdat.get(['headspan',0])[:,2]))
+			print array(mdat.get(['headspan',0])[:,3])[0]
+			print shape(array(mdat.get(['headspan',0])[:,3]))
 			# This seems to work with any keyword given to mdat.get
 			tmp = reduce(lambda x,y: x.extend(float(y)),head_area)
 			head_area = [float(i) for i in tmp]
@@ -176,7 +181,12 @@ for aname in analysis_names:
 			head_angle = [float(i) for i in tmp]
 			sysname = analysis_descriptors[aname]["sysname"]
 			name = analysis_descriptors[aname]["name"]
-		H, xedges, yedges = histogram2d(head_angle,head_area,bins=41,normed=True,range=((60,180),(45,100)))
+			print 'I just loaded a pickle. Here are the data.'
+			print 'Name = '+str(name)
+			print 'Mean angle = '+str(mean(head_angle))
+			print 'Mean area = '+str(mean(head_area))
+#		H, xedges, yedges = histogram2d(head_angle,head_area,bins=41,normed=True,range=((60,180),(45,100)))
+		H, xedges, yedges = histogram2d(head_angle,head_area,bins=41,normed=True)
 		midx = (xedges[1:]+xedges[:-1])/2
 		midy = (yedges[1:]+yedges[:-1])/2
 		extent = [xedges[1], xedges[-1], yedges[1], yedges[-1]]
@@ -199,11 +209,15 @@ for aname in analysis_names:
 		ax.set_ylabel(r'Molecular area (\AA$^2$)')
 #		plt.pcolor(xedges, yedges, H) # This is totally different than imshow.
 #		plt.show()
-		
-		plt.savefig(pickles+'fig-'+aname+'-size-angle-correlation.png',dpi=300,bbox_inches='tight')
+		if 'plot' in routine and 'contour' not in routine:
+			plt.savefig(pickles+'fig-'+aname+'-size-angle-correlation.png',dpi=300,bbox_inches='tight')
+			print 'Image saved.'
+		print 'Statistics for '+aname
+		print 'Mean head angle '+str(mean(head_angle))+' , Mean head area '+str(mean(head_area))
 
 	if 'contour' in routine:
-		density_contour(head_angle, head_area, 41, 41)
+#		density_contour(head_angle, head_area, 41, 41)
+		ax.contour(midx,midy,array(H).T)
 		plt.show()
 
 		
