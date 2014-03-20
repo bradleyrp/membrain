@@ -4,6 +4,7 @@
 mset = msets[0]
 vecs = mean(mset.vecs,axis=0)
 m,n = mset.griddims
+#---getgrid is xyz points in nm
 getgrid = array([[[i,j] for j in linspace(0,vecs[1]/mset.lenscale,n)] for i in linspace(0,vecs[0]/mset.lenscale,m)])
 if 'tmp' not in globals(): tmp = array(msets[0].surf)
 msets[0].surf = []
@@ -11,18 +12,18 @@ for i in range(len(tmp)):
 	msets[index_md].surf.append(1*tmp[i])
 maxpos = unravel_index((mean(msets[0].surf,axis=0)/msets[0].lenscale).argmax(),msets[0].griddims)
 maxposgrid = [maxpos[i]/vecs[i]*msets[0].griddims[i] for i in range(2)]
-hypo = [0.04,0.4,0.5,20,8,0]
-params = [0,hypo[0],vecs[0]*hypo[1]/mset.lenscale,vecs[1]*hypo[2]/mset.lenscale,hypo[3],hypo[4],hypo[5]]
-c0hypo = array([[gauss2d(params,getgrid[i,j,0],getgrid[i,j,1]) for j in range(n)] for i in range(m)])
-mscs[index_md].calculate_mode_coupling(msets[index_md],[c0hypo for i in range(len(mset.surf))])
+#---hypothesis has C0 in native units
+#hypo = [0.005,0.5,0.5,5/msets[1].lenscale,5/msets[1].lenscale,0]
+#params = [0,hypo[0],vecs[0]*hypo[1]/mset.lenscale,vecs[1]*hypo[2]/mset.lenscale,hypo[3],hypo[4],hypo[5]]
+#c0hypo = array([[gauss2d(params,getgrid[i,j,0],getgrid[i,j,1]) for j in range(n)] for i in range(m)])
+#mscs[index_md].calculate_mode_coupling(msets[index_md],[c0hypo for i in range(len(mset.surf))])
 
 #---figure
 fig = plt.figure()
 gs = gridspec.GridSpec(3,4,wspace=0.0,hspace=0.0)
 
 #---plot curvature field
-extrem = max([mscs[i].t1d[1][:,1].max() for i in range(2)])
-extrem = 0.1
+extrem = max([max([j.max() for j in mscs[i].c0s]) for i in range(2)])
 ax = plt.subplot(gs[0,0])
 ax.imshow(mean(mscs[0].c0s,axis=0),vmax=extrem,vmin=0.,cmap=mpl.cm.binary)
 ax.set_title('CGMD')
@@ -78,9 +79,11 @@ axl = plt.subplot(gs[0,3])
 m = 1
 axl = plt.subplot(133)
 axl.set_title(r'$\left\langle C_{0,q} h_{-q} \right\rangle $')
-axl.scatter(mscs[m].t1d[1][:,0],mscs[m].t1d[1][:,1]/msets[m].lenscale,marker='.',color='r',s=40,label='CGMD')
+axl.scatter(mscs[m].t1d[1][:,0],mscs[m].t1d[1][:,1]/msets[m].lenscale,marker='.',color='r',s=40,label='MESO')
+#axl.scatter(mscs[m].t1d[0][:,0],mscs[m].t1d[0][:,1]/msets[m].lenscale,marker='.',color='r',s=40,label='MESO')
 m = 0
-axl.scatter(mscs[m].t1d[1][:,0],mscs[m].t1d[1][:,1]/msets[m].lenscale,marker='.',color='b',s=40,label='MESO')
+axl.scatter(mscs[m].t1d[1][:,0],mscs[m].t1d[1][:,1]/msets[m].lenscale,marker='.',color='b',s=40,label='CGMD')
+#axl.scatter(mscs[m].t1d[0][:,0],mscs[m].t1d[0][:,1]/msets[m].lenscale,marker='.',color='b',s=40,label='CGMD')
 axl.set_ylim((10**-11,10**-1))
 axl.set_xlim((0.06,1.5))
 axl.set_yscale('log')

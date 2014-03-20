@@ -451,6 +451,44 @@ def plotmov(dat,basename,altdat=None,panels=1,plotfunc=None,figsize=None,keep_sn
 		subprocess.call(['ffmpeg','-i',pickles+'/'+plot_video_filebase+'.fr.%04d.png',
 			'-vcodec','mpeg2video','-qscale','0','-filter:v','setpts=2.0*PTS',
 			pickles+'/'+plot_video_name+'.mpeg'])
+	#---this is obv wrong
+	if keep_snapshots == False:
+		os.popen('rm -r -f '+pickles+'/figs-'+sysname+'-dimple-view')
+		
+def plotmov_line(dat,basename,altdat=None,panels=1,plotfunc=None,figsize=None,keep_snapshots=True,
+	cmap=None,lowres=False,smooth=None,xedges=None,yedges=None,whitezero=False):
+	'''Generic wrapper for making movies.'''
+	import scipy.ndimage
+	#---names
+	sysname = 'test'
+	plot_video_filebase = 'tmpdir'
+	if not os.path.isdir(pickles+'/figs-'+basename):
+		os.mkdir(pickles+'/figs-'+basename)
+	plot_video_filebase = '/figs-'+basename+'/'+'snap-'+basename
+	plot_video_name = '/figs-'+basename+'/'+'vid-'+basename
+	#---loop over frames
+	framenums = range(len(dat[0]))
+	for fr in framenums:
+		print 'Plotting frame '+str(fr)
+		fig = plt.figure()
+		if plotfunc == None:
+			ax = plt.subplot(111)
+			ax.plot(dat[fr])
+		else:
+			globals()[plotfunc]([dat[i][fr] for i in range(panels)],fig,altdat=altdat,
+				vmin=vmin,vmax=vmax,fr=fr)
+		plt.savefig(pickles+plot_video_filebase+'.fr.'+str('%04d'%framenums.index(fr))+'.png',
+			dpi=200,bbox_inches='tight')
+		plt.close(fig)
+	if lowres:
+		subprocess.call(['ffmpeg','-i',pickles+'/'+plot_video_filebase+'.fr.%04d.png',
+			'-vcodec','mpeg2video','-filter:v','setpts=2.0*PTS',
+			pickles+'/'+plot_video_name+'.lowres.mpeg'])
+	else:
+		subprocess.call(['ffmpeg','-i',pickles+'/'+plot_video_filebase+'.fr.%04d.png',
+			'-vcodec','mpeg2video','-qscale','0','-filter:v','setpts=2.0*PTS',
+			pickles+'/'+plot_video_name+'.mpeg'])
+	#---this is obv wrong
 	if keep_snapshots == False:
 		os.popen('rm -r -f '+pickles+'/figs-'+sysname+'-dimple-view')
 

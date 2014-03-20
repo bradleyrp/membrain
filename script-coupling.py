@@ -80,7 +80,7 @@ analysis_descriptors = {
 		'end':None,
 		'nbase':None,
 		'hascurv':True,
-		'hypo':[0.04,1./2,1./2,5,5,0],
+		'hypo':[0.005,1./2,1./2,5,5,0],
 		'plot_ener_err':True,
 		'plotqe':True,
 		'removeavg':False,
@@ -99,7 +99,7 @@ if dotest == 'v2002.t3.t4.v614':
 	#---load colors in the same order as analyses_names
 	#---previous v614 hypo [0.005,2./5,2./5,10,10,0]
 	clist = [(brewer2mpl.get_map('Set1', 'qualitative', 8).mpl_colors)[i] for i in [0,2,1,3,4,5,6,7,]]
-	routine = ['load','calc','plot1d','plot2d','plotphase','hyposweep'][1:2]
+	routine = ['load','calc','checkplot','plot1d','plot2d','plotphase','hyposweep'][1:3]
 	index_md = 0
 	if 'hyposweep' in routine:
 		hypo_list = [[i,1./2,1./2,10,10,0] for i in arange(0.1,1.0,0.05)]
@@ -121,7 +121,7 @@ elif dotest == 'v2002.t2.t1':
 	#---load colors in the same order as analyses_names
 	clist = [(brewer2mpl.get_map('Set1', 'qualitative', 8).mpl_colors)[i] for i in [0,1,2,3,4,5,6,7,]]
 
-if 'msets' not in globals(): msets = []
+if 'msets' not in globals(): msets = []; plt.ion()
 if 'mscs' not in globals(): mscs = []
 if 'collect_c0s' not in globals(): collect_c0s = []
 
@@ -177,10 +177,11 @@ class ModeCouple():
 		mset.calculate_undulations(removeavg=removeavg,fitlims=fitlims,forcekappa=forcekappa)
 		grid = mset.griddims
 		m,n = grid[0]-1,grid[1]-1
-		if c0s == []:
-			#---if no curvature field, use zeros
-			c0s = zeros((m,n))
+		#---if no curvature field, use zeros
+		if c0s == []: c0s = zeros((m,n))
+		#---units of hqs are unspecified here but then set by autocorr
 		hqs = [fftwrap(mset.surf[i])/double(m*n) for i in range(len(mset.surf))]
+		#---units of incoming c0s must be in the units specified by mset.lenscale
 		cqs = [fftwrap(mset.lenscale*array(c0s[i]))/double(m*n) for i in range(len(c0s))]
 		Lx,Ly = mean(mset.vecs,axis=0)[0:2]
 		cm,cn = [int(round(i/2.-1)) for i in shape(hqs[0])]
@@ -240,7 +241,8 @@ class ModeCouple():
 		self.area = area
 		self.scalefac = scalefac
 		self.qmagst = qmagst
-		self.c0s = c0s
+		#---store c0s in nm units
+		self.c0s = [mset.lenscale*array(c0s[i]) for i in range(len(c0s))]
 
 def spectrum_summary(hypotext=False):
 	'''Plots the 1D spectrum from global variables.'''
@@ -382,8 +384,7 @@ def spectrum_summary(hypotext=False):
 			transform=axl.transAxes)
 	plt.savefig(pickles+'fig-bilayer-couple-'+analysis_name+'-'+'spectrum1d'+hypo_suffix+'.png',
 		dpi=200,bbox_inches='tight')
-	#plt.show()
-	plt.close(fig)
+	plt.show()
 
 #---MAIN
 #-------------------------------------------------------------------------------------------------------------
@@ -411,21 +412,26 @@ if 'load' in routine or msets == []:
 			if hypo != None:
 				vecs = mean(mset.vecs,axis=0)
 				m,n = mset.griddims
-				getgrid = array([[[i,j] for j in linspace(0,vecs[1]/mset.lenscale,n)] for i in linspace(0,vecs[0]/mset.lenscale,m)])
+				#---getgrid is xyz points in nm
+				getgrid = array([[[i,j] for j in linspace(0,vecs[1]/mset.lenscale,n)] 
+					for i in linspace(0,vecs[0]/mset.lenscale,m)])
 				#---convert everything to nm
 				#---recall z0,c0,x0,y0,sx,sy,th = params
-				params = [0,hypo[0],vecs[0]*hypo[1]/mset.lenscale,vecs[1]*hypo[2]/mset.lenscale,hypo[3],hypo[4],hypo[5]]
-				c0hypo = array([[gauss2d(params,getgrid[i,j,0],getgrid[i,j,1]) for j in range(n)] for i in range(m)])
+				#---params sets C0 in native units, x0,y0 in proportional units, and sx,sy in nm
+				params = [0,hypo[0],vecs[0]*hypo[1]/mset.lenscale,vecs[1]*hypo[2]/mset.lenscale,
+					hypo[3],hypo[4],hypo[5]]
+				c0hypo = array([[gauss2d(params,getgrid[i,j,0],getgrid[i,j,1]) for j in range(n)] 
+					for i in range(m)])
 				collect_c0s.append([c0hypo for i in range(len(mset.surf))])
 			else:
 				collect_c0s.append([])
 		elif simtype == 'meso_precomp':
 			if 'mset' in globals(): del mset
 			mset = unpickle(pickles+locate)
+			#---for precomp simulations these units are relative to a0 and already in a reglar grid
 			collect_c0s.append(mset.getdata('c0map').data)
 			msets.append(mset)
 
-####### c0 1/nm * 1/10
 #---calculate mode couplings
 if 'calc' in routine:
 	#---match mesoscale length scales to an MD simulation
@@ -435,11 +441,24 @@ if 'calc' in routine:
 		lenscale = max(mean(msets[move_ind].vecs,axis=0))/\
 			(max(mean(msets[ref_ind].vecs,axis=0))/msets[ref_ind].lenscale)
 		for a in analyses_names:
+			for i in analysis_descriptors[a]: vars()[i] = (analysis_descriptors[a])[i]
 			if (analysis_descriptors[a])['simtype'] == 'meso' or \
 				(analysis_descriptors[a])['simtype'] == 'meso_precomp':
 				msets[analyses_names.index(a)].lenscale = lenscale
+		#---reset the hypothetical C0 field according to the new scaling (replaces the calculation above)
+		for a in analyses_names:
+			for i in analysis_descriptors[a]: vars()[i] = (analysis_descriptors[a])[i]
+			if analysis_descriptors[a]['simtype'] == 'md':
+				anum = analyses_names.index(a)
+				mset = msets[anum]
+				vecs = mean(mset.vecs,axis=0)
+				m,n = mset.griddims
+				params = [0,0.5*hypo[0]*msets[1].lenscale,vecs[0]*hypo[1]/mset.lenscale,vecs[1]*hypo[2]/mset.lenscale,hypo[3]/msets[1].lenscale,hypo[4]/msets[1].lenscale,hypo[5]]
+				c0hypo = array([[gauss2d(params,getgrid[i,j,0],getgrid[i,j,1]) for j in range(n)] for i in range(m)])
+				collect_c0s[anum] = [c0hypo for i in range(len(mset.surf))]
 	#---calculate coupled modes
 	for a in analyses_names:
+		for i in analysis_descriptors[a]: vars()[i] = (analysis_descriptors[a])[i]
 		m = analyses_names.index(a)
 		if 'msc' in globals(): del msc
 		msc = ModeCouple()
@@ -447,6 +466,7 @@ if 'calc' in routine:
 		mscs.append(msc)
 	hypo = (analysis_descriptors['v614'])['hypo']
 	spectrum_summary(hypotext=True)
+	#execfile('script-coupling-dev2.py')
 		
 #---calculate mode couplings according to testable hypotheses
 if 'hyposweep' in routine:
@@ -574,4 +594,97 @@ if 'plotphase' in routine:
 				for i in range(len(ms.undulate_raw))])
 			plt.scatter(dat[:,0],dat[:,1],c=clrs[m])
 		plt.show()
+
+#-------------------!!!!!!!!!!!!@@@@@@@@@@@@#########################
+if 'checkplot' in routine:		
+	#---calculations
+	mset = msets[0]
+	vecs = mean(mset.vecs,axis=0)
+	m,n = mset.griddims
+	#---getgrid is xyz points in nm
+	if 0:
+		getgrid = array([[[i,j] for j in linspace(0,vecs[1]/mset.lenscale,n)] for i in linspace(0,vecs[0]/mset.lenscale,m)])
+		if 'tmp' not in globals(): tmp = array(msets[0].surf)
+		msets[0].surf = []
+		for i in range(len(tmp)):
+			msets[index_md].surf.append(1*tmp[i])
+		maxpos = unravel_index((mean(msets[0].surf,axis=0)/msets[0].lenscale).argmax(),msets[0].griddims)
+		maxposgrid = [maxpos[i]/vecs[i]*msets[0].griddims[i] for i in range(2)]
+		#---hypothesis has C0 in native units
+		#hypo = [0.005,0.5,0.5,5/msets[1].lenscale,5/msets[1].lenscale,0]
+		#params = [0,hypo[0],vecs[0]*hypo[1]/mset.lenscale,vecs[1]*hypo[2]/mset.lenscale,hypo[3],hypo[4],hypo[5]]
+		#c0hypo = array([[gauss2d(params,getgrid[i,j,0],getgrid[i,j,1]) for j in range(n)] for i in range(m)])
+		#mscs[index_md].calculate_mode_coupling(msets[index_md],[c0hypo for i in range(len(mset.surf))])
+	#---figure
+	fig = plt.figure()
+	gs = gridspec.GridSpec(3,4,wspace=0.0,hspace=0.0)
+	#---plot curvature field
+	extrem = max([max([j.max() for j in mscs[i].c0s]) for i in range(2)])
+	ax = plt.subplot(gs[0,0])
+	ax.imshow(mean(mscs[0].c0s,axis=0),vmax=extrem,vmin=0.,cmap=mpl.cm.binary)
+	ax.set_title('CGMD')
+	ax = plt.subplot(gs[0,1])
+	ax.set_title('MESO')
+	im = ax.imshow(mean(mscs[1].c0s,axis=0),vmax=extrem,vmin=0.,cmap=mpl.cm.binary)
+	axins = inset_axes(ax,width="5%",height="100%",loc=3,
+		bbox_to_anchor=(1.,0.,1.,1.),
+		bbox_transform=ax.transAxes,
+		borderpad=0)
+	cbar = plt.colorbar(im,cax=axins,orientation="vertical")
+	plt.setp(axins.get_yticklabels())
+	plt.setp(axins.get_xticklabels())
+	axins.set_ylabel(r'$\left\langle C_0 \right\rangle (\mathrm{{nm}^{-1}})$',
+		rotation=270)
+	#---plot average structure
+	vmax = max([mean(msets[i].surf,axis=0).max()/msets[i].lenscale for i in range(2)])
+	vmin = min([mean(msets[i].surf,axis=0).min()/msets[i].lenscale for i in range(2)])
+	extrem = max(abs(vmax),abs(vmin))
+	vmax,vmin = extrem,-extrem
+	ax = plt.subplot(gs[1,0])
+	ax.imshow(mean(msets[0].surf,axis=0)/msets[0].lenscale,vmin=vmin,vmax=vmax,cmap=mpl.cm.RdBu_r)
+	ax = plt.subplot(gs[1,1])
+	im = ax.imshow(mean(msets[1].surf,axis=0)/msets[1].lenscale,vmin=vmin,vmax=vmax,cmap=mpl.cm.RdBu_r)
+	axins = inset_axes(ax,width="5%",height="100%",loc=3,
+		bbox_to_anchor=(1.,0.,1.,1.),
+		bbox_transform=ax.transAxes,
+		borderpad=0)
+	cbar = plt.colorbar(im,cax=axins,orientation="vertical")
+	plt.setp(axins.get_yticklabels())
+	plt.setp(axins.get_xticklabels())
+	axins.set_ylabel(r'$\left\langle z(x,y)\right\rangle (\mathrm{nm})$',rotation=270)
+	#---plot standard deviations
+	extrem = max([std(msets[i].surf,axis=0).max()/msets[i].lenscale for i in range(2)])
+	ax = plt.subplot(gs[2,0])
+	ax.imshow(std(msets[0].surf,axis=0)/msets[0].lenscale,vmin=0.,vmax=extrem,cmap=mpl.cm.jet)
+	ax = plt.subplot(gs[2,1])
+	im = ax.imshow(std(msets[1].surf,axis=0)/msets[1].lenscale,vmin=0.,vmax=extrem,cmap=mpl.cm.jet)
+	axins = inset_axes(ax,width="5%",height="100%",loc=3,
+		bbox_to_anchor=(1.,0.,1.,1.),
+		bbox_transform=ax.transAxes,
+		borderpad=0)
+	cbar = plt.colorbar(im,cax=axins,orientation="vertical")
+	plt.setp(axins.get_yticklabels())
+	plt.setp(axins.get_xticklabels())
+	axins.set_ylabel(r'$\left\langle \left(z-\overline{z}\right)^{2} \right\rangle (\mathrm{{nm}^2})$',
+		rotation=270)
+	#---spectrum plot
+	axl = plt.subplot(gs[0,3])
+	m = 1
+	axl = plt.subplot(133)
+	axl.set_title(r'$\left\langle C_{0,q} h_{-q} \right\rangle $')
+	axl.scatter(mscs[m].t1d[1][:,0],mscs[m].t1d[1][:,1],marker='.',color='r',s=40,label='MESO')
+	#axl.scatter(mscs[m].t1d[0][:,0],mscs[m].t1d[0][:,1]/msets[m].lenscale,marker='.',color='r',s=40,label='MESO')
+	m = 0
+	axl.scatter(mscs[m].t1d[1][:,0],mscs[m].t1d[1][:,1],marker='.',color='b',s=40,label='CGMD')
+	#axl.scatter(mscs[m].t1d[0][:,0],mscs[m].t1d[0][:,1]/msets[m].lenscale,marker='.',color='b',s=40,label='CGMD')
+	axl.set_ylim((10**-11,10**-1))
+	axl.set_xlim((0.06,1.5))
+	axl.set_yscale('log')
+	axl.set_xscale('log')
+	axl.grid(True)
+	axl.yaxis.set_ticks_position("right")
+	axl.legend(loc='lower left')
+	gs.tight_layout(fig,h_pad=0.,w_pad=1.0)
+	plt.savefig(pickles+'fig-bilayer-couple-c0qhq-compare.png',bbox_inches='tight')
+	plt.show()
 

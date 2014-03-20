@@ -76,7 +76,7 @@ class MembraneData:
 			self.struct = {'type':0,'zone':1,'ion':2,'deltat':3,'start_frame':4}
 			self.struct_opts = {'type': {'mastermsd_zones':0,'distsxy':1,'distsz':2}}
 		elif self.calctype == 'spanangle':
-			self.struct = {'frame':0,'resid':1,'headspan':2, 'headangle':3}
+			self.struct = {'frame':0,'resid':1,'headspan':2,'headangle':3}
 		#---type: updated/advanced dimple fitting
 		elif self.calctype == 'dimple2':
 			self.struct = {'frame':0,'type':1}
