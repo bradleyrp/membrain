@@ -352,13 +352,13 @@ class MembraneSet:
 			monolayer_resids = []
 			for resids in residue_ids:
 				monolayer_resids.append(list(set.intersection(set(monolayer),set(resids))))
-			self.monolayer_by_resid_abs.append(monolayer_resids)
+			self.monolayer_by_resid.append(monolayer_resids)
 		if self.resids_reracker == []:
-			self.monolayer_by_resid = self.monolayer_by_resid_abs
+			self.monolayer_by_resid_abs = self.monolayer_by_resid
 		else:
-			self.monolayer_by_resid = \
+			self.monolayer_by_resid_abs = \
 				[[[self.resids_reracker[r] for r in restype] 
-				for restype in mono] for mono in self.monolayer_by_resid_abs]
+				for restype in mono] for mono in self.monolayer_by_resid]
 
 	def locate_bilayer(self,frameno,monolayer_rep=None):
 		'''General side-of monolayer identifier function. Needs name of the atom.'''

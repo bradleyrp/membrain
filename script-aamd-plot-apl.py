@@ -7,7 +7,7 @@ execfile('locations.py')
 if 'msets' not in globals(): 
 	msets = []
 	msets.append(unpickle(pickles+\
-		'pkl.lipidarea.membrane-v530.a4-surfacer.u5-sim-trestles-md.part0006.30000-100000-100.pkl'))
+		'pkl.cells.membrane-v530.a4-surfacer.u5-sim-trestles-md.part0006.30000-100000-100.pkl'))
 mset = msets[0]
 dat = mset.store[0]
 
@@ -56,7 +56,7 @@ dat_vor[0][0] = list(dat.get(['monolayer',0,'type','voronoi']))
 dat_vor[1][0] = list(dat.get(['monolayer',1,'type','voronoi']))
 rand_color_list = [np.random.rand(3,1) for i in range(2*len(dat_vor[0][0][0].points))]
 
-plotmov(dat_vor,'celltest',plotfunc='cellplot')
+#plotmov(dat_vor,'celltest',plotfunc='cellplot')
 
 
 

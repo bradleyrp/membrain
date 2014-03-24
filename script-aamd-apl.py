@@ -59,11 +59,11 @@ for aname in analysis_names:
 			top = []
 			for t in range(len(mset.resnames)):
 				top.extend([mean(mset.universe.residues[i].selectAtoms(selector[t]).coordinates(),
-					axis=0) for i in mset.monolayer_by_resid_abs[0][t]])
+					axis=0) for i in mset.monolayer_by_resid[0][t]])
 			bot = []
 			for t in range(len(mset.resnames)):
 				bot.extend([mean(mset.universe.residues[i].selectAtoms(selector[t]).coordinates(),
-					axis=0) for i in mset.monolayer_by_resid_abs[1][t]])
+					axis=0) for i in mset.monolayer_by_resid[1][t]])
 			#---calculate areas for each monolayer
 			results = []
 			for points in [top,bot]:
@@ -76,6 +76,11 @@ for aname in analysis_names:
 					areas.append(abs(sum(x1*y2-y1*x2 for (x1, y1), (x2, y2) in pairs)/2))
 				results.append([points,vmap,areas])
 			result_data.add(results,[frameno])
+			#---add details to the store
+			for i in analysis_descriptors[aname]:
+				result_data.addnote([i,(analysis_descriptors[aname])[i]])
+			result_data.addnote(['selector',selector])
+			result_data.addnote(['director',director])
 		mset.store.append(result_data)
 		#---Save the data
-		pickledump(mset,'pkl.lipidarea.'+specname_pickle(sysname,traj)+'.pkl',directory=pickles)
+		pickledump(mset,'pkl.cells.'+specname_pickle(sysname,traj)+'.pkl',directory=pickles)
