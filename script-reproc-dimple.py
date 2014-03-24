@@ -201,7 +201,7 @@ def gauss2d(params,x,y):
 #---load
 if 'results_stack' not in globals():
 	#---looking at old results, temporary fix before adding it above or simply re-computing those files
-	do_old = False
+	do_old = True
 	if not do_old:
 		results_stack = []
 		for aname in analysis_names:

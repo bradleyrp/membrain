@@ -56,9 +56,12 @@ class MembraneSet:
 		self.unierse_structfile = ''
 		self.universe_trajfile = ''
 		self.monolayer_residues = []
+		self.monolayer_residues_abs = []
 		self.resnames = []
 		self.resids = []
 		self.monolayer_by_resid = []
+		self.monolayer_by_resid_abs = []
+		self.resids_reracker = []
 		self.monolayer_rep = ''
 		self.selections = []
 		self.picklename = ''
@@ -326,8 +329,10 @@ class MembraneSet:
 		if (max(monos[0]+monos[1])-min(monos[0]+monos[1])) != len(monos[0]+monos[1])-1:
 			print 'warning: resorting the monolayer indices because there is a mismatch'
 			reracker = list(sort(monos[0]+monos[1]))	
-			monos = [[reracker.index(i) for i in monos[m]] for m in range(2)]
-		self.monolayer_residues = monos
+			monos_rerack = [[reracker.index(i) for i in monos[m]] for m in range(2)]
+			self.monolayer_residues_abs = monos	
+			self.resids_reracker = reracker
+		self.monolayer_residues = monos_rerack
 		if len(monos[0]) != len(monos[1]):
 			print 'warning: there is a difference in the number of lipids per monolayer'
 
@@ -339,12 +344,22 @@ class MembraneSet:
 			selection = self.universe.selectAtoms('resname '+sel)
 			self.resids.append([i-1 for i in selection.resids()])
 			self.resnames.append(sel)
+		#---absolute vs relative numbering is tricky here
+		if self.resids_reracker != []:
+			residue_ids = [[self.resids_reracker.index(i) for i in j] for j in self.resids]
+		else: residue_ids = self.resids
 		for monolayer in self.monolayer_residues:
 			monolayer_resids = []
-			for resids in self.resids:
+			for resids in residue_ids:
 				monolayer_resids.append(list(set.intersection(set(monolayer),set(resids))))
-			self.monolayer_by_resid.append(monolayer_resids)
-	
+			self.monolayer_by_resid_abs.append(monolayer_resids)
+		if self.resids_reracker == []:
+			self.monolayer_by_resid = self.monolayer_by_resid_abs
+		else:
+			self.monolayer_by_resid = \
+				[[[self.resids_reracker[r] for r in restype] 
+				for restype in mono] for mono in self.monolayer_by_resid_abs]
+
 	def locate_bilayer(self,frameno,monolayer_rep=None):
 		'''General side-of monolayer identifier function. Needs name of the atom.'''
 		if frameno not in self.surf_positioni:
