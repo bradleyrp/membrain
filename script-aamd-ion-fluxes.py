@@ -66,13 +66,14 @@ analysis_names = [
 	'v531-20000-62000-100',
 	'v509-40000-90000-10'
 	][-1:]
-routine = ['compute',][1:0]
+routine = ['load','compute',][1:]
 
 #---MAIN
 #-------------------------------------------------------------------------------------------------------------
 
 #---decomposing the diffusion by calculating it only from movements that are mostly in a particular z-slice
-if 'compute' in routine:
+
+if 'load' in routine:
 	for aname in analysis_names:
 		for i in analysis_descriptors[aname]: vars()[i] = (analysis_descriptors[aname])[i]
 		#---load
@@ -103,8 +104,10 @@ if 'compute' in routine:
 			mset_surf.gotoframe(fr)
 			surfpts = surf_select.coordinates()
 			monoz.append([mean(surfpts[mset_surf.monolayer_residues[m],2],axis=0) for m in range(2)])
-		#---construct bins		
-		desired_binsize = 5
+		#---construct bins	
+if 'compute' in routine:
+      for aname in analysis_names:
+		desired_binsize = 1
 		upper_binws = [int(round((mset_surf.vec(i)[2]-monoz[i][0])/desired_binsize)) for i in whichframes]
 		mid_binws = [int(round((monoz[i][0]-monoz[i][1])/desired_binsize)) for i in whichframes]
 		lower_binws = [int(round((monoz[i][1])/desired_binsize)) for i in whichframes]
@@ -184,7 +187,7 @@ if 0:
 		mids = array(edges[1:]+edges[:-1])/2.
 		plt.plot(mids,hist);
 	plt.show()
-if 0:
+if 1:
 	#---average the histograms
 	hists = []
 	meanbinedges = mean(binedges,axis=0)	
@@ -194,9 +197,11 @@ if 0:
 		hist,edges = histogram(disctraj[:,i],range=(0,bincount),bins=bincount);
 		hists.append(hist)
 	mids = array(edges[1:]+edges[:-1])/2.
-	bw = mean(meanbinedges[1:]-meanbinedges[:-1])
-	plt.axvline(x=edges[monobins[0]],ymin=0.,ymax=1.)
-	plt.axvline(x=edges[monobins[1]],ymin=0.,ymax=1.)
+	bw = mean(meanbinedges[1:]-meanbinedges[:-1]) # bin width in Angstroms.
+	# plt.axvline(x=bw*edges[monobins[0]],ymin=0.,ymax=1.)
+	# plt.axvline(x=bw*edges[monobins[1]],ymin=0.,ymax=1.)
 	plt.plot(bw*mids,mean(hists,axis=0),'o-');
 	plt.show()
-
+	# Where is the histogram zero? Where is the center of reflection?
+	zeroes = where(mean(hists,axis=0)==0)
+	middle_bin = int(mean(zeroes))
