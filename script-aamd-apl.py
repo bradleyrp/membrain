@@ -1,11 +1,6 @@
 #!/usr/bin/python -i
 
 from membrainrunner import *
-
-#---Analysis parameters
-skip = None
-framecount = None
-location = ''
 execfile('locations.py')
 
 #---selections
@@ -25,22 +20,15 @@ cgmd_protein = 'name BB'
 #---Analysis plan
 analysis_plan = slice(None,None)
 analysis_descriptors = {
-	'v530-5000-5500-2':
+	'v530-30000-100000-100':
 		{'sysname':'membrane-v530',
-		'sysname_lookup':'membrane-v530-apl',
-		'director':director_aamd_symmetric,'selector':selector_aamd_symmetric,'protein_select':None,
-		'trajsel':'u4-reboot-sim-compbio-md.part0002.5000-5500-2.xtc'},
-	'v530-20000-20500-2':
-		{'sysname':'membrane-v530',
-		'sysname_lookup':'membrane-v530-apl',
-		'director':director_aamd_symmetric,'selector':selector_aamd_symmetric,'protein_select':None,
-		'trajsel':'u5-sim-trestles-md.part0005.20000-20500-2.xtc'},
-	'v530-80000-80500-2':
-		{'sysname':'membrane-v530',
-		'sysname_lookup':'membrane-v530-apl',
-		'director':director_aamd_symmetric,'selector':selector_aamd_symmetric,'protein_select':None,
-		'trajsel':'u5-sim-trestles-md.part0012.80000-80500-2.xtc'}}
-analysis_names = ['v530-5000-5500-2', 'v530-20000-20500-2', 'v530-80000-80500-2']
+		'sysname_lookup':'membrane-v530-atomP',
+		'director':director_aamd_asymmetric,'selector':selector_aamd_asymmetric,'protein_select':None,
+		'residues':'infer',
+		'trajsel':'u5-sim-trestles-md.part0006.30000-100000-100.atomP.xtc',
+		'whichframes':None}}
+analysis_names = [
+	'v530-30000-100000-100'][:]
 
 #---MAIN
 #-------------------------------------------------------------------------------------------------------------
@@ -55,23 +43,14 @@ for aname in analysis_names:
 		mset = MembraneSet()
 		mset.load_trajectory((basedir+'/'+grofile,basedir+'/'+traj),resolution='aamd')
 		mset.identify_monolayers(director,startframeno=0)
-#		mset.identify_residues(residues)
+		if residues == 'infer':
+			residues = list(set(mset.universe.residues.resnames()))
+		mset.identify_residues(residues)
 		result_data = MembraneData('cells')
-		'''
-		#---frame selection header
-		end = None
-		start = None
-		if framecount == None:
-			if end == None: end = mset.nframes
-			if start == None: start = 0
-			if skip == None: skip = 1
-		else:
-			start = 0
-			end = mset.nframes
-			skip = int(float(mset.nframes)/framecount)
-			skip = 1 if skip < 1 else skip
+		if whichframes == None: whichframes = slice(None,None)
 		#---calcalate areas per lipid
-		for frameno in range(start,end,skip):
+		for frameno in range(mset.nframes)[whichframes]:
+			print frameno
 			#---select the frame
 			mset.gotoframe(frameno)
 			if type(selector) == str:
@@ -97,7 +76,11 @@ for aname in analysis_names:
 					areas.append(abs(sum(x1*y2-y1*x2 for (x1, y1), (x2, y2) in pairs)/2))
 				results.append([points,vmap,areas])
 			result_data.add(results,[frameno])
-			'''
+			#---add details to the store
+			for i in analysis_descriptors[aname]:
+				result_data.addnote([i,(analysis_descriptors[aname])[i]])
+			result_data.addnote(['selector',selector])
+			result_data.addnote(['director',director])
 		mset.store.append(result_data)
 		#---Save the data
-		pickledump(mset,'pkl.lipidarea.'+specname_pickle(sysname,traj)+'.pkl',directory=pickles)
+		pickledump(mset,'pkl.cells.'+specname_pickle(sysname,traj)+'.pkl',directory=pickles)

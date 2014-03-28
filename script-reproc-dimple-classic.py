@@ -93,7 +93,7 @@ do_resid_1d = False
 do_pubplot = False
 		
 #---pre-made analysis routines
-plotspecs = 'both'
+plotspecs = 'enthpub'
 if plotspecs == 'both':
 	analysis_plan = slice(None,-1)
 	figoutnamebase = 'fig-dimple-master-summary-ENTH-EXO70-classic-check2'
@@ -118,7 +118,7 @@ elif plotspecs == 'enthpub':
 
 #---method settings
 do_resid_filter = True
-resid_filter = 8.
+resid_filter = 6.
 show_areas_on_master_plot = True
 
 #---parameters
@@ -210,6 +210,7 @@ if do_pubplot:
 	#---plot maximum mean curvatures	
 	maxpeak = 0
 	for p in range(len(analyses)):
+		print 'p = '+str(p)
 		thisaxis = ax_hmax[p]
 		ccodes = analyses[p][1]
 		name = analyses[p][2]
@@ -235,6 +236,7 @@ if do_pubplot:
 					and abs(10*maxhs[i]) < maxhfilter[1])]
 			#---nanometer correction
 			validhs = [10*maxhs[i] for i in validhis]
+			print 'mean = '+str(mean(validhs))
 			hist0,binedge0 = numpy.histogram(validhs,bins=nbins,normed=False,weights=[1./len(validhs) 
 				for i in validhs],range=(minval,maxval))
 			mid0 = (binedge0[1:]+binedge0[:-1])/2

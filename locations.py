@@ -59,6 +59,7 @@ elif location == 'dark':
 	fsaxticks = 16
 	fsaxtitle = 20
 	fsaxlegend = 14
+	fsaxlegend_small = 12
 	#---distinct from plot_suppress rpb added this for remote plotting on a specific set of scripts
 	plotviewflag = True
 #---Set data locations according to system: DS
