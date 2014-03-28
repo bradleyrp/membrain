@@ -166,6 +166,9 @@ if 0:
 		plt.savefig(pickles+'fig-dimple2avg-'+bigname+'.png',dpi=300,bbox_inches='tight')
 		if show_plots: plt.show()
 		plt.clf()
+if 0:
+	mset = unpickle(pickles+'pkl.structures.membrane-v614.s9-lonestar.md.part0004.120000-220000-200.pkl')
+	plotter_undulate(mset)
+if 0:
+	mset = unpickle(pickles+'pkl.cells.membrane-v530.a4-surfacer.u5-sim-trestles-md.part0006.30000-100000-100.pkl')
 
-mset = unpickle(pickles+'pkl.structures.membrane-v614.s9-lonestar.md.part0004.120000-220000-200.pkl')
-plotter_undulate(mset)

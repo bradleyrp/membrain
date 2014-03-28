@@ -28,7 +28,7 @@ analysis_descriptors = {
 analysis_names = [
 	'v509-40000-90000-10'
 	][-1:]
-routine = ['load','compute','average_leaflets','fit'][3:]
+routine = ['load','compute','average_leaflets','fit'][:]
 
 #---MAIN
 #-------------------------------------------------------------------------------------------------------------
@@ -246,18 +246,20 @@ if 'compute' in routine:
 	
 if 'fit' in routine:
 	from scipy.optimize import curve_fit
-	def func(z, kappa, phi):
+	def func(z, kappa, phi, z0 , dens_inf):
 		# result is the ratio of ion at point (z) to bulk value.
 		# This is positive for positive ions. For negative ions, flip the signs!
-		result = ((1 + exp(-kappa*z) * math.tanh(phi/4.)) / (1 - exp(-kappa*z) * math.tanh(phi/4.)))**2
+		result = dens_inf*((1 + exp(-kappa*(z-z0)) * math.tanh(phi/4.)) / (1 - exp(-kappa*(z-z0)) * math.tanh(phi/4.)))**2
+		# result = dens_inf*((1 - exp(-kappa*(z-z0)) * math.tanh(phi/4.)) / (1 + exp(-kappa*(z-z0)) * math.tanh(phi/4.)))**2
 		return result
 			
-	guess = [5, 2] # Debye screening should be ~0.5 nm for 1 M sodium in water
+	guess = [5, 2, 1, 5] # Debye screening should be ~0.5 nm for 1 M sodium in water
 	
 	# Confusingly, it looks like *more* weight means the points count *less*
 	#weights = [1/sqrt(array(symmetric_pos)[array(symmetric_pos)>0][i])\
 	#	for i in range(len(array(symmetric_pos)[array(symmetric_pos)>0]))]
 	weights = [1.0 for i in range(len(array(symmetric_pos)[array(symmetric_pos)>0]))]
+	weights = array(weights)/sum(weights)
 
 	# Fit positive values only.
 	fit, fit_covariance = curve_fit(func, array(symmetric_pos)[array(symmetric_pos)>0] , array(symmetric_hist)[array(symmetric_pos)>0], guess, weights)
@@ -267,7 +269,7 @@ if 'fit' in routine:
 	print 'kappa = '+str(fit[0])+' +/- '+str(sigma[0])
 	print 'phi(s) = '+str(fit[1])+' +/- '+str(sigma[1])
 	
-	y = func(array(symmetric_pos)[array(symmetric_pos)>0],fit[0],fit[1])
+	y = func(array(symmetric_pos)[array(symmetric_pos)>0],fit[0],fit[1],fit[2],fit[3])
 
 	plt.figure()
 	plt.scatter(symmetric_pos,symmetric_hist, c='g', s=80, alpha=0.3, label='Average')
