@@ -332,7 +332,8 @@ class MembraneSet:
 			monos_rerack = [[reracker.index(i) for i in monos[m]] for m in range(2)]
 			self.monolayer_residues_abs = monos	
 			self.resids_reracker = reracker
-		self.monolayer_residues = monos_rerack
+			self.monolayer_residues = monos_rerack
+		else: self.monolayer_residues = monos
 		if len(monos[0]) != len(monos[1]):
 			print 'warning: there is a difference in the number of lipids per monolayer'
 

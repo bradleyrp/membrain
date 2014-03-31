@@ -259,12 +259,13 @@ if 'fit' in routine:
 				(1 - exp(-kappa*(z-z0)) * math.tanh(phi/4.)))**2
 		return result
 			
-	guess = [5, 2, 0, 5] # Debye screening should be ~0.5 nm for 1 M sodium in water
+	guess = [5, 2, 1, 5] # Debye screening should be ~0.5 nm for 1 M sodium in water
 	
 	# Confusingly, it looks like *more* weight means the points count *less*
 	#weights = [1/sqrt(array(symmetric_pos)[array(symmetric_pos)>0][i])\
 	#	for i in range(len(array(symmetric_pos)[array(symmetric_pos)>0]))]
 	weights = [1.0 for i in range(len(array(symmetric_pos)[array(symmetric_pos)>0]))]
+	weights = array(weights)/sum(weights)
 
 	# Fit positive values only.
 	fit, fit_covariance = curve_fit(func, array(symmetric_pos)[array(symmetric_pos)>0], \

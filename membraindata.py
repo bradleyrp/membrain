@@ -45,8 +45,10 @@ class MembraneData:
 		elif self.calctype == 'tilefilter_area_v1':
 			self.struct = {'frame':0,'type':1}
 			self.struct_opts = {'type' : {'positive':0,'negative':1}}
+		#---stores surface normal vectors
 		elif self.calctype == 'surfnorms':
-			self.struct = {'frame':0,'monolayer':2,'lipid':3}
+			self.struct = {'frame':0,'monolayer':1,'type':2,'lipid':3}
+			self.struct_opts = {'type':{'normals','areas'}}
 		elif self.calctype == 'tilts':
 			self.struct = {'frame':0,'tail':1,'monolayer':2,'lipid':3}
 			self.struct_opts = {'tail' : {'a':0,'b':1}}
@@ -102,8 +104,7 @@ class MembraneData:
 		availnotes = [i[0] for i in self.notes]
 		if note in availnotes:
 			return self.notes[availnotes.index(note)][1]
-		else:
-			print 'missing note'
+		#else: print 'missing note'
 	#---Retrieve data
 	def get(self,*args,**kwargs):
 		#---Flatten the data as necessary, or depending on the calculation
