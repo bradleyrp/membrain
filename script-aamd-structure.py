@@ -57,9 +57,15 @@ analysis_descriptors = {
 		{'sysname':'membrane-v515',
 		'sysname_lookup':'membrane-v515-atomP',
 		'director':director_aamd_asymmetric,'selector':selector_aamd_asymmetric,'protein_select':None,
-		'trajsel':'s2-sim-compbio-md.part0004.10000-30000-100.atomP.xtc'}}
+		'trajsel':'s2-sim-compbio-md.part0004.10000-30000-100.atomP.xtc'},
 
-analysis_names = ['v515-10000-30000-100']
+	'v509-40000-90000-10':
+		{'sysname':'membrane-v509',
+		'sysname_lookup':'membrane-v509-atomP',
+		'director':director_aamd_asymmetric,'selector':selector_aamd_asymmetric,'protein_select':None,
+		'trajsel':'s6-kraken-md.part0018.40000-90000-10.atomP.xtc'}}
+
+analysis_names = ['v515-10000-30000-100','v509-40000-90000-10'][-1:]
 
 #---MAIN
 #-------------------------------------------------------------------------------------------------------------

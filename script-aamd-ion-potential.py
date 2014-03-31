@@ -28,8 +28,8 @@ analysis_descriptors = {
 	 'director':director_aamd_symmetric}}
 analysis_names = [
 	'v509-40000-90000-10'
-][-1:]
-routine = ['load','compute','average_leaflets','fit'][1:]
+	][-1:]
+routine = ['load','compute','average_leaflets','fit','fit_together'][-1:]
 
 #---MAIN
 #-------------------------------------------------------------------------------------------------------------
@@ -221,7 +221,7 @@ if 'compute' in routine:
 				for i in range(len(lower_sorted)):
 					#lower_sorted[i][0] += diff
 					lower_sorted[i][1] *= -1.0
-				
+					
 				upper_positive = upper_sorted[:,1]>0
 				position_of_rise = upper_sorted[upper_sorted[:,1]>0][0][0]
 				diff = 0.0 - position_of_rise	
@@ -356,4 +356,66 @@ if 'fit' in routine:
 		'''		 
 		plt.legend()
 		plt.show()
+
+def pot_func(params,pos,valence):
+	kappa, phi, z0, bulkp, bulkn = params
+	#z0 = 0
+	resids = zeros(len(valences))
+	if valence == 1:
+		val = bulkp*((1 + exp(-kappa*(pos-z0)) * math.tanh(phi/4.)) /
+			(1 - exp(-kappa*(pos-z0)) * math.tanh(phi/4.)))**2
+	elif valence == -1:
+		val = bulkn*((1 - exp(-kappa*(pos-z0)) * math.tanh(phi/4.)) /
+			(1 + exp(-kappa*(pos-z0)) * math.tanh(phi/4.)))**2
+	return val
+
+def pot_resids(params,pos,hist,valence):
+	kappa, phi, z0, bulkp, bulkn = params
+	#z0 = 0
+	resids = zeros(len(valences))
+	for i in range(len(valence)):
+		if valence[i] == 1:
+			resids[i] = (hist[i] - bulkp*((1 + exp(-kappa*(pos[i]-z0)) * math.tanh(phi/4.)) /
+				(1 - exp(-kappa*(pos[i]-z0)) * math.tanh(phi/4.)))**2)**2
+		elif valence[i] == -1:
+			resids[i] = (hist[i] - bulkn*((1 - exp(-kappa*(pos[i]-z0)) * math.tanh(phi/4.)) /
+				(1 + exp(-kappa*(pos[i]-z0)) * math.tanh(phi/4.)))**2)**2
+	return resids
+
+if 'fit_together' in routine:
+	from scipy.optimize import curve_fit
+	from scipy.optimize import leastsq
+
+	inds_pos = (pos_pos>0)
+	inds_neg = (neg_pos>-12)
+	pos_cut = np.concatenate((pos_pos[inds_pos],neg_pos[inds_neg]))
+	hist_cut = np.concatenate((pos_hist[inds_pos],neg_hist[inds_neg]))
+	valences = array([1 for i in range(sum(inds_pos))]+[-1 for i in range(sum(inds_neg))])
+
+	posst = [0.08177729, 2.30000692, 0., 2.92884602, -4.]
+	negst = [0.08177729, 2.30000692, -15., 2.92884602, -4.]
+	p_opt_neg = leastsq(pot_resids,array(negst),
+		args=(pos_cut[sum(inds_pos):],hist_cut[sum(inds_pos):],valences[sum(inds_pos):]))
+	print p_opt_neg	
+
+	p_opt_pos = leastsq(pot_resids,array(posst),
+		args=(pos_cut[2:sum(inds_pos)],hist_cut[2:sum(inds_pos)],valences[2:sum(inds_pos)]))
+	print p_opt_pos	
+
+	pos_pos_cut = pos_pos[inds_pos]
+	hist_pos_cut = pos_hist[inds_pos]	
+	pos_neg_cut = neg_pos[inds_neg]
+	hist_neg_cut = neg_hist[inds_neg]
+	
+	ax = plt.subplot(111)
+	ax.plot(pos_pos_cut-p_opt_pos[0][2],[pot_func(p_opt_pos[0],pos_pos_cut[i],1)/p_opt_pos[0][3] for i in range(len(pos_pos_cut))],'bo-')
+	ax.plot(pos_pos_cut-p_opt_pos[0][2],array(hist_pos_cut)/p_opt_pos[0][3],'ro-')
+	
+	ax.plot(pos_neg_cut-p_opt_neg[0][2],[pot_func(p_opt_neg[0],pos_neg_cut[i],-1)/p_opt_neg[0][4] for i in range(len(pos_neg_cut))],'bo-')
+	ax.plot(pos_neg_cut-p_opt_neg[0][2],array(hist_neg_cut)/p_opt_neg[0][4],'ro-')
+	ax.set_yscale('log')
+	plt.show()			
+	
+	
 		
+

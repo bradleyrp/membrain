@@ -63,11 +63,11 @@ analysis_descriptors = {
 		
 #---analysis menu
 analysis_names = ['v614-120000-220000-200','v612-75000-175000-200','v550-400000-500000-160',
-	'v614-40000-140000-200','v612-10000-80000-200','v550-300000-400000-200'][:]
+	'v614-40000-140000-200','v612-10000-80000-200','v550-300000-400000-200'][:3]
 plot_reord = analysis_names
-routine = ['plot','plot_mean_z','plot_gaussian'][:]
-bigname = 'v614-v612-v550-old-new'
-panel_nrows = 2
+routine = ['plot','plot_mean_z','plot_gaussian'][:1]
+bigname = 'v614-v612-v550-ver2'
+panel_nrows = 1
 
 #---FUNCTIONS
 #-------------------------------------------------------------------------------------------------------------

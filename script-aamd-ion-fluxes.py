@@ -66,7 +66,7 @@ analysis_names = [
 	'v531-20000-62000-100',
 	'v509-40000-90000-10'
 	][-1:]
-routine = ['load','compute',][1:]
+routine = ['load','compute',][:]
 
 #---MAIN
 #-------------------------------------------------------------------------------------------------------------
@@ -104,8 +104,9 @@ if 'load' in routine:
 			mset_surf.gotoframe(fr)
 			surfpts = surf_select.coordinates()
 			monoz.append([mean(surfpts[mset_surf.monolayer_residues[m],2],axis=0) for m in range(2)])
-		#---construct bins	
-if 'compute' in routine:
+		monoz = array(monoz)
+
+if 'compute_old' in routine:
       for aname in analysis_names:
 		desired_binsize = 1
 		upper_binws = [int(round((mset_surf.vec(i)[2]-monoz[i][0])/desired_binsize)) for i in whichframes]
@@ -179,29 +180,88 @@ if 'compute' in routine:
 			ax.set_title('residence time distributions v509')
 			#ax.legend(loc=1)
 			plt.show()
-if 0:
-	#---plot some single-frame distributions
-	for i in range(0,shape(disctraj)[1],1):
-	#for i in [1]:
-		hist,edges = histogram(disctraj[:,i],range=(0,bincount),bins=bincount);
-		mids = array(edges[1:]+edges[:-1])/2.
-		plt.plot(mids,hist);
-	plt.show()
-if 1:
-	#---average the histograms
-	hists = []
-	meanbinedges = mean(binedges,axis=0)	
-	monobins = [array([abs(mean(monoz,axis=0)[i]-meanbinedges[j])
-		for j in range(len(meanbinedges))]).argmin() for i in range(2)][::-1]
-	for i in range(0,shape(disctraj)[1],1):
-		hist,edges = histogram(disctraj[:,i],range=(0,bincount),bins=bincount);
-		hists.append(hist)
-	mids = array(edges[1:]+edges[:-1])/2.
-	bw = mean(meanbinedges[1:]-meanbinedges[:-1]) # bin width in Angstroms.
-	# plt.axvline(x=bw*edges[monobins[0]],ymin=0.,ymax=1.)
-	# plt.axvline(x=bw*edges[monobins[1]],ymin=0.,ymax=1.)
-	plt.plot(bw*mids,mean(hists,axis=0),'o-');
-	plt.show()
-	# Where is the histogram zero? Where is the center of reflection?
-	zeroes = where(mean(hists,axis=0)==0)
-	middle_bin = int(mean(zeroes))
+		if 0:
+			#---plot some single-frame distributions
+			for i in range(0,shape(disctraj)[1],1):
+			#for i in [1]:
+				hist,edges = histogram(disctraj[:,i],range=(0,bincount),bins=bincount);
+				mids = array(edges[1:]+edges[:-1])/2.
+				plt.plot(mids,hist);
+			plt.show()
+		if 0:
+			#---average the histograms
+			hists = []
+			meanbinedges = mean(binedges,axis=0)	
+			monobins = [array([abs(mean(monoz,axis=0)[i]-meanbinedges[j])
+				for j in range(len(meanbinedges))]).argmin() for i in range(2)][::-1]
+			for i in range(0,shape(disctraj)[1],1):
+				hist,edges = histogram(disctraj[:,i],range=(0,bincount),bins=bincount);
+				hists.append(hist)
+			mids = array(edges[1:]+edges[:-1])/2.
+			bw = mean(meanbinedges[1:]-meanbinedges[:-1]) # bin width in Angstroms.
+			# plt.axvline(x=bw*edges[monobins[0]],ymin=0.,ymax=1.)
+			# plt.axvline(x=bw*edges[monobins[1]],ymin=0.,ymax=1.)
+			plt.plot(bw*mids,mean(hists,axis=0),'o-');
+			plt.show()
+			# Where is the histogram zero? Where is the center of reflection?
+			zeroes = where(mean(hists,axis=0)==0)
+			middle_bin = int(mean(zeroes))
+		
+#---UNDER CONSTRUCTION
+#---re-work the discrete binning function, fix badframes, make flexible zones, etc
+
+desired_binw = 5		
+		
+if 'compute' in routine:
+	#for aname in analysis_names:
+	aname = analysis_names[0]
+	if 0:
+		#---midplane positions
+		midz = mean(monoz,axis=1)
+		#---box vectors
+		vecs = [mset_surf.vec(i) for i in range(mset_surf.nframes)]
+		#---average distance outside of phosphate groups
+		waterdist = mean(vecs,axis=0)[2]-mean([i[0]-i[1] for i in monoz])
+		#---bin counts in the water
+		nbins_out = int(round(waterdist/desired_binw))
+		nbins_in = int(round(mean([i[0]-i[1] for i in monoz])/desired_binw))
+		nbins_out = 21
+		#---generate list of bin zones
+		#---Nb this is written to be general, so you can define different zones
+		#---here we define bins inside and outside the bilayer
+	if 0:
+		binlists = []
+		for fr in range(mset_surf.nframes):
+			thick_in = (monoz[fr,0]-monoz[fr,1])/2.
+			thick_out = (vecs[fr][2]-thick_in*2)/2.
+			if (nbins_out % 2) == 1:
+				end_binw = thick_out/(nbins_out/2+0.5)
+				thick_out = thick_out - end_binw
+				binlist = sum([list(i) for i in [
+					linspace(-thick_out-end_binw-thick_in,-thick_out,1+1)[:-1],
+					linspace(-thick_in-thick_out,-thick_in,nbins_out/2+1)[:-1],
+					linspace(-thick_in,thick_in,nbins_in+1)[:-1],
+					linspace(thick_in,thick_in+thick_out,nbins_out/2+1)[:-1],
+					linspace(thick_in+thick_out,thick_in+thick_out+end_binw,2+1)[:]]])
+			else: 
+				binlist = sum([list(i) for i in [
+					linspace(-thick_in-thick_out,-thick_in,nbins_out/2+1)[:-1],
+					linspace(-thick_in,thick_in,nbins_in+1)[:-1],
+					linspace(thick_in,thick_in+thick_out,nbins_out/2+1)[:-1]]])
+			binlists.append(binlist)
+	if 1:
+		st = time.time()
+		print 'a'
+		relpos = []
+		for fr in range(mset_surf.nframes):
+			print fr
+			relpos.append([[pt-\
+				(pt>mset_surf.vec(0)[2]/2)*vecs[fr][2]+\
+				(pt<-1*vecs[fr][2]/2)*vecs[fr][2] \
+				for pt in (array(ionspos)[fr,:,2]-midz[fr])])
+			#for fr in range(mset_surf.nframes)]
+			#[where(i<binlist)[0][0] for i in rejigger]
+		print 'b'
+		print 1./60*(time.time()-st)
+
+
