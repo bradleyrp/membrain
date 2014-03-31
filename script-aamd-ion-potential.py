@@ -28,7 +28,7 @@ analysis_descriptors = {
 analysis_names = [
 	'v509-40000-90000-10'
 	][-1:]
-routine = ['load','compute','average_leaflets','fit'][3:]
+routine = ['load','compute','average_leaflets','fit'][:]
 
 #---MAIN
 #-------------------------------------------------------------------------------------------------------------
@@ -214,7 +214,7 @@ if 'compute' in routine:
 		symmetric_hist = []
 		symmetric_pos = []
 		# This is unpythonic but it works.
-		if 'average_leaflets' in routine:
+		if 'average_leaflets'  in routine and ionname != 'CL':
 			if len(lower_bins) == len(upper_bins):
 				for i in range(len(lower_bins)):
 					symmetric_hist.append(mean([lower_sorted[i][1], upper_sorted[i][1]]))
@@ -237,8 +237,14 @@ if 'compute' in routine:
 					last_step = len(upper_bins)
 					symmetric_hist.append(lower_sorted[last_step+i][1])
 					symmetric_pos.append(lower_sorted[last_step+i][0])
+		elif 'average_leaflets' in routine and ionname == 'CL':
+			print "There wasn't enough coffee around to finish this."
+		elif 'average_leaflets' in routine:
+			print "I'm not sure if I should adjust the peaks for a positive or negative ion."
 		else:
 			print 'Pick a leaflet to fit and set that equal to symmetric_hist and symmetric_pos'
+
+		
 		#plt.figure()
 		#plt.scatter(symmetric_pos,symmetric_hist, c='g', s=80, alpha=0.3, label='Average')
 		#plt.legend()
@@ -246,13 +252,14 @@ if 'compute' in routine:
 	
 if 'fit' in routine:
 	from scipy.optimize import curve_fit
-	def func(z, kappa, phi):
+	def func(z, kappa, phi, z0, bulk):
 		# result is the ratio of ion at point (z) to bulk value.
 		# This is positive for positive ions. For negative ions, flip the signs!
-		result = ((1 + exp(-kappa*z) * math.tanh(phi/4.)) / (1 - exp(-kappa*z) * math.tanh(phi/4.)))**2
+		result = bulk*((1 + exp(-kappa*(z-z0)) * math.tanh(phi/4.)) / \
+				(1 - exp(-kappa*(z-z0)) * math.tanh(phi/4.)))**2
 		return result
 			
-	guess = [5, 2] # Debye screening should be ~0.5 nm for 1 M sodium in water
+	guess = [5, 2, 0, 5] # Debye screening should be ~0.5 nm for 1 M sodium in water
 	
 	# Confusingly, it looks like *more* weight means the points count *less*
 	#weights = [1/sqrt(array(symmetric_pos)[array(symmetric_pos)>0][i])\
@@ -260,14 +267,18 @@ if 'fit' in routine:
 	weights = [1.0 for i in range(len(array(symmetric_pos)[array(symmetric_pos)>0]))]
 
 	# Fit positive values only.
-	fit, fit_covariance = curve_fit(func, array(symmetric_pos)[array(symmetric_pos)>0] , array(symmetric_hist)[array(symmetric_pos)>0], guess, weights)
-	sigma = [sqrt(fit_covariance[0,0]), sqrt(fit_covariance[1,1])]
+	fit, fit_covariance = curve_fit(func, array(symmetric_pos)[array(symmetric_pos)>0], \
+			array(symmetric_hist)[array(symmetric_pos)>0], guess, weights)
+	sigma = [sqrt(fit_covariance[0,0]), sqrt(fit_covariance[1,1]), \
+			sqrt(fit_covariance[2,2]), sqrt(fit_covariance[3,3])]
 	
-	print 'FIT'
+	print 'Fit Parameters'
 	print 'kappa = '+str(fit[0])+' +/- '+str(sigma[0])
 	print 'phi(s) = '+str(fit[1])+' +/- '+str(sigma[1])
+	print 'z offset = '+str(fit[2])+' +/- '+str(sigma[2])
+	print '[bulk] = '+str(fit[3])+' +/- '+str(sigma[3])
 	
-	y = func(array(symmetric_pos)[array(symmetric_pos)>0],fit[0],fit[1])
+	y = func(array(symmetric_pos)[array(symmetric_pos)>0],fit[0],fit[1],fit[2],fit[3])
 
 	plt.figure()
 	plt.scatter(symmetric_pos,symmetric_hist, c='g', s=80, alpha=0.3, label='Average')

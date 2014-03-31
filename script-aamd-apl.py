@@ -20,15 +20,23 @@ cgmd_protein = 'name BB'
 #---Analysis plan
 analysis_plan = slice(None,None)
 analysis_descriptors = {
-	'v530-30000-100000-100':
-		{'sysname':'membrane-v530',
-		'sysname_lookup':'membrane-v530-atomP',
+	'v531-20000-62000-100':
+		{'sysname':'membrane-v531',
+		'sysname_lookup':'membrane-v531-atomP',
 		'director':director_aamd_asymmetric,'selector':selector_aamd_asymmetric,'protein_select':None,
 		'residues':'infer',
-		'trajsel':'u5-sim-trestles-md.part0006.30000-100000-100.atomP.xtc',
-		'whichframes':None}}
+		'trajsel':'s4-sim-trestles-md.part0007.20000-62000-100.atomP.xtc',
+		'whichframes':None},
+	'v532-20000-58000-100':
+                {'sysname':'membrane-v532',
+                'sysname_lookup':'membrane-v532-atomP',
+                'director':director_aamd_asymmetric,'selector':selector_aamd_asymmetric,'protein_select':None,
+                'residues':'infer',
+                'trajsel':'s4-sim-trestles-md.part0007.20000-58000-100.atomP.xtc',
+                'whichframes':None},
+	}
 analysis_names = [
-	'v530-30000-100000-100'][:]
+	'v531-20000-62000-100','v532-20000-58000-100'][:]
 
 #---MAIN
 #-------------------------------------------------------------------------------------------------------------
