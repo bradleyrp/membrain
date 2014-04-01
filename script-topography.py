@@ -39,7 +39,7 @@ analysis_descriptors = {
 		'whichframes':slice(None,None)},
 	'v550-400000-500000-160':
 		{'sysname':'membrane-v550','sysname_lookup':None,
-		'trajsel':'s0-trajectory-full/md.part0006.300000-400000-200.xtc',
+		'trajsel':'v1-lonestar/md.part0010.400000-500000-160.xtc',
 		'label':r'$\mathrm{control}$',
 		'nprots':1,
 		'whichframes':slice(0,500),
@@ -50,23 +50,34 @@ analysis_descriptors = {
 #---analysis menu
 do = ['phasecomp','topography_calc','topography_plot'][2]
 if do == 'phasecomp':
-	analysis_names = ['v700-500000-600000-200','v614-120000-220000-200','v550-400000-500000-160']
+	analysis_names = [
+		'v700-500000-600000-200',
+		'v614-120000-220000-200',
+		'v550-400000-500000-160'
+		][:]
 	plot_reord = analysis_names
 	dolist = ['phase_std_spec2d']
 	bigname = '.'.join(analysis_names)
 	nhistbins = 80
 elif do == 'topography_calc':
-	analysis_names = ['v614-120000-220000-200','v612-75000-175000-200',
-		'v550-400000-500000-160'][-1:]
+	analysis_names = [
+		'v614-120000-220000-200',
+		'v612-75000-175000-200',
+		'v550-400000-500000-160'
+		][-1:]
 	plot_reord = analysis_names
 	dolist = ['topogcorr_calc']
 	nhistbins = 80
 elif do == 'topography_plot':
-	analysis_names = ['v614-120000-220000-200','v612-75000-175000-200','v550-400000-500000-160'][:]
+	analysis_names = [
+		'v614-120000-220000-200',
+		'v612-75000-175000-200',
+		'v550-400000-500000-160'
+		][:]
 	plot_reord = analysis_names
 	dolist = ['topogcorr_calc','topogcorr_plot_alt'][1:]
 	topogcorr_plot_zrange = (-2.5,2.5)
-	bigname = 'v614-v612-v550'
+	bigname = 'v614-v612-v550-ver2'
 	nhistbins = 80
 	nhistbins_smooth = 10
 

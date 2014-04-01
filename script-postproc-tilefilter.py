@@ -14,35 +14,51 @@ analysis_descriptors = {
 		{'sysname':'membrane-v614','sysname_lookup':None,
 		'trajsel':'s9-lonestar/md.part0004.120000-220000-200.xtc',
 		'protein_traj':None,
-		'label':r'$\mathrm{{ENTH}\ensuremath{\times}4}$'},
+		'label':r'$\mathrm{{ENTH}\ensuremath{\times}4}$',
+		'whichframes':slice(None,None)},
 	'v700-500000-600000-200':
 		{'sysname':'membrane-v700','sysname_lookup':None,
 		'trajsel':'u1-lonestar-longrun/md.part0009.500000-700000-200.xtc',
-		'protein_traj':None},
+		'protein_traj':None,
+		'whichframes':slice(None,None)},
 	'v701-60000-160000-200':
 		{'sysname':'membrane-v701','sysname_lookup':None,
 		'trajsel':'s8-lonestar/md.part0003.60000-160000-200.xtc',
-		'protein_traj':None},
+		'protein_traj':None,
+		'whichframes':slice(None,None)},
 	'v612-75000-175000-200':
 		{'sysname':'membrane-v612','sysname_lookup':None,
 		'trajsel':'t4-lonestar/md.part0007.75000-175000-200.xtc',
 		'protein_traj':None,
-		'label':r'$\mathrm{{ENTH}\ensuremath{\times}1}$'},
+		'label':r'$\mathrm{{ENTH}\ensuremath{\times}1}$',
+		'whichframes':slice(None,None)},
 	'v550-4000000-500000-160':
 		{'sysname':'membrane-v550','sysname_lookup':None,
 		'trajsel':'v1-lonestar/md.part0010.400000-500000-160.xtc',
-		'protein_traj':None},
+		'protein_traj':'v614-120000-220000-200',
+		'custom_protein_shifts':['unshifted','peak','valley'],
+		'label':r'$\mathrm{control}$',
+		'whichframes':slice(0,500)},
 	'v550-300000-400000-200':
 		{'sysname':'membrane-v550','sysname_lookup':None,
 		'trajsel':'s0-trajectory-full/md.part0006.300000-400000-200.xtc',
 		'protein_traj':'v614-120000-220000-200',
 		'custom_protein_shifts':['unshifted','peak','valley'],
-		'label':r'$\mathrm{control}$'}}
+		'label':r'$\mathrm{control}$',
+		'whichframes':slice(None,None)},
+	'v550-400000-500000-160':
+		{'sysname':'membrane-v550','sysname_lookup':None,
+		'trajsel':'v1-lonestar/md.part0010.400000-500000-160.xtc',
+		'protein_traj':'v614-120000-220000-200',
+		'custom_protein_shifts':['unshifted','peak','valley'],
+		'label':r'$\mathrm{control}$',
+		'whichframes':slice(None,None)}}
 
 routine = ['topogareas','topogareas_singleplots'][-1:]
 analysis_names = ['v614-120000-220000-200','v612-75000-175000-200','v550-300000-400000-200'][:]
+analysis_names = ['v614-120000-220000-200','v612-75000-175000-200','v550-4000000-500000-160'][:]
 plot_reord = analysis_names
-bigname = 'v614-v612-v550'
+bigname = 'v614-v612-v550-ver2'
 
 #---parameters
 binwid = 5.
@@ -73,7 +89,7 @@ if 'msets' not in globals():
 			if protein_traj == None:
 				mset = msets[-1]
 				tilefiltdat = []
-				for fr in range(len(mset.surf)):
+				for fr in range(len(mset.surf))[whichframes]:
 					print fr
 					protpts = mset.protein[fr][:,:2]
 					surfpts = mset.wrappbc(mset.unzipgrid(array(mset.surf[fr]),vecs=mset.vec(0)),
@@ -113,7 +129,7 @@ if 'msets' not in globals():
 						protein_com = mean(mean(mset_prot.protein,axis=0),axis=0)[:2]
 						shift = minxy - protein_com
 						print shift
-					for fr in range(len(mset.surf)):
+					for fr in range(len(mset.surf))[whichframes]:
 						print fr
 						protpts = mset_prot.protein[fr][:,:2]
 						surfpts = mset.wrappbc(mset.unzipgrid(array(mset.surf[fr]),vecs=mset.vec(0)),
@@ -151,7 +167,8 @@ if 'topogareas_singleplots' in routine:
 		if protein_traj == None: datlist = [topogareas[m]]
 		else: 
 			datlist = topogareas[m]
-			ncontrols += 1
+			#---temporary hack to use only one control 
+			datlist = [topogareas[m][-1]]
 		for p in range(len(datlist)):
 			topogarea = datlist[p]
 			cutoff = min(mean(mset.vecs,axis=0)[:2])
@@ -177,9 +194,7 @@ if 'topogareas_singleplots' in routine:
 			ax.set_ylim((0,1.0))
 			#---plot details
 			ax.get_xaxis().set_major_locator(mpl.ticker.MaxNLocator(nbins=3,prune='both'))
-			ax.set_title(label+('('+str(ncontrols)+')' if protein_traj != None else ''),
-				fontsize=fsaxlabel)
-			if protein_traj != None: ncontrols += 1
+			ax.set_title(label,fontsize=fsaxlabel)
 			plt.setp(ax.get_xticklabels(),fontsize=fsaxlabel)
 			plt.setp(ax.get_yticklabels(),fontsize=fsaxlabel)
 			ax.set_xlabel(r'$r_{min}\:(\mathrm{nm})$',fontsize=fsaxlabel)

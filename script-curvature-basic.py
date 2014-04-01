@@ -12,7 +12,7 @@ analysis_descriptors = {
 	'v614-120000-220000-200':
 		{'sysname':'membrane-v614','sysname_lookup':None,
 		'trajsel':'s9-lonestar/md.part0004.120000-220000-200.xtc',
-		'label':r'$\mathrm{{ENTH}\ensuremath{\times}4\,(v2)}$',
+		'label':r'$\mathrm{{ENTH}\ensuremath{\times}4}$',
 		'nprots':4,
 		'whichframes':slice(None,None),
 		'protein_pkl':None,
@@ -21,7 +21,7 @@ analysis_descriptors = {
 	'v612-75000-175000-200':
 		{'sysname':'membrane-v612','sysname_lookup':None,
 		'trajsel':'t4-lonestar/md.part0007.75000-175000-200.xtc',
-		'label':r'$\mathrm{{ENTH}\ensuremath{\times}1\,(v2)}$',
+		'label':r'$\mathrm{{ENTH}\ensuremath{\times}1}$',
 		'nprots':1,
 		'protein_pkl':None,
 		'custom_topogcorr_specs':None,
@@ -54,7 +54,7 @@ analysis_descriptors = {
 	'v550-400000-500000-160':
 		{'sysname':'membrane-v550','sysname_lookup':None,
 		'trajsel':'v1-lonestar/md.part0010.400000-500000-160.xtc',
-		'label':r'$\mathrm{control\,(v2)}$',
+		'label':r'$\mathrm{control}$',
 		'nprots':1,
 		'whichframes':slice(0,500),
 		'protein_pkl':'pkl.structures.membrane-v612.t4-lonestar.md.part0007.75000-175000-200.pkl',

@@ -242,10 +242,11 @@ def plotter2d(ax,mset,dat=None,nlabels=None,tickshow=False,cmap=None,lims=None,
 		yticklabels = [int(i) for i in array(list(arange(0,n/2,sskipy)*-1)[:0:-1]+\
 			list(arange(0,n/2,sskipy)))*mset.rounder/mset.lenscale]
 	else:
+		scalefac = mset.rounder/mset.lenscale
 		xticks = range(0,m,tickskip)
 		yticks = range(0,n,tickskip)
-		xticklabels = xticks
-		yticklabels = yticks
+		xticklabels = [int(scalefac*i) for i in xticks]
+		yticklabels = [int(scalefac*i) for i in yticks]
 	#---plot
 	im = ax.imshow(array(dat).T,interpolation='nearest',origin='lower',
 		norm=lognorm,cmap=cmap,alpha=cmap_washout,vmin=lims[0],vmax=lims[1])

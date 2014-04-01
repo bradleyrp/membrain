@@ -59,6 +59,7 @@ class MembraneSet:
 		self.monolayer_residues_abs = []
 		self.resnames = []
 		self.resids = []
+		self.resids_abs = []
 		self.monolayer_by_resid = []
 		self.monolayer_by_resid_abs = []
 		self.resids_reracker = []
@@ -345,6 +346,12 @@ class MembraneSet:
 			selection = self.universe.selectAtoms('resname '+sel)
 			self.resids.append([i-1 for i in selection.resids()])
 			self.resnames.append(sel)
+		#---when re-racker has been defined by identify_monolayers then provide distinct residue numberings
+		if self.resids_reracker != []: 
+			self.resids_abs = self.resids
+			self.resids = [[self.resids_reracker.index(i) for i in j] for j in self.resids]
+		else:
+			self.resids_abs = self.resids
 		#---absolute vs relative numbering is tricky here
 		if self.resids_reracker != []:
 			residue_ids = [[self.resids_reracker.index(i) for i in j] for j in self.resids]
