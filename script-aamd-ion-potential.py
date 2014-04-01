@@ -29,7 +29,7 @@ analysis_descriptors = {
 analysis_names = [
 	'v509-40000-90000-10'
 	][-1:]
-routine = ['load','compute','average_leaflets','fit','fit_together'][-1:]
+routine = ['load','compute','average_leaflets','fit_together'][-1:]
 
 #---MAIN
 #-------------------------------------------------------------------------------------------------------------
@@ -197,7 +197,7 @@ if 'compute' in routine:
 				old_position = bw*mids[i]
 				# Offset only
 				upper_position.append(old_position-upper_peak_pos)
-				
+			show_each_leaflet = 0	
 			if 'show_each_leaflet':
 				plt.title('Peak at maximum')
 				plt.scatter(lower_position,lower_hist,c='r', s=40, alpha=0.5, label='Lower leaflet')
@@ -229,7 +229,7 @@ if 'compute' in routine:
 					#upper_sorted[i][0] += diff
 					upper_sorted[i][1] *= -1.0
 					
-				show_each_leaflet = 1
+				show_each_leaflet = 0
 				if 'show_each_leaflet':
 					plt.title('Is the inflection at positive distance?')
 					plt.scatter([lower_sorted[i][0] for i in range(len(lower_sorted))],[lower_sorted[i][1] for i in range(len(lower_sorted))],c='r', s=40, alpha=0.5, label='Lower leaflet')
@@ -271,7 +271,6 @@ if 'compute' in routine:
 				pos_hist = array([i for i in symmetric_hist])
 									
 			elif 'average_leaflets' in routine and (ionname == 'CL' or ionname == 'Cl'):
-				print "This is experimental."
 				if len(lower_bins) == len(upper_bins):
 					for i in range(len(lower_bins)):
 						symmetric_hist.append(mean([lower_sorted[i][1], upper_sorted[i][1]]))
@@ -394,10 +393,11 @@ if 'fit_together' in routine:
 
 	posst = [0.08177729, 2.30000692, 0., 2.92884602, -4.]
 	negst = [0.08177729, 2.30000692, -15., 2.92884602, -4.]
+	print 'Fitting negative ion'
 	p_opt_neg = leastsq(pot_resids,array(negst),
 		args=(pos_cut[sum(inds_pos):],hist_cut[sum(inds_pos):],valences[sum(inds_pos):]))
 	print p_opt_neg	
-
+	print 'Fitting positive ion'
 	p_opt_pos = leastsq(pot_resids,array(posst),
 		args=(pos_cut[2:sum(inds_pos)],hist_cut[2:sum(inds_pos)],valences[2:sum(inds_pos)]))
 	print p_opt_pos	
@@ -410,12 +410,14 @@ if 'fit_together' in routine:
 	ax = plt.subplot(111)
 	ax.plot(pos_pos_cut-p_opt_pos[0][2],[pot_func(p_opt_pos[0],pos_pos_cut[i],1)/p_opt_pos[0][3] for i in range(len(pos_pos_cut))],'bo-')
 	ax.plot(pos_pos_cut-p_opt_pos[0][2],array(hist_pos_cut)/p_opt_pos[0][3],'ro-')
+	#ax.plot(pos_pos,pos_hist,'go-')
 	
 	ax.plot(pos_neg_cut-p_opt_neg[0][2],[pot_func(p_opt_neg[0],pos_neg_cut[i],-1)/p_opt_neg[0][4] for i in range(len(pos_neg_cut))],'bo-')
 	ax.plot(pos_neg_cut-p_opt_neg[0][2],array(hist_neg_cut)/p_opt_neg[0][4],'ro-')
+	ax.plot(neg_pos,neg_hist/p_opt_neg[0][4],'go-')
+	ax.fill_between(neg_pos,neg_hist/p_opt_neg[0][4],1.0,color='g',alpha=0.5)
 	ax.set_yscale('log')
 	plt.show()			
 	
 	
-		
 

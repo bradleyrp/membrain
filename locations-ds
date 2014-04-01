@@ -86,7 +86,14 @@ name=membrane-v533-spanangle
 struct=membrane-v533/a2-spanangle/system.spanangle.gro
 membrane-v533/a2-spanangle/s4-sim-kraken-md.part0015.40000-54000-100.spanangle.xtc
 
+name=membrane-v533-atomP
+struct=membrane-v533/a2-spanangle/system.atomP.gro
+membrane-v533/a2-spanangle/s4-sim-kraken-md.part0015.40000-54000-100.atomP.xtc
+
 name=membrane-v534-spanangle
 struct=membrane-v534/a1-spanangle/system.spanangle.gro
 membrane-v534/a1-spanangle/s4-sim-kraken-md.part0013.40000-60000-100.spanangle.xtc
 
+name=membrane-v534-atomP
+struct=membrane-v534/a1-spanangle/system.atomP.gro
+membrane-v534/a1-spanangle/s4-sim-kraken-md.part0013.40000-60000-100.atomP.xtc

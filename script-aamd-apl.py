@@ -19,28 +19,28 @@ cgmd_protein = 'name BB'
 
 #---Analysis plan
 analysis_plan = slice(None,None)
+# Note the "spanangle" trajectories have atomP in them, so they should work for APL calculations.
 analysis_descriptors = {
-	'v531-20000-62000-100':
-		{'sysname':'membrane-v531',
-		'sysname_lookup':'membrane-v531-atomP',
+	'v533-40000-54000-100':
+		{'sysname':'membrane-v533',
+		'sysname_lookup':'membrane-v533-atomP',
 		'director':director_aamd_asymmetric,'selector':selector_aamd_asymmetric,'protein_select':None,
 		'residues':'infer',
-		'trajsel':'s4-sim-trestles-md.part0007.20000-62000-100.atomP.xtc',
+		'trajsel':'s4-sim-kraken-md.part0015.40000-54000-100.atomP.xtc',
 		'whichframes':None},
-	'v532-20000-58000-100':
-                {'sysname':'membrane-v532',
-                'sysname_lookup':'membrane-v532-atomP',
+	'v534-40000-60000-100':
+                {'sysname':'membrane-v534',
+                'sysname_lookup':'membrane-v534-atomP',
                 'director':director_aamd_asymmetric,'selector':selector_aamd_asymmetric,'protein_select':None,
                 'residues':'infer',
-                'trajsel':'s4-sim-trestles-md.part0007.20000-58000-100.atomP.xtc',
+                'trajsel':'s4-sim-kraken-md.part0013.40000-60000-100.atomP.xtc',
                 'whichframes':None},
 	}
 analysis_names = [
-	'v531-20000-62000-100','v532-20000-58000-100'][:]
+	'v533-40000-54000-100','v534-40000-60000-100'][-1:]
 
 #---MAIN
 #-------------------------------------------------------------------------------------------------------------
-
 #---loop over analysis questions
 for aname in analysis_names:
 	#---details
