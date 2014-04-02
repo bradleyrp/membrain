@@ -13,7 +13,7 @@ selector_aamd_symmetric = 'name P'
 selector_aamd_asymmetric = '(name P and not resname CHL1)'
 selector_aamd_asymmetric = '(name P and not resname CHL1) or (name C3 and resname CHL1)'
 residues_aamd_symmetric = ['DOPC','DOPS','PI2P']
-residues_aamd_asymmetric = ['DOPC','DOPS','DOPE','POPC','P35P','PI2P']
+residues_aamd_asymmetric = ['DOPC','DOPS','DOPE','POPC','P35P']
 sel_aamd_surfacer = ['name P','(name C2 and not resname CHL1)']
 cgmd_protein = 'name BB'
 
@@ -37,7 +37,7 @@ analysis_descriptors = {
                 'whichframes':None},
 	}
 analysis_names = [
-	'v533-40000-54000-100','v534-40000-60000-100'][-1:]
+	'v533-40000-54000-100','v534-40000-60000-100'][:]
 
 #---MAIN
 #-------------------------------------------------------------------------------------------------------------

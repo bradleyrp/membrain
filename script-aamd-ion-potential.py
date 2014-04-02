@@ -1,5 +1,6 @@
 #!/usr/bin/python
 
+
 if 'mset' not in globals():
 	interact = True
 	from membrainrunner import *
@@ -7,6 +8,20 @@ if 'mset' not in globals():
 
 from scipy import stats
 from mpl_toolkits.axes_grid1 import make_axes_locatable
+
+font = {'family' : 'sans-serif',
+        'size'   : 22}
+mpl.rc('font', **font)
+mpl.rc('text', usetex=True)
+mpl.rc('text.latex', preamble='\usepackage{sfmath}')
+mpl.rcParams['text.latex.preamble'] = [r'\usepackage{sfmath}',r'\usepackage{amsmath}',
+					r'\usepackage{siunitx}',r'\sisetup{detect-all}',
+		                        r'\usepackage{helvet}',r'\usepackage{sansmath}',
+		                        r'\sansmath', r'\usepackage{upgreek}']
+mpl.rcParams['xtick.major.pad'] = 8
+mpl.rcParams['ytick.major.pad'] = 8
+
+
 
 #---Settings
 #-------------------------------------------------------------------------------------------------------------
@@ -29,7 +44,7 @@ analysis_descriptors = {
 analysis_names = [
 	'v509-40000-90000-10'
 	][-1:]
-routine = ['load','compute','average_leaflets','fit_together'][-1:]
+routine = ['load','compute','average_leaflets','fit_together'][0:2]
 
 #---MAIN
 #-------------------------------------------------------------------------------------------------------------
@@ -158,7 +173,7 @@ if 'compute' in routine:
 				#plt.plot(mids,mean(hists,axis=0))		
 				#plt.plot([bw*mids[i] for i in lower_bins],[mean(hists,axis=0)[i] for i in lower_bins],'ro-')
 				#plt.plot([bw*mids[i] for i in upper_bins],[mean(hists,axis=0)[i] for i in upper_bins],'bo-')
-				#plt.show()
+				#plt.show()			
 			
 			lower_hist = [mean(hists,axis=0)[i] for i in lower_bins] # Stop computing this a thousand times.
 			upper_hist = [mean(hists,axis=0)[i] for i in upper_bins]
@@ -185,7 +200,14 @@ if 'compute' in routine:
 					tmp.append(lower_peak_pos + abs(lower_peak_pos - old_position))
 				else:
 					print "Not enough coffee today to move the peaks."
-					
+			
+			# Now, keep track of the actual distances.
+			####################################################################################
+			d_to_top_leaf = [bw*(i-j) for i, j in zip (mids,[monoz[k][0] for k in range(len(monoz))])] # For all ions.
+			d_top = [d_to_top_leaf[i] for i in upper_bins]
+			d_bottom = [(i-j) for i, j in zip (tmp,[monoz[k][1] for k in range(len(monoz))])] # Just for lower ions.
+			####################################################################################
+			
 			# Offset the lower peak
 			if ionname != 'CL' or ionname != 'Cl':
 				lower_position = [] # This will contain the final adjusted positions for the "bottom" leaflet
@@ -199,18 +221,17 @@ if 'compute' in routine:
 				upper_position.append(old_position-upper_peak_pos)
 			show_each_leaflet = 0	
 			if 'show_each_leaflet':
-				plt.title('Peak at maximum')
+				plt.title('Peaks aligned?')
 				plt.scatter(lower_position,lower_hist,c='r', s=40, alpha=0.5, label='Lower leaflet')
 				plt.scatter(upper_position,upper_hist,c='b', s=40, alpha=0.5, label='Upper leaflet')
-				plt.show()				
+				plt.show()
 				
 			# After the shifting, resort the bins by distance from membrane surface
 			lower = array(zip(lower_position, lower_hist))
 			upper = array(zip(upper_position, upper_hist))
 			lower_sorted = lower[np.argsort(lower[:, 0])]
 			upper_sorted = upper[np.argsort(upper[:, 0])]
-		
-		
+
 			if ionname == 'CL' or ionname == 'Cl':
 				# In this case, we don't want to shift to the max. We want to shift to the first nonzero element.
 				# IOW, shift so that the inflection of the curve is positive (and thus, fitted).
@@ -236,6 +257,17 @@ if 'compute' in routine:
 					plt.scatter([upper_sorted[i][0] for i in range(len(upper_sorted))],[upper_sorted[i][1] for i in range(len(upper_sorted))],c='b', s=40, alpha=0.5, label='Upper leaflet')
 					plt.show()				
 
+		
+			bottom = array(zip(d_bottom, lower_hist))
+			top = array(zip(d_top, upper_hist))
+			bottom_sorted = bottom[np.argsort(bottom[:, 0])]
+			top_sorted = top[np.argsort(top[:, 0])]
+			plt.title('Actual distances?')
+			plt.scatter([bottom_sorted[i][0] for i in range(len(bottom_sorted))], [lower_sorted[i][1] for i in range(len(lower_sorted))], c='r', s=40, alpha=0.5, label='Lower leaflet')
+			plt.scatter([top_sorted[i][0] for i in range(len(top_sorted))], [upper_sorted[i][1] for i in range(len(upper_sorted))] ,c='b', s=40, alpha=0.5, label='Upper leaflet')
+			plt.show()
+
+		
 		
 		
 			symmetric_hist = []
@@ -407,16 +439,31 @@ if 'fit_together' in routine:
 	pos_neg_cut = neg_pos[inds_neg]
 	hist_neg_cut = neg_hist[inds_neg]
 	
-	ax = plt.subplot(111)
-	ax.plot(pos_pos_cut-p_opt_pos[0][2],[pot_func(p_opt_pos[0],pos_pos_cut[i],1)/p_opt_pos[0][3] for i in range(len(pos_pos_cut))],'bo-')
-	ax.plot(pos_pos_cut-p_opt_pos[0][2],array(hist_pos_cut)/p_opt_pos[0][3],'ro-')
-	#ax.plot(pos_pos,pos_hist,'go-')
+	fig = plt.figure(figsize=(11,8.5))
+	gs = gridspec.GridSpec(1,2,wspace=0.0,hspace=0.05)
+	ax1 = fig.add_subplot(gs[0])
+	ax2 = fig.add_subplot(gs[1])
 	
-	ax.plot(pos_neg_cut-p_opt_neg[0][2],[pot_func(p_opt_neg[0],pos_neg_cut[i],-1)/p_opt_neg[0][4] for i in range(len(pos_neg_cut))],'bo-')
-	ax.plot(pos_neg_cut-p_opt_neg[0][2],array(hist_neg_cut)/p_opt_neg[0][4],'ro-')
-	ax.plot(neg_pos,neg_hist/p_opt_neg[0][4],'go-')
-	ax.fill_between(neg_pos,neg_hist/p_opt_neg[0][4],1.0,color='g',alpha=0.5)
-	ax.set_yscale('log')
+	#ax1.plot(pos_pos_cut-p_opt_pos[0][2],[pot_func(p_opt_pos[0],pos_pos_cut[i],1)/p_opt_pos[0][3] for i in range(len(pos_pos_cut))],'bo-')
+	ax1.plot(pos_pos_cut,[pot_func(p_opt_pos[0],pos_pos_cut[i],1)/p_opt_pos[0][3] for i in range(len(pos_pos_cut))],'bo-') # Fit
+	#ax1.plot(pos_pos_cut,array(hist_pos_cut)/p_opt_pos[0][3],'ro-') # Fitted data
+	ax1.bar(pos_pos,pos_hist/p_opt_pos[0][3],width=bw, color='g',alpha=0.2) # Real data
+	
+	#ax2.plot(pos_neg_cut-p_opt_neg[0][2],[pot_func(p_opt_neg[0],pos_neg_cut[i],-1)/p_opt_neg[0][4] for i in range(len(pos_neg_cut))],'bo-')
+	ax2.plot(pos_neg_cut,[pot_func(p_opt_neg[0],pos_neg_cut[i],-1)/p_opt_neg[0][4] for i in range(len(pos_neg_cut))],'bo-') # Fit
+	#ax2.plot(pos_neg_cut,array(hist_neg_cut)/p_opt_neg[0][4],'ro-') # Fitted data
+	ax2.bar(neg_pos,neg_hist/p_opt_neg[0][4],width=bw, color='g', alpha=0.2) # Real data
+	
+	#ax.axvline(x=0, ymin=0, ymax=1, color='k')
+	ax1.axvspan(-40, 0, facecolor='0.5', alpha=0.2)
+	ax2.axvspan(-40, 0, facecolor='0.5', alpha=0.2)
+	#ax.annotate('Membrane surface', xy=(0, 10), xytext=(-40, 10), arrowprops=dict(facecolor='black', shrink=0.05, width=0.5))
+	ax1.annotate('Membrane',  xy=(-40, 10))
+
+	ax1.set_xlabel('Distance from membrane surface (\AA)',fontsize=22)
+	ax1.set_ylabel('Relative concentration', fontsize=22)
+
+	#ax.set_yscale('log')
 	plt.show()			
 	
 	
