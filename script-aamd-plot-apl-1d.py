@@ -16,34 +16,38 @@ mpl.rcParams['xtick.major.pad'] = 8
 mpl.rcParams['ytick.major.pad'] = 8
 
 #results = [\
-#	'pkl.cells.membrane-v531.a6-surfacer.s4-sim-trestles-md.part0007.20000-62000-100.pkl',\
+#	'pkl.cells.membrane-v531.a7-headspan.s4-sim-trestles-md.part0007.20000-62000-100.pkl',\
 #	'pkl.cells.membrane-v532.a5-surfacer.s4-sim-trestles-md.part0007.20000-58000-100.pkl',\
-#	'pkl.cells.membrane-v530.a4-surfacer.u5-sim-trestles-md.part0006.30000-100000-100.pkl',
+#	'pkl.cells.membrane-v530.a2-apl.u5-sim-trestles-md.part0006.30000-100000-100.pkl',
 #	]
 #
-results = [\
-
-	'pkl.cells.membrane-v533.a2-spanangle.s4-sim-kraken-md.part0015.40000-54000-100.pkl',\
-	'pkl.cells.membrane-v534.a1-spanangle.s4-sim-kraken-md.part0013.40000-60000-100.pkl',
-	]
-
 #results = [\
-#	'pkl.cells.membrane-v531.a6-surfacer.s4-sim-trestles-md.part0007.20000-62000-100.pkl',\
-#	'pkl.cells.membrane-v532.a5-surfacer.s4-sim-trestles-md.part0007.20000-58000-100.pkl',\
+#
 #	'pkl.cells.membrane-v533.a2-spanangle.s4-sim-kraken-md.part0015.40000-54000-100.pkl',\
 #	'pkl.cells.membrane-v534.a1-spanangle.s4-sim-kraken-md.part0013.40000-60000-100.pkl',
 #	]
 
+results = [\
+	'pkl.cells.membrane-v531.a7-headspan.s4-sim-trestles-md.part0007.20000-62000-100.pkl',\
+	'pkl.cells.membrane-v532.a5-surfacer.s4-sim-trestles-md.part0007.20000-58000-100.pkl',\
+	'pkl.cells.membrane-v533.a2-spanangle.s4-sim-kraken-md.part0015.40000-54000-100.pkl',\
+	'pkl.cells.membrane-v534.a1-spanangle.s4-sim-kraken-md.part0013.40000-60000-100.pkl',
+	]
+
 	
 #aname = ['v531-part0007.20000-62000-100','v532-part0007.20000-58000-100','v530-part0006.30000-100000-100']
-#aname = ['v531-part0007.20000-62000-100','v532-part0007.20000-58000-100','v533-part0015.40000-54000-100','v534-part0015.40000-54000-100']
-aname = ['v533-part0015.40000-54000-100','v534-part0015.40000-54000-100']
+aname = ['v531-part0007.20000-62000-100','v532-part0007.20000-58000-100','v533-part0015.40000-54000-100','v534-part0015.40000-54000-100']
+#aname = ['v533-part0015.40000-54000-100','v534-part0015.40000-54000-100']
 #descriptions = ["Mg$^{2+}$", "Ca$^{2+}$", "Na$^+$"]
-#descriptions = ["PtdIns(4,5)P$_2$ with Mg$^{2+}$", "PtdIns(4,5)P$_2$ with Ca$^{2+}$", "PtdIns(3,5)P$_2$ with Mg$^{2+}$", "PtdIns(3,5)P$_2$ with Ca$^{2+}$"]
-descriptions = ["Mg$^{2+}$", "Ca$^{2+}$"]
+descriptions = ["PtdIns(4,5)P$_2$ with Mg$^{2+}$", "PtdIns(4,5)P$_2$ with Ca$^{2+}$", "PtdIns(3,5)P$_2$ with Mg$^{2+}$", "PtdIns(3,5)P$_2$ with Ca$^{2+}$"]
+#descriptions = ["Mg$^{2+}$", "Ca$^{2+}$"]
 
 routine = ['compute','plot'][:]
 keyword_re = re.compile("|".join(map(re.escape, ['v533','v534'])))
+
+fig = plt.figure(figsize=(11,8.5))
+gs = gridspec.GridSpec(1,1,wspace=0.0,hspace=0.05)
+ax1 = fig.add_subplot(gs[0])
 
 for ad in range(len(aname)):
 	if 'compute' in routine:
@@ -95,18 +99,17 @@ for ad in range(len(aname)):
         	resn = 'DOPE'
 		inds = array( [mset.monolayer_residues[mono].index(i) for i in mset.monolayer_by_resid[mono][mset.resnames.index(resn)]])
         	pe.append([array(i)[inds] for i in mset.getdata('cells').get(['monolayer',mono,'type','areas'])])
-        	if bool(keyword_re.search(aname[ad])):
-			resn = 'CHL1'
-			inds = array( [mset.monolayer_residues[mono].index(i) for i in mset.monolayer_by_resid[mono][mset.resnames.index(resn)]])
-			chl1_bottom.append([array(i)[inds] for i in mset.getdata('cells').get(['monolayer',mono,'type','areas'])])
+
+		resn = 'CHL1'
+		inds = array( [mset.monolayer_residues[mono].index(i) for i in mset.monolayer_by_resid[mono][mset.resnames.index(resn)]])
+		chl1_bottom.append([array(i)[inds] for i in mset.getdata('cells').get(['monolayer',mono,'type','areas'])])
 		mono = 1
         	resn = 'POPC'
 		inds = array( [mset.monolayer_residues[mono].index(i) for i in mset.monolayer_by_resid[mono][mset.resnames.index(resn)]])
 		pc.append([array(i)[inds] for i in mset.getdata('cells').get(['monolayer',mono,'type','areas'])])
-		if bool(keyword_re.search(aname[ad])):
-			resn = 'CHL1'        	
-			inds = array( [mset.monolayer_residues[mono].index(i) for i in mset.monolayer_by_resid[mono][mset.resnames.index(resn)]])
-			chl1_top.append([array(i)[inds] for i in mset.getdata('cells').get(['monolayer',mono,'type','areas'])])
+		resn = 'CHL1'        	
+		inds = array( [mset.monolayer_residues[mono].index(i) for i in mset.monolayer_by_resid[mono][mset.resnames.index(resn)]])
+		chl1_top.append([array(i)[inds] for i in mset.getdata('cells').get(['monolayer',mono,'type','areas'])])
 		
 		'''
 		print 'Sanity check:'
@@ -125,19 +128,18 @@ for ad in range(len(aname)):
 		hist_pc,binedge_pc = numpy.histogram(pc,bins=100,normed=True,range=(20,140))
 		hist_pe,binedge_pe = numpy.histogram(pe,bins=100,normed=True,range=(20,140))
 		hist_ps,binedge_ps = numpy.histogram(ps,bins=100,normed=True,range=(20,140))
-		if bool(keyword_re.search(aname[ad])):
-			hist_chl1_top, binedge_chl1_top = numpy.histogram(chl1_top,bins=100,normed=True,range=(20,140))
-			hist_chl1_bot, binedge_chl1_bot = numpy.histogram(chl1_bottom,bins=100,normed=True,range=(20,140))
-			mid_chl1_top = (binedge_chl1_top[1:]+binedge_chl1_top[:-1])/2
-			mid_chl1_bot = (binedge_chl1_bot[1:]+binedge_chl1_bot[:-1])/2
+
+		hist_chl1_top, binedge_chl1_top = numpy.histogram(chl1_top,bins=100,normed=True,range=(20,140))
+		hist_chl1_bot, binedge_chl1_bot = numpy.histogram(chl1_bottom,bins=100,normed=True,range=(20,140))
+		mid_chl1_top = (binedge_chl1_top[1:]+binedge_chl1_top[:-1])/2
+		mid_chl1_bot = (binedge_chl1_bot[1:]+binedge_chl1_bot[:-1])/2
+
 		mid = (binedge[1:]+binedge[:-1])/2
 		mid_pc = (binedge_pc[1:]+binedge_pc[:-1])/2
 		mid_pe = (binedge_pe[1:]+binedge_pe[:-1])/2
 		mid_ps = (binedge_ps[1:]+binedge_ps[:-1])/2
 	if 'plot' in routine:
-		fig = plt.figure(figsize=(11,8.5))
-		gs = gridspec.GridSpec(1,1,wspace=0.0,hspace=0.05)
-		ax1 = fig.add_subplot(gs[0])
+
 		def fill_between(x, y1, y2=0, ax=None, **kwargs):
 			"""Plot filled region between `y1` and `y2`.
 
@@ -162,17 +164,17 @@ for ad in range(len(aname)):
 		#ax1.fill_between(mid_ps,hist_ps,0,color=clrs[4],alpha=0.3)
 		#ax1.fill_between(mid_pe,hist_pe,0,color=clrs[5],alpha=0.3)
 		
-		ax1.set_title('Asymmetric membranes with cholesterol and '+descriptions[ad],fontsize=22)
-		fill_between(mid_pc,hist_pc,0,ax1,color=clrs[3],alpha=0.3,label='PtdCho')
-		fill_between(mid_pe,hist_pe,0,ax1,color=clrs[4],alpha=0.3,label='PtdEtn')
-		fill_between(mid_pe,hist_ps,0,ax1,color=clrs[6],alpha=0.3,label='PtdSer')
-		if bool(keyword_re.search(aname[ad])):
-			fill_between(mid,hist,0,ax1,color=clrs[ad%len(clrs)],alpha=0.3,label='PtdIns(3,5)P$_2$')
-			fill_between(mid_chl1_top,mean(array([hist_chl1_top,hist_chl1_bot]),axis=0),0,ax1,color='0.5',alpha=0.3,label='Cholesterol')
-		else:
-			fill_between(mid,hist,0,ax1,color=clrs[ad%len(clrs)],alpha=0.3,label='PtdIns(4,5)P$_2$')
-		
-		#fill_between(mid,hist,0,ax1,color=clrs[ad%len(clrs)],alpha=0.3,label=descriptions[ad])
+		#ax1.set_title('Asymmetric membranes with cholesterol and '+descriptions[ad],fontsize=22)
+		#fill_between(mid_pc,hist_pc,0,ax1,color=clrs[3],alpha=0.3,label='PtdCho')
+		#fill_between(mid_pe,hist_pe,0,ax1,color=clrs[4],alpha=0.3,label='PtdEtn')
+		#fill_between(mid_pe,hist_ps,0,ax1,color=clrs[6],alpha=0.3,label='PtdSer')
+		#fill_between(mid_chl1_top,mean(array([hist_chl1_top,hist_chl1_bot]),axis=0),0,ax1,color='0.5',alpha=0.3,label='Cholesterol')
+		#if bool(keyword_re.search(aname[ad])):
+		#	fill_between(mid,hist,0,ax1,color=clrs[ad%len(clrs)],alpha=0.3,label='PtdIns(3,5)P$_2$')
+		#else:
+		#	fill_between(mid,hist,0,ax1,color=clrs[ad%len(clrs)],alpha=0.3,label='PtdIns(4,5)P$_2$')
+
+		fill_between(mid,hist,0,ax1,color=clrs[ad%len(clrs)],alpha=0.3,label=descriptions[ad])
 		ax1.grid(True)
 		ax1.legend(loc=0,fontsize=18)
 		#plt.gca().yaxis.set_major_locator(MaxNLocator(prune='lower'))
@@ -191,9 +193,9 @@ for ad in range(len(aname)):
 		#fig.text(0, 0.5, "MSD (nm$^2$)", rotation="vertical", va="center",fontsize=22)	
 		gs.tight_layout(fig, rect=[0.03, 0.0, 1, 1]) # Leave space for the common y-label.
 		#plt.show()
-		plt.savefig('/home/davids/repo-pickles/fig-apl-cells-'+aname[ad]+'.png',dpi=300)
+		#plt.savefig('/home/davids/repo-pickles/fig-apl-cells-'+aname[ad]+'.png',dpi=300)
 		#plt.close()
 #plt.show()
 #plt.savefig('/home/davids/repo-pickles/fig-apl-cells-'+aname[ad]+'.png',dpi=300)
-#plt.savefig('/home/davids/repo-pickles/fig-apl-cells-v533-v534.png',dpi=300)
+plt.savefig('/home/davids/repo-pickles/fig-apl-cells-v531-v532-v533-v534.png',dpi=300)
 #plt.close()

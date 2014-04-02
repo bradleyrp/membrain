@@ -13,13 +13,12 @@ selector_aamd_symmetric = 'name P'
 selector_aamd_asymmetric = '(name P and not resname CHL1)'
 selector_aamd_asymmetric = '(name P and not resname CHL1) or (name C3 and resname CHL1)'
 residues_aamd_symmetric = ['DOPC','DOPS','PI2P']
-residues_aamd_asymmetric = ['DOPC','DOPS','DOPE','POPC','P35P']
+residues_aamd_asymmetric = ['DOPC','DOPS','DOPE','POPC','PI2P', 'CHL1', 'P35P']
 sel_aamd_surfacer = ['name P','(name C2 and not resname CHL1)']
 cgmd_protein = 'name BB'
 
 #---Analysis plan
 analysis_plan = slice(None,None)
-# Note the "spanangle" trajectories have atomP in them, so they should work for APL calculations.
 analysis_descriptors = {
 	'v533-40000-54000-100':
 		{'sysname':'membrane-v533',
@@ -35,9 +34,30 @@ analysis_descriptors = {
                 'residues':'infer',
                 'trajsel':'s4-sim-kraken-md.part0013.40000-60000-100.atomP.xtc',
                 'whichframes':None},
+	'v530-30000-100000-100':
+		{'sysname':'membrane-v530',
+                'sysname_lookup':'membrane-v530-atomP',
+                'director':director_aamd_asymmetric,'selector':selector_aamd_asymmetric,'protein_select':None,
+                'residues':'infer',
+                'trajsel':'u5-sim-trestles-md.part0006.30000-100000-100.atomP.xtc',
+                'whichframes':None},
+	'v531-20000-62000-100':
+		{'sysname':'membrane-v531',
+                'sysname_lookup':'membrane-v531-atomP',
+                'director':director_aamd_asymmetric,'selector':selector_aamd_asymmetric,'protein_select':None,
+                'residues':'infer',
+                'trajsel':'s4-sim-trestles-md.part0007.20000-62000-100.atomP.xtc',
+                'whichframes':None},
+	'v532-20000-58000-100':
+		{'sysname':'membrane-v532',
+                'sysname_lookup':'membrane-v532-atomP',
+                'director':director_aamd_asymmetric,'selector':selector_aamd_asymmetric,'protein_select':None,
+                'residues':'infer',
+                'trajsel':'s4-sim-trestles-md.part0007.20000-58000-100.atomP.xtc',
+                'whichframes':None},
 	}
 analysis_names = [
-	'v533-40000-54000-100','v534-40000-60000-100'][:]
+	'v530-30000-100000-100','v531-20000-62000-100','v532-20000-58000-100'][:]
 
 #---MAIN
 #-------------------------------------------------------------------------------------------------------------

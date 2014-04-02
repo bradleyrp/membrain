@@ -44,7 +44,7 @@ analysis_descriptors = {
 analysis_names = [
 	'v509-40000-90000-10'
 	][-1:]
-routine = ['load','compute','average_leaflets','fit_together'][0:2]
+routine = ['load','compute','average_leaflets','fit_together'][-1:]
 
 #---MAIN
 #-------------------------------------------------------------------------------------------------------------
@@ -138,7 +138,7 @@ if 'compute' in routine:
 				plt.plot(mids,hist);
 			plt.show()
 			'''
-
+			
 			hists = []
 			meanbinedges = mean(binedges,axis=0)	
 			monobins = [array([abs(mean(monoz,axis=0)[i]-meanbinedges[j])
@@ -181,10 +181,7 @@ if 'compute' in routine:
 			lower_peak_pos = bw*mids[lower_bins[lower_peak_max]]
 			upper_peak_max = argmax(upper_hist)
 			upper_peak_pos = bw*mids[upper_bins[upper_peak_max]]
-			'''
-			diff = [lower_bins[i+1] - lower_bins[i] for i in range(len(lower_bins)-1)]
-			lower_discontinuity = np.where(array(diff) > 1)
-			'''
+
 			tmp = []
 			for i in lower_bins:
 				old_position = bw*mids[i]
@@ -200,13 +197,14 @@ if 'compute' in routine:
 					tmp.append(lower_peak_pos + abs(lower_peak_pos - old_position))
 				else:
 					print "Not enough coffee today to move the peaks."
-			
+			'''
 			# Now, keep track of the actual distances.
 			####################################################################################
 			d_to_top_leaf = [bw*(i-j) for i, j in zip (mids,[monoz[k][0] for k in range(len(monoz))])] # For all ions.
 			d_top = [d_to_top_leaf[i] for i in upper_bins]
 			d_bottom = [(i-j) for i, j in zip (tmp,[monoz[k][1] for k in range(len(monoz))])] # Just for lower ions.
 			####################################################################################
+			'''
 			
 			# Offset the lower peak
 			if ionname != 'CL' or ionname != 'Cl':
@@ -225,6 +223,7 @@ if 'compute' in routine:
 				plt.scatter(lower_position,lower_hist,c='r', s=40, alpha=0.5, label='Lower leaflet')
 				plt.scatter(upper_position,upper_hist,c='b', s=40, alpha=0.5, label='Upper leaflet')
 				plt.show()
+
 				
 			# After the shifting, resort the bins by distance from membrane surface
 			lower = array(zip(lower_position, lower_hist))
@@ -257,7 +256,7 @@ if 'compute' in routine:
 					plt.scatter([upper_sorted[i][0] for i in range(len(upper_sorted))],[upper_sorted[i][1] for i in range(len(upper_sorted))],c='b', s=40, alpha=0.5, label='Upper leaflet')
 					plt.show()				
 
-		
+			'''
 			bottom = array(zip(d_bottom, lower_hist))
 			top = array(zip(d_top, upper_hist))
 			bottom_sorted = bottom[np.argsort(bottom[:, 0])]
@@ -266,9 +265,21 @@ if 'compute' in routine:
 			plt.scatter([bottom_sorted[i][0] for i in range(len(bottom_sorted))], [lower_sorted[i][1] for i in range(len(lower_sorted))], c='r', s=40, alpha=0.5, label='Lower leaflet')
 			plt.scatter([top_sorted[i][0] for i in range(len(top_sorted))], [upper_sorted[i][1] for i in range(len(upper_sorted))] ,c='b', s=40, alpha=0.5, label='Upper leaflet')
 			plt.show()
-
-		
-		
+			'''
+			###################################################################################
+			#raw_upper_position = upper_position+upper_peak_pos
+			#real_upper_position = raw_upper_position - mean([monoz[k][0] for k in range(len(monoz))]) 
+			# Really should be doing this framewise, but this saves a lot of time and is easier and is okay,
+			# because the variance is <0.3 A.
+			# numpy.var([monoz[k][0] for k in range(len(monoz))])
+			#raw_lower_position = lower_position+lower_peak_pos
+			#real_lower_position = raw_lower_position - mean([monoz[k][1] for k in range(len(monoz))]) 
+			###################################################################################
+			peak_bins = np.array(mean(hists,axis=0)).argsort()[-2:][::-1]
+			differences = abs(peak_bins - middle_bin)
+			peak_to_center = bw*mean(differences)
+			P_to_P_distance = mean([monoz[k][0]-monoz[k][1] for k in range(len(monoz))])
+			peak_to_P_surface = peak_to_center - P_to_P_distance/2.
 		
 			symmetric_hist = []
 			symmetric_pos = []
@@ -301,6 +312,8 @@ if 'compute' in routine:
 						
 				pos_pos = array([i for i in symmetric_pos])
 				pos_hist = array([i for i in symmetric_hist])
+				pos_peak_to_center = peak_to_center
+				pos_peak_to_P_surface = peak_to_P_surface
 									
 			elif 'average_leaflets' in routine and (ionname == 'CL' or ionname == 'Cl'):
 				if len(lower_bins) == len(upper_bins):
@@ -330,6 +343,8 @@ if 'compute' in routine:
 									
 				neg_pos = array([i for i in symmetric_pos])
 				neg_hist = array([i for i in symmetric_hist])
+				neg_peak_to_center = peak_to_center
+				neg_peak_to_P_surface = peak_to_P_surface
 			
 			elif 'average_leaflets' in routine:
 				print "I'm not sure if I should adjust the peaks for a positive or negative ion."
@@ -438,33 +453,45 @@ if 'fit_together' in routine:
 	hist_pos_cut = pos_hist[inds_pos]	
 	pos_neg_cut = neg_pos[inds_neg]
 	hist_neg_cut = neg_hist[inds_neg]
-	
+		
 	fig = plt.figure(figsize=(11,8.5))
-	gs = gridspec.GridSpec(1,2,wspace=0.0,hspace=0.05)
+	gs = gridspec.GridSpec(1,2,wspace=0.2,hspace=0.05)
 	ax1 = fig.add_subplot(gs[0])
 	ax2 = fig.add_subplot(gs[1])
 	
 	#ax1.plot(pos_pos_cut-p_opt_pos[0][2],[pot_func(p_opt_pos[0],pos_pos_cut[i],1)/p_opt_pos[0][3] for i in range(len(pos_pos_cut))],'bo-')
-	ax1.plot(pos_pos_cut,[pot_func(p_opt_pos[0],pos_pos_cut[i],1)/p_opt_pos[0][3] for i in range(len(pos_pos_cut))],'bo-') # Fit
 	#ax1.plot(pos_pos_cut,array(hist_pos_cut)/p_opt_pos[0][3],'ro-') # Fitted data
-	ax1.bar(pos_pos,pos_hist/p_opt_pos[0][3],width=bw, color='g',alpha=0.2) # Real data
+	#ax1.bar(pos_pos,pos_hist/p_opt_pos[0][3],width=bw, color='g',alpha=0.2) # Real data
 	
 	#ax2.plot(pos_neg_cut-p_opt_neg[0][2],[pot_func(p_opt_neg[0],pos_neg_cut[i],-1)/p_opt_neg[0][4] for i in range(len(pos_neg_cut))],'bo-')
-	ax2.plot(pos_neg_cut,[pot_func(p_opt_neg[0],pos_neg_cut[i],-1)/p_opt_neg[0][4] for i in range(len(pos_neg_cut))],'bo-') # Fit
+	
 	#ax2.plot(pos_neg_cut,array(hist_neg_cut)/p_opt_neg[0][4],'ro-') # Fitted data
-	ax2.bar(neg_pos,neg_hist/p_opt_neg[0][4],width=bw, color='g', alpha=0.2) # Real data
+	#ax2.bar(neg_pos,neg_hist/p_opt_neg[0][4],width=bw, color='g', alpha=0.2) # Real data
 	
 	#ax.axvline(x=0, ymin=0, ymax=1, color='k')
-	ax1.axvspan(-40, 0, facecolor='0.5', alpha=0.2)
-	ax2.axvspan(-40, 0, facecolor='0.5', alpha=0.2)
+	ax1.axvspan(-20, 0, facecolor='0.5', alpha=0.2)
+	ax2.axvspan(-20, 0, facecolor='0.5', alpha=0.2)
 	#ax.annotate('Membrane surface', xy=(0, 10), xytext=(-40, 10), arrowprops=dict(facecolor='black', shrink=0.05, width=0.5))
-	ax1.annotate('Membrane',  xy=(-40, 10))
+	#ax1.annotate('Membrane',  xy=(-20, 10))
+	
+	pos_real_data_shift = pos_peak_to_P_surface - pos_pos[pos_hist.argmax()]
+	neg_real_data_shift = neg_peak_to_P_surface - neg_pos[neg_hist.argmin()]
 
-	ax1.set_xlabel('Distance from membrane surface (\AA)',fontsize=22)
-	ax1.set_ylabel('Relative concentration', fontsize=22)
+	ax1.bar(pos_pos+pos_real_data_shift,pos_hist/p_opt_pos[0][3],width=bw, color=clrs[2],alpha=0.2) # Synchronized data!
+	ax1.plot(pos_pos_cut+pos_real_data_shift,[pot_func(p_opt_pos[0],pos_pos_cut[i],1)/p_opt_pos[0][3] for i in range(len(pos_pos_cut))],'ko-',label='$\kappa$ = %.2f, $\phi$ = %.2f' %(p_opt_pos[0][0],p_opt_pos[0][1])) # Fit
+	ax2.bar(neg_pos+neg_real_data_shift,neg_hist/p_opt_neg[0][4],width=bw, color=clrs[2],alpha=0.2) # Synchronized data!
+	ax2.plot(pos_neg_cut+neg_real_data_shift,[pot_func(p_opt_neg[0],pos_neg_cut[i],-1)/p_opt_neg[0][4] for i in range(len(pos_neg_cut))],'ko-',label='$\kappa$ = %.2f, $\phi$ = %.2f ' %(p_opt_neg[0][0],p_opt_neg[0][1])) # Fit
 
+	ax1.legend(fontsize=16)
+	ax2.legend(fontsize=16)
+	#ax1.set_xlabel('Distance from membrane surface (\AA)',fontsize=22)
+	ax1.set_ylabel('Concentration relative to bulk', fontsize=22)
+	fig.text(0.25, 0.02, "Distance from membrane surface (\AA)",fontsize=22)
+	gs.tight_layout(fig, rect=[0.0, 0.03, 1, 1]) # Leave space for the common x-label.
+	plt.savefig(pickles+'fig-'+aname+'-ion-potential.png',dpi=300)
+	plt.close()
 	#ax.set_yscale('log')
-	plt.show()			
+	#plt.show()			
 	
 	
 
