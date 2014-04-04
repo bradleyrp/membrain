@@ -72,8 +72,10 @@ analysis_names = [
 	'v612-10000-80000-200',
 	'v550-300000-400000-200',
 	][:3]
-routine = ['compute','compute_mean_fits','plot','plot_residmaps','plot_mean_fits','plotpub'][-1:]
+routine = ['compute','compute_mean_fits','plot','plot_residmaps','plot_mean_fits','plotpub'][-2:-1]
 bigname = 'v614-v612-v550-ver2'
+
+#---Nb you must run compute_mean_fits with decay_z0_min = True and False if you want to do both plots
 
 #---parameter set for sweeps
 params = [[c,d] for c in [50,80,100,110,120,130,150,200,250] for d in [0,-1,1]]
@@ -85,9 +87,11 @@ params_plot = [[c,d] for d in [0,1] for c in [100]]
 params_plot = [[c,d] for c in range(20,320+10,10) for d in [0]]
 params_plot = [[c,d] for c in [80,100,150][1:2] for d in [0,1]]
 
+params_plot = [[c,d] for c in range(20,320+10,10) for d in [0]]
+
 #---height settings
-decay_z0 = True				#---set decay to z0 = 0
-decay_z0_min = False		#---set decay to z0 = minimum of the mean height profile
+decay_z0 = False				#---set decay to z0 = 0
+decay_z0_min = True			#---set decay to z0 = minimum of the mean height profile must be opposite decay_z0
 
 #---method
 wait_save = True 			#---save pickle dump until the end if running a short calculation
@@ -152,7 +156,6 @@ def gauss2d_residual_z0_global(params,x,y,z):
 	'''Two-dimensional Gaussian height function with fluid axis of rotation, residual, decay height fixed'''
 	return ((gauss2d_z0(params,x,y,z0=z0)-z)**2)
 
-	
 #---modification to find older pickles
 extra_locs = [
 	'./','structures-broken-transposer-error/',
@@ -934,8 +937,13 @@ if 'plot_mean_fits' in routine:
 				msdats[anum][ms].getnote('zfiltdir') == zfiltdir and \
 				msdats[anum][ms].getnote('decay_z0_min') == True:
 				msdats_subset2[anum].append(ms)
-	fig = plt.figure(figsize=(10,len(analysis_names)*2))
-	gs = gridspec.GridSpec(len(analysis_names),3,wspace=0.0,hspace=0.0)
+	fig = plt.figure(figsize=(5,len(analysis_names)*2))
+	#gs = gridspec.GridSpec(len(analysis_names),3,wspace=0.0,hspace=0.0)
+	gs = gridspec.GridSpec(len(analysis_names),2,wspace=0.0,hspace=0.0)
+	#gs = gridspec.GridSpec(len(analysis_names),2,wspace=0.0,hspace=0.0)
+	#gs.update(left=0.0,right=0.7)
+	#gs2 = gridspec.GridSpec(len(analysis_names),1,wspace=0.0,hspace=0.0)
+	#gs2.update(left=0.75,right=1.0)
 	cuts = [i[0] for i in params_plot]	
 	extremz = max([max([mean(mset.surf,axis=0).max(),abs(mean(mset.surf,axis=0).min())]) for mset in msets])
 	for aname in analysis_names:
@@ -959,72 +967,83 @@ if 'plot_mean_fits' in routine:
 		casual_names = [i[0] if type(i) == list else i for i in casual_names]
 		color_order = [casual_names.index(i) for i in casual_names if i not in ['peak','valley','full']]
 		#---plot Hmax values for the average structures
-		ax = plt.subplot(gs[anum,0])
-		testnames = [i[0] if type(i) == list else i for i in msdats[anum][0].getnote('testlist')]
-		print len(dat)
-		print testnames
-		print casual_names
-		print color_order
-		for testnum in range(len(testnames)):
-			test = dat[testnum]
-			testcurv = [[i.get(['type','maxhs'])[0] for i in msdats[anum]
-				if (i.getnote('cutoff') == cutoff and \
-				i.getnote('decay_z0_min') == None and \
-				i.getnote('this_test') == testnum)][0] 
-				for cutoff in cuts]
-			casual_name = test.getnote('testlist')[test.getnote('this_test')]
-			if casual_name == 'peak': color = colordict('blue')
-			elif casual_name == 'valley': color = colordict('red')
-			elif casual_name == 'full': color = colordict('black')
-			else: color = colordict(color_order.index(testnum))
-			ax.plot(array(cuts)/10.,testcurv,'-',c=color,label=label,lw=2)
-		ax.axhline(y=0,xmax=1,xmin=0,lw=2,c='k')
-		ax.set_ylim((-0.02,0.02))
-		ax.grid(True)
-		if analysis_names.index(aname) < len(analysis_names)-1: ax.set_xticklabels([])
-		else: ax.set_xlabel(r'cutoff (nm)',fontsize=fsaxlabel)
-		ax.get_yaxis().set_major_locator(mpl.ticker.MaxNLocator(prune='both'))
-		if analysis_names.index(aname) == 0:
-			ax.set_title('$\mathsf{H_{max}\,(nm^{-1})}$',fontsize=16)
-		ax.set_ylabel(label,fontsize=fsaxlabel)
-		#---plot Hmax values for the average structures, z0_min
-		ax = plt.subplot(gs[anum,2])
-		testnames = [i[0] if type(i) == list else i for i in msdats[anum][0].getnote('testlist')]
-		print len(dat)
-		print testnames
-		print casual_names
-		print color_order
-		for testnum in range(len(testnames)):
-			test = dat[testnum]
-			testcurv = [[i.get(['type','maxhs'])[0] for i in msdats[anum] 
-				if (i.getnote('cutoff') == cutoff and \
-				i.getnote('decay_z0_min') == True and \
-				i.getnote('this_test') == testnum)][0] 
-				for cutoff in cuts]
-			casual_name = test.getnote('testlist')[test.getnote('this_test')]
-			if casual_name == 'peak': color = colordict('blue')
-			elif casual_name == 'valley': color = colordict('red')
-			elif casual_name == 'full': color = colordict('black')
-			else: color = colordict(color_order.index(testnum))
-			ax.plot(array(cuts)/10.,testcurv,'-',c=color,label=label,lw=2)
-		ax.axhline(y=0,xmax=1,xmin=0,lw=2,c='k')
-		ax.set_ylim((-0.02,0.02))
-		ax.grid(True)
-		if analysis_names.index(aname) < len(analysis_names)-1: ax.set_xticklabels([])
-		else: ax.set_xlabel(r'cutoff (nm)',fontsize=fsaxlabel)
-		ax.get_yaxis().set_major_locator(mpl.ticker.MaxNLocator(prune='both'))
-		if analysis_names.index(aname) == 0:
-			ax.set_title('$\mathsf{H_{max}\,(nm^{-1})}$',fontsize=16)
-		ax.yaxis.tick_right()
+		if 1:
+			ax = plt.subplot(gs[anum,0])
+			testnames = [i[0] if type(i) == list else i for i in msdats[anum][0].getnote('testlist')]
+			print len(dat)
+			print testnames
+			print casual_names
+			print color_order
+			ax.axhline(y=0,xmax=1,xmin=0,lw=2,c='k')
+			for testnum in range(len(testnames)):
+				test = dat[testnum]
+				testcurv = [[i.get(['type','maxhs'])[0] for i in msdats[anum]
+					if (i.getnote('cutoff') == cutoff and \
+					i.getnote('decay_z0_min') == True and \
+					i.getnote('this_test') == testnum)][0] 
+					for cutoff in cuts]
+				casual_name = test.getnote('testlist')[test.getnote('this_test')]
+				if casual_name == 'peak': color = colordict('blue')
+				elif casual_name == 'valley': color = colordict('red')
+				elif casual_name == 'full': color = colordict('black')
+				else: color = colordict(color_order.index(testnum))
+				ax.plot(array(cuts)/10.,testcurv,'-',c=color,label=label,lw=2)
+			ax.set_ylim((-0.008,0.008))
+			ax.grid(True)
+			if analysis_names.index(aname) < len(analysis_names)-1: ax.set_xticklabels([])
+			else: ax.set_xlabel(r'cutoff (nm)',fontsize=fsaxlabel)
+			ax.get_yaxis().set_major_locator(mpl.ticker.MaxNLocator(prune='both'))
+			if analysis_names.index(aname) == 0:
+				ax.set_title('$\mathsf{H_{max}\,(nm^{-1})}$',fontsize=16)
+			ax.set_ylabel(label,fontsize=fsaxlabel)
+		#---plot Hmax values for the average structures, z0_min (note I switched these)
+		if 0:
+			#ax = plt.subplot(gs[anum,1])
+			ax = plt.subplot(gs[anum,0])
+			testnames = [i[0] if type(i) == list else i for i in msdats[anum][0].getnote('testlist')]
+			dat = [msdats[anum][i] for i in msdats_subset2[anum]]
+			print len(dat)
+			print testnames
+			print casual_names
+			print color_order
+			ax.axhline(y=0,xmax=1,xmin=0,lw=2,c='k')
+			for testnum in range(len(testnames)):
+				test = dat[testnum]
+				testcurv = [[i.get(['type','maxhs'])[0] for i in msdats[anum] 
+					if (i.getnote('cutoff') == cutoff and \
+					i.getnote('decay_z0_min') == True and \
+					i.getnote('this_test') == testnum)][0] 
+					for cutoff in cuts]
+				casual_name = test.getnote('testlist')[test.getnote('this_test')]
+				if casual_name == 'peak': color = colordict('blue')
+				elif casual_name == 'valley': color = colordict('red')
+				elif casual_name == 'full': color = colordict('black')
+				else: color = colordict(color_order.index(testnum))
+				ax.plot(array(cuts)/10.,testcurv,'-',c=color,label=label,lw=2)
+			ax.set_ylabel(label,fontsize=fsaxlabel)
+			ax.set_ylim((-0.008,0.008))
+			ax.grid(True)
+			if analysis_names.index(aname) < len(analysis_names)-1: ax.set_xticklabels([])
+			else: ax.set_xlabel(r'cutoff (nm)',fontsize=fsaxlabel)
+			ax.get_yaxis().set_major_locator(mpl.ticker.MaxNLocator(prune='both'))
+			if analysis_names.index(aname) == 0:
+				ax.set_title('$\mathsf{H_{max}\,(nm^{-1})}$',fontsize=16)
+		#ax.yaxis.tick_right()
+		#ax.set_yticklabels([])
 		#---plot structure
+		#ax = plt.subplot(gs2[anum])
 		ax = plt.subplot(gs[anum,1])
 		im = plotter2d(ax,mset,dat=mean(mset.surf,axis=0)/10.,lognorm=False,cmap=mpl.cm.RdBu_r,
 			inset=False,cmap_washout=1.0,ticklabel_show=[1,1],tickshow=[1,1],centertick=False,
 			fs=fsaxlabel,label_style='xy',lims=[-extremz/10.,extremz/10.])
-		ax.set_xticklabels([])
+		if analysis_names.index(aname) < len(analysis_names)-1:
+			ax.set_xticklabels([])
+			ax.set_xlabel('')
+		else:
+			plt.setp(ax.get_xticklabels(),fontsize=fsaxlabel-4)
+			ax.set_xlabel(r'$x\:(\mathrm{nm})$',fontsize=fsaxlabel-4)
 		ax.set_yticklabels([])
 		ax.set_ylabel('')
-		ax.set_xlabel('')
 		#---height color scale
 		axins2 = inset_axes(ax,width="5%",height="100%",loc=3,
 			bbox_to_anchor=(1.,0.,1.,1.),

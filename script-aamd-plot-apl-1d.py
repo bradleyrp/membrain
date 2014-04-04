@@ -30,7 +30,7 @@ descriptors = ["Mg$^{2+}$", "Ca$^{2+}$"]
 
 routine = ['compute','plot'][:]
 
-for ad in range(0,2):
+for ad in range(0,2)[:1]:
 	if 'compute' in routine:
 
 		mset = []
@@ -39,43 +39,52 @@ for ad in range(0,2):
 		tmp2 = []
 
 		#---relative resids
-		resids = [[mset.resids_reracker.index(i) for i in j] for j in mset.resids]
+		#resids = [[mset.resids_reracker.index(i) for i in j] for j in mset.resids]
 		#---color codes
-		colorcodes = [[[i for i in range(4) if j in resids[i]][0] for j in mono] for mono in mset.monolayer_residues]
-		pi2p_resids = where(np.in1d(colorcodes, 3)==True) # resids is equal to the index because it's re-racked.
-		pc_resids = where(np.in1d(colorcodes[1], 0)==True)
-		#pe_resids_upper = where(np.in1d(colorcodes[1], 1)==True)
-		pe_resids_lower = where(np.in1d(colorcodes[0], 1)==True)
-		ps_resids = where(np.in1d(colorcodes, 2)==True)
+		colorcodes = [[[i for i in range(len(mset.resids)) if j in mset.resids[i]][0] for j in mono] for mono in mset.monolayer_residues]
+		
+		mono = 0
+		resn = 'P35P'
+		inds = array([mset.monolayer_residues[mono].index(i) 
+			for i in mset.monolayer_by_resid[mono][mset.resnames.index('P35P')]])
+		areas = [array(i)[inds] for i in mset.getdata('cells').get(['monolayer',mono,'type','areas'])]
+		
+		
+		if 0:
+			pi2p_resids = where(np.in1d(colorcodes, 3)==True) # resids is equal to the index because it's re-racked.
+			pc_resids = where(np.in1d(colorcodes[1], 0)==True)
+			#pe_resids_upper = where(np.in1d(colorcodes[1], 1)==True)
+			pe_resids_lower = where(np.in1d(colorcodes[0], 1)==True)
+			ps_resids = where(np.in1d(colorcodes, 2)==True)
 
-		lower = mset.getdata('cells').get(['monolayer',0,'type','areas'])
-		upper = mset.getdata('cells').get(['monolayer',1,'type','areas'])
-		#lower[0][pi2p_resids[0][0]:pi2p_resids[0][-1]+1]
-		tmp2 = array([lower[i][pi2p_resids[0][0]:pi2p_resids[0][-1]+1] for i in range(len(lower))]).flatten()
-		pc = array([lower[i][pc_resids[0][0]:pc_resids[0][-1]+1] for i in range(len(upper))]).flatten()
+			lower = mset.getdata('cells').get(['monolayer',0,'type','areas'])
+			upper = mset.getdata('cells').get(['monolayer',1,'type','areas'])
+			#lower[0][pi2p_resids[0][0]:pi2p_resids[0][-1]+1]
+			tmp2 = array([lower[i][pi2p_resids[0][0]:pi2p_resids[0][-1]+1] for i in range(len(lower))]).flatten()
+			pc = array([lower[i][pc_resids[0][0]:pc_resids[0][-1]+1] for i in range(len(upper))]).flatten()
 		
-		#pe_upper = array([lower[i][pe_resids_upper[0][0]:pe_resids_upper[0][-1]+1] for i in range(len(upper))]).flatten()
-		pe_lower = array([lower[i][pe_resids_lower[0][0]:pe_resids_lower[0][-1]+1] for i in range(len(lower))]).flatten()
-		#pe = pe_upper + pe_lower
-		pe_upper = []
-		pe = pe_lower
-		ps = array([lower[i][ps_resids[0][0]:ps_resids[0][-1]+1] for i in range(len(lower))]).flatten()
+			#pe_upper = array([lower[i][pe_resids_upper[0][0]:pe_resids_upper[0][-1]+1] for i in range(len(upper))]).flatten()
+			pe_lower = array([lower[i][pe_resids_lower[0][0]:pe_resids_lower[0][-1]+1] for i in range(len(lower))]).flatten()
+			#pe = pe_upper + pe_lower
+			pe_upper = []
+			pe = pe_lower
+			ps = array([lower[i][ps_resids[0][0]:ps_resids[0][-1]+1] for i in range(len(lower))]).flatten()
 		
-		print 'Sanity check:'
-		print '# PC = '+str(shape(pc)[0]/mset.nframes)
-		print '# PE (upper) = '+str(shape(pe_upper)[0]/mset.nframes)+ ' and (lower) = '+str(shape(pe_lower)[0]/mset.nframes)
-		print '# PS = '+str(shape(ps)[0]/mset.nframes)
-		print '# PIP2 = '+str(shape(tmp2)[0]/mset.nframes)
+			print 'Sanity check:'
+			print '# PC = '+str(shape(pc)[0]/mset.nframes)
+			print '# PE (upper) = '+str(shape(pe_upper)[0]/mset.nframes)+ ' and (lower) = '+str(shape(pe_lower)[0]/mset.nframes)
+			print '# PS = '+str(shape(ps)[0]/mset.nframes)
+			print '# PIP2 = '+str(shape(tmp2)[0]/mset.nframes)
 		
 		
-		hist,binedge = numpy.histogram(tmp2,bins=100,normed=True,range=(20,140))
-		hist_pc,binedge_pc = numpy.histogram(pc,bins=100,normed=True,range=(20,140))
-		hist_pe,binedge_pe = numpy.histogram(pe,bins=100,normed=True,range=(20,140))
-		hist_ps,binedge_ps = numpy.histogram(ps,bins=100,normed=True,range=(20,140))
-		mid = (binedge[1:]+binedge[:-1])/2
-		mid_pc = (binedge_pc[1:]+binedge_pc[:-1])/2
-		mid_pe = (binedge_pe[1:]+binedge_pe[:-1])/2
-		mid_ps = (binedge_ps[1:]+binedge_ps[:-1])/2
+			hist,binedge = numpy.histogram(tmp2,bins=100,normed=True,range=(20,140))
+			hist_pc,binedge_pc = numpy.histogram(pc,bins=100,normed=True,range=(20,140))
+			hist_pe,binedge_pe = numpy.histogram(pe,bins=100,normed=True,range=(20,140))
+			hist_ps,binedge_ps = numpy.histogram(ps,bins=100,normed=True,range=(20,140))
+			mid = (binedge[1:]+binedge[:-1])/2
+			mid_pc = (binedge_pc[1:]+binedge_pc[:-1])/2
+			mid_pe = (binedge_pe[1:]+binedge_pe[:-1])/2
+			mid_ps = (binedge_ps[1:]+binedge_ps[:-1])/2
 	if 'plot' in routine:
 		def fill_between(x, y1, y2=0, ax=None, **kwargs):
 			"""Plot filled region between `y1` and `y2`.

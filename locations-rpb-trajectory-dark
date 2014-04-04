@@ -70,6 +70,11 @@ name=membrane-v530-atomP
 struct=/home/rpb/compbio/membrane-v530/a4-surfacer/system.atomP.gro
 /home/rpb/compbio/membrane-v530/a4-surfacer/u5-sim-trestles-md.part0006.30000-100000-100.atomP.xtc
 
+name=membrane-v533-atomP
+struct=/home/rpb/compbio-alt/membrane-v533/a2-spanangle/system.atomP.gro
+/home/rpb/compbio-alt/membrane-v533/a2-spanangle/system.atomP.gro
+/home/rpb/compbio-alt/membrane-v533/a2-spanangle/s4-sim-kraken-md.part0015.40000-54000-100.atomP.xtc
+
 name=membrane-v530-director
 struct=/home/rpb/compbio/membrane-v530/a6-surfacer/system.director.gro
 /home/rpb/compbio/membrane-v530/a6-surfacer/u5-sim-trestles-md.part0006.30000-100000-100.director.xtc

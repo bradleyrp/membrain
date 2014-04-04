@@ -87,7 +87,7 @@ analysis_names = [
 	'v612-75000-175000-200',
 	'v550-300000-400000-200',
 	'v614-40000-140000-200'
-	][:]
+	][:-1]
 
 #---methods
 routine = [
@@ -96,20 +96,30 @@ routine = [
 	'video',
 	'plot_extendview',
 	'plot_histograms',
-	'plot_2dhistograms'][-1:]
+	'plot_2dhistograms'][-2:-1]
 span_sweep = [1,2,3,4,5,6]
 flatz0 = True #---use a flat plane z0=0 instead of z0=z(x,y) for the integral
 bigname = '.'.join(analysis_names)
+do_blur = False #---use Gaussian blur
+do_blur_first = False #---use Gaussian blur before taking the mean (has no effect)
 smooth_wid = 2 #---sigma for the Gaussian blur
 window_half = 140 #---half-width in Angstroms of the zoom window for the plot_extendview
+
+#---units
+#---Nb this assumes pressure units are in bar, and hence this leads to a factor of ten difference
+kappa = 20
+temperature = 310
+conv_fac = 1.38*10.*kappa*temperature
 
 #---methods
 plot_menu = [
 	'hist_sum_norm',
 	'hist_smooth_sum_norm',
 	'join_systems_histogram',
-	'systems_join_span_histogram'
-	][-1:-2]
+	'systems_join_span_histogram',
+	'systems_join_span_histogram_no_mean',
+	'neighborhood_unfiltered'
+	][-1:]
 smooth_mean = 1 #---method: histogram > smooth > sum frames > norm (r)
 plot_span = 2 #---method: join all C0 for one span, all systems > histogram
 systems_join_span_histogram_subset = False #---method: join all C0 for one span, all systems > histogram
@@ -251,7 +261,19 @@ if 'plot_extendview' in routine:
 	m,n = shape(md_maps[0][0].data)[1:]
 	#---Nb the Gaussian blur step means that the peaks on the stress maps will be duller than the extrema 
 	#---...of the 1D histograms of the average map given in the systems_join_span_histogram step
-	panelplots = [scipy.ndimage.filters.gaussian_filter(numpy.tile(mean(md_maps[i][plot_span].data,axis=0),(3,3)),smooth_wid)[m:2*m,n:2*n] for i in range(len(md_maps))]
+	if do_blur:
+		panelplots = [
+			scipy.ndimage.filters.gaussian_filter(numpy.tile(
+				mean(md_maps[i][plot_span].data,axis=0),(3,3)),smooth_wid)[m:2*m,n:2*n] 
+				for i in range(len(md_maps))]
+	elif do_blur_first:
+		panelplots = [mean([scipy.ndimage.filters.gaussian_filter(numpy.tile(
+			md_maps[i][plot_span].data[j],(3,3)),smooth_wid)[m:2*m,n:2*n] 
+			for j in range(len(md_maps[i][plot_span].data))],axis=0) for i in range(len(md_maps))]
+	else:
+		panelplots = [mean(md_maps[i][plot_span].data,axis=0) for i in range(len(md_maps))]
+	#---scale to the correct units
+	panelplots = [array(i)/conv_fac for i in panelplots]
 	vmin = array(panelplots).min()
 	vmax = array(panelplots).max()
 	extrem = max(abs(vmax),abs(vmin))
@@ -298,10 +320,10 @@ if 'plot_extendview' in routine:
 		ax.set_xlim(lims[0])
 		ax.set_ylim(lims[1])
 		#---draw a box on the zoomed-out row
-		axeslist[p].axvline(x=lims[0][0],ymin=lims[1][0]/(n-1),ymax=lims[1][1]/(n-0),linewidth=2,c='k')
-		axeslist[p].axvline(x=lims[0][1],ymin=lims[1][0]/(n-1),ymax=lims[1][1]/(n-0),linewidth=2,c='k')
-		axeslist[p].axhline(y=lims[1][0],xmin=lims[0][0]/(m-1),xmax=lims[0][1]/(m-0),linewidth=2,c='k')
-		axeslist[p].axhline(y=lims[1][1],xmin=lims[0][0]/(m-1),xmax=lims[0][1]/(m-0),linewidth=2,c='k')
+		axeslist[p].axvline(x=lims[0][0]-1,ymin=lims[1][0]/(n-0),ymax=lims[1][1]/(n+0),linewidth=2,c='k')
+		axeslist[p].axvline(x=lims[0][1],ymin=lims[1][0]/(n-0),ymax=lims[1][1]/(n+0),linewidth=2,c='k')
+		axeslist[p].axhline(y=lims[1][0]-1,xmin=lims[0][0]/(m-0),xmax=lims[0][1]/(m+0),linewidth=2,c='k')
+		axeslist[p].axhline(y=lims[1][1],xmin=lims[0][0]/(m-0),xmax=lims[0][1]/(m+0),linewidth=2,c='k')
 		#---remove for flush plots
 		if p > 0: ax.set_yticklabels([])
 		if p == 0: ax.set_ylabel(r'$y\:(\mathrm{nm})$',fontsize=fsaxlabel)
@@ -318,7 +340,10 @@ if 'plot_extendview' in routine:
 	fig.set_size_inches(fig.get_size_inches()[0]*1.5,fig.get_size_inches()[1]*1.5)
 	gs.tight_layout(fig,h_pad=0.0,w_pad=0.0)
 	plt.savefig(pickles+'fig-stressmap_zoom-'+bigname+('.flat' if flatz0 else '')+\
-		'-span'+str(span_sweep[plot_span])+'.png',dpi=300,bbox_inches='tight')
+		'-span'+str(span_sweep[plot_span])+\
+		('-blur'+str(smooth_wid) if do_blur else '')+\
+		('-blurfirst'+str(smooth_wid) if do_blur_first else '')+\
+		'.png',dpi=300,bbox_inches='tight')
 	plt.show()
 	
 #---make cool videos
@@ -382,9 +407,9 @@ for plot_type in plot_menu:
 					protcenter+array([window_half,window_half])]).T/10.
 				boxlims = [[int(round(i)) for i in l] for l in boxlims]
 				dat = mean(array(array(md_map[plot_span].data)[:,boxlims[0][0]:boxlims[0][1],
-					boxlims[1][0]:boxlims[1][1]]),axis=0).flatten()
+					boxlims[1][0]:boxlims[1][1]]),axis=0).flatten()/conv_fac
 			#---full box
-			else: dat = mean(md_map[plot_span].data,axis=0).flatten()
+			else: dat = mean(md_map[plot_span].data,axis=0).flatten()/conv_fac
 			lims = [[-1*i,i] for i in [max([abs(dat.min()),abs(dat.max())])]][0]
 			counts,edges = histogram(dat,range=lims,bins=nbins)
 			mids = (edges[1:]+edges[:-1])/2.
@@ -402,7 +427,9 @@ for plot_type in plot_menu:
 		plt.setp(axins.get_xticklabels(), rotation=90)
 		axins.set_yticklabels([])
 		axins.set_xticks(ind+width)
-		axins.set_ylabel(r'${C}_{0}\mathbf{(+/-)}$',fontsize=fsaxlabel)
+		axins.set_ylabel(r'${C}_{0}\,\mathrm{balance}$',fontsize=fsaxlabel)
+		axins.set_yticks([])
+		plt.tick_params(axis='x',which='both',top='off')
 		#---plot
 		ax.set_xlabel(r'$\mathsf{C_{0}(x,y)\,(nm^{-1})}$',fontsize=fsaxlabel)
 		plt.setp(ax.get_xticklabels(),fontsize=fsaxlabel)
@@ -414,6 +441,204 @@ for plot_type in plot_menu:
 			('.flat' if flatz0 else '')+\
 			('.subset' if systems_join_span_histogram_subset else '')+\
 			'.png',dpi=300,bbox_inches='tight')
+		plt.show()
+	#---method: for each system join c0 for all frames with no mean for one span > histogram
+	if plot_type == 'systems_join_span_histogram_no_mean':
+		width = 0.35
+		nbins = 21 if systems_join_span_histogram_subset else 41
+		fig = plt.figure()
+		ax = plt.subplot(111)
+		ax.axvline(x=0,ymin=0,ymax=1,color='k',lw=2)
+		pozsums = []
+		negsums = []
+		extrem = 0
+		for j in range(len(md_maps)):
+			md_map = md_maps[j]
+			#---box subset
+			if systems_join_span_histogram_subset:
+				mset = msets[j] if msets[j].protein != [] else msets[j-1]
+				protcenter = mean(mean(mset.protein,axis=0),axis=0)[:2]
+				boxlims = array([protcenter-array([window_half,window_half]),
+					protcenter+array([window_half,window_half])]).T/10.
+				boxlims = [[int(round(i)) for i in l] for l in boxlims]
+				dat = array(array(md_map[plot_span].data)[:,boxlims[0][0]:boxlims[0][1],
+					boxlims[1][0]:boxlims[1][1]]).flatten()/conv_fac
+			#---full box
+			else: dat = array(md_map[plot_span].data).flatten()/conv_fac
+			thismax = max([abs(dat.min()),dat.max()])
+			if thismax > extrem: extrem = thismax
+		lims = [-thismax,thismax]
+		for j in range(len(md_maps)):
+			md_map = md_maps[j]
+			#---box subset
+			if systems_join_span_histogram_subset:
+				mset = msets[j] if msets[j].protein != [] else msets[j-1]
+				protcenter = mean(mean(mset.protein,axis=0),axis=0)[:2]
+				boxlims = array([protcenter-array([window_half,window_half]),
+					protcenter+array([window_half,window_half])]).T/10.
+				boxlims = [[int(round(i)) for i in l] for l in boxlims]
+				dat = array(array(md_map[plot_span].data)[:,boxlims[0][0]:boxlims[0][1],
+					boxlims[1][0]:boxlims[1][1]]).flatten()/conv_fac
+			#---full box
+			else: dat = array(md_map[plot_span].data).flatten()/conv_fac
+			#lims = [[-1*i,i] for i in [max([abs(dat.min()),abs(dat.max())])]][0]
+			counts,edges = histogram(dat,range=lims,bins=nbins)
+			mids = (edges[1:]+edges[:-1])/2.
+			ax.plot(mids,counts,'o-',lw=2,c=clrs[j],
+				label=(analysis_descriptors[analysis_names[j]])['label'],mec=clrs[j])
+			pozsums.append(sum(counts[mids>=0]*mids[mids>=0]))
+			negsums.append(abs(sum(counts[mids<=0]*mids[mids<=0])))
+		#---inset comparing positive and negative values
+		axins = mpl_toolkits.axes_grid.inset_locator.inset_axes(ax,width="25%",height="40%",loc=1)
+		ind = np.arange(len(md_maps))
+		pozbars = axins.bar(ind+width,pozsums,width,color='r',alpha=0.5)
+		negbars = axins.bar(ind,negsums,width, color='b',alpha=0.5)
+		axins.set_xticklabels([(analysis_descriptors[analysis_names[j]])['label'] 
+			for j in range(len(analysis_names))])
+		plt.setp(axins.get_xticklabels(), rotation=90)
+		axins.set_yticklabels([])
+		axins.set_xticks(ind+width)
+		axins.set_ylabel(r'${C}_{0}\,\mathrm{balance}$',fontsize=fsaxlabel)
+		axins.set_yticks([])
+		plt.tick_params(axis='x',which='both',top='off')
+		#---plot
+		ax.set_xlabel(r'$\mathsf{C_{0}(x,y)\,(nm^{-1})}$',fontsize=fsaxlabel)
+		plt.setp(ax.get_xticklabels(),fontsize=fsaxlabel)
+		ax.set_yticklabels([])
+		ax.grid(True)
+		ax.legend(loc='upper left')
+		plt.savefig(pickles+'fig-stressdist-joinhistall-'+\
+			bigname+'-span'+str(span_sweep[plot_span])+\
+			('.flat' if flatz0 else '')+\
+			('.subset' if systems_join_span_histogram_subset else '')+\
+			'.png',dpi=300,bbox_inches='tight')
+		plt.show()
+	#---method: raw histograms in three different domains
+	if plot_type == 'neighborhood_unfiltered':
+		'''
+		Notes: in the section called 'systems_join_span_histogram_no_mean', we can plot the raw data in a 
+		...histogram for the full box and subset. In this section, I'm rolling this into a panel plot instead 
+		...of having to switch the flags and do separate figures. I'm also adding a third method which allows
+		...you to do a raw histogram of points within a certain distance of the protein.
+		'''
+		width = 0.35
+		nbins = 101
+		fig = plt.figure(figsize=(6,10))
+		gs = gridspec.GridSpec(len(msets),1,wspace=0.0,hspace=0.0)
+		extrem = 0
+		boxslice = ['full','center','near']
+		marklist = ['o','v','>']
+		#---first find the correct limits
+		for j in range(len(md_maps)):
+			for k in boxslice:
+				md_map = md_maps[j]
+				if k == 'center':
+					mset = msets[j] if msets[j].protein != [] else msets[j-1]
+					protcenter = mean(mean(mset.protein,axis=0),axis=0)[:2]
+					boxlims = array([protcenter-array([window_half,window_half]),
+						protcenter+array([window_half,window_half])]).T/10.
+					boxlims = [[int(round(i)) for i in l] for l in boxlims]
+					dat = array(array(md_map[plot_span].data)[:,boxlims[0][0]:boxlims[0][1],
+						boxlims[1][0]:boxlims[1][1]]).flatten()/conv_fac
+				elif k == 'full': dat = array(md_map[plot_span].data).flatten()/conv_fac
+				elif k == 'near':
+					#---take the mean protein position and identify all points on the md_maps grid that are 
+					#---...within some cutoff of the time-wise averaged protein locations then use these 
+					#---...points in the histogram
+					m,n = msets[j].griddims
+					protpts = mean(msets[0].protein,axis=0)
+					mvecs = mean(msets[0].vecs,axis=0)
+					mapper = md_maps[j][plot_span].data[0]
+					surfpts = mset.wrappbc(mset.unzipgrid(array(mapper),vecs=mset.vec(0)),vecs=mvecs)
+					cd = scipy.spatial.distance.cdist(protpts[:,:2],surfpts[:,:2])
+					dists = array([np.min(cd,axis=0),surfpts[:,2]]).T
+					shadow_inds = where(np.min(cd,axis=0)<=200)[0]
+					shadow_inds = array(unravel_index(shadow_inds,shape(mapper))).T
+					dat = array([[md_map[plot_span].data[fr][i[0],i[1]] for i in shadow_inds] 
+						for fr in range(len(md_map[plot_span].data))]).flatten()/conv_fac
+				thismax = max([abs(dat.min()),dat.max()])
+				if thismax > extrem: extrem = thismax
+		#---perform the plotting
+		lims = [-thismax,thismax]
+		for j in range(len(md_maps)):
+			ax = fig.add_subplot(gs[j])
+			ax.axvline(x=0,ymin=0,ymax=1,color='k',lw=2)
+			pozsums = []
+			negsums = []
+			for k in boxslice:
+				md_map = md_maps[j]
+				if k == 'center':
+					mset = msets[j] if msets[j].protein != [] else msets[j-1]
+					protcenter = mean(mean(mset.protein,axis=0),axis=0)[:2]
+					boxlims = array([protcenter-array([window_half,window_half]),
+						protcenter+array([window_half,window_half])]).T/10.
+					boxlims = [[int(round(i)) for i in l] for l in boxlims]
+					dat = array(array(md_map[plot_span].data)[:,boxlims[0][0]:boxlims[0][1],
+						boxlims[1][0]:boxlims[1][1]]).flatten()/conv_fac
+				elif k == 'full': dat = array(md_map[plot_span].data).flatten()/conv_fac
+				elif k == 'within 10 nm':
+					#---take the mean protein position and identify all points on the md_maps grid that are 
+					#---...within some cutoff of the time-wise averaged protein locations then use these 
+					#---...points in the histogram
+					m,n = msets[j].griddims
+					protpts = mean(msets[0].protein,axis=0)
+					mvecs = mean(msets[0].vecs,axis=0)
+					mapper = md_maps[j][plot_span].data[0]
+					surfpts = mset.wrappbc(mset.unzipgrid(array(mapper),vecs=mset.vec(0)),vecs=mvecs)
+					cd = scipy.spatial.distance.cdist(protpts[:,:2],surfpts[:,:2])
+					dists = array([np.min(cd,axis=0),surfpts[:,2]]).T
+					shadow_inds = where(np.min(cd,axis=0)<=200)[0]
+					shadow_inds = array(unravel_index(shadow_inds,shape(mapper))).T
+					dat = array([[md_map[plot_span].data[fr][i[0],i[1]] for i in shadow_inds] for 
+						fr in range(len(md_map[plot_span].data))]).flatten()/conv_fac
+				
+				counts,edges = histogram(dat,range=lims,bins=nbins,normed=True)
+				mids = (edges[1:]+edges[:-1])/2.
+				if 0: ax.plot(mids,counts,'o-',lw=1,c=clrs[boxslice.index(k)],
+					label=k,mec=clrs[boxslice.index(k)],
+					marker=marklist[boxslice.index(k)])
+
+				if 1: ax.plot(mids,counts,'o-',lw=1,c=clrs[boxslice.index(k)],
+					label=k)
+
+
+				pozsums.append(sum(counts[mids>=0]*mids[mids>=0]))
+				negsums.append(abs(sum(counts[mids<=0]*mids[mids<=0])))
+				
+			if 1:
+				ax.set_xlim((-0.05,0.05))
+				#ax.set_ylim((5.,6.0))
+				ax.set_ylim((0.8*max(counts),max(counts)*1.1))
+			
+			ax.set_ylabel((analysis_descriptors[analysis_names[j]])['label'],fontsize=fsaxlabel)
+			if j < len(msets)-1: ax.set_xticklabels([])
+
+			#---inset comparing positive and negative values
+			axins = mpl_toolkits.axes_grid.inset_locator.inset_axes(ax,width="25%",height="40%",loc=1)
+			ind = np.arange(len(md_maps))
+			pozbars = axins.bar(ind+width,pozsums,width,color='r',alpha=0.5)
+			negbars = axins.bar(ind,negsums,width, color='b',alpha=0.5)
+			axins.set_xticklabels([(analysis_descriptors[analysis_names[j]])['label'] 
+				for j in range(len(analysis_names))])
+			plt.setp(axins.get_xticklabels(), rotation=90)
+			axins.set_yticklabels([])
+			axins.set_xticks(ind+width)
+			axins.set_ylabel(r'${C}_{0}\,\mathrm{balance}$',fontsize=fsaxlabel)
+			axins.set_yticks([])
+			plt.tick_params(axis='x',which='both',top='off')
+			#---plot
+			ax.set_xlabel(r'$\mathsf{C_{0}(x,y)\,(nm^{-1})}$',fontsize=fsaxlabel)
+			plt.setp(ax.get_xticklabels(),fontsize=fsaxlabel)
+			ax.set_yticklabels([])
+			ax.grid(True)
+			ax.legend(loc='upper left')
+		'''
+		plt.savefig(pickles+'fig-stressdist-joinhistall-'+\
+			bigname+'-span'+str(span_sweep[plot_span])+\
+			('.flat' if flatz0 else '')+\
+			('.subset' if systems_join_span_histogram_subset else '')+\
+			'.png',dpi=300,bbox_inches='tight')
+		'''
 		plt.show()
 	
 #---plot 2D histograms over protein distance and and curvature
@@ -453,8 +678,8 @@ if 'plot_2dhistograms' in routine and 'stack_collected_hists' not in globals():
 		stack_collected_hists.append(bigdathist)
 if 'plot_2dhistograms' in routine:
 	aspect = 1./3.
-	binspan = 20
-	fig = plt.figure()
+	binspan = 10
+	fig = plt.figure(figsize=(6,10))
 	gs = gridspec.GridSpec(1,len(md_maps),wspace=0.0,hspace=0.0)
 	if 0: ax = fig.add_subplot(gs[p])
 	if 0: ax = plt.subplot(111)
@@ -474,8 +699,8 @@ if 'plot_2dhistograms' in routine:
 			label=(analysis_descriptors[analysis_names[p]])['label'])
 		if 0: ax.fill_between(range(m),means+stddevs,means-stddevs,color='k',alpha=0.2)
 		ax.set_ylim((nbins[1]/2.-binspan,nbins[1]/2.+binspan))
-		yticks = [int(round(i)) for i in linspace(n/2-binspan,n/2+binspan,5)]
-		ylabels = [int(round(linspace(-nhistmax,nhistmax,n)[j],-2)) for j in yticks]
+		yticks = [int(round(i)) for i in linspace(n/2-binspan,n/2+binspan,7)]
+		ylabels = [round(int(round(linspace(-nhistmax,nhistmax,n)[j],-2))/conv_fac,3) for j in yticks]
 		ax.set_yticklabels(ylabels)
 		ax.set_yticks(yticks)
 		ax.set_xlim((0,20))
@@ -484,12 +709,12 @@ if 'plot_2dhistograms' in routine:
 		if p == 0: ax.set_ylabel(r'$\mathsf{C_{0}(nm^{-1})}$',fontsize=fsaxlabel)
 		ax.set_title((analysis_descriptors[analysis_names[p]])['label'],fontsize=fsaxlabel)
 		ax.set_xlabel(r'$\left|\mathbf{r}_{min}\right|\,\mathrm{(nm)}$',fontsize=fsaxlabel)
+		ax.get_xaxis().set_major_locator(mpl.ticker.MaxNLocator(prune='upper',nbins=5))
 	if 0: plt.legend()
 	gs.tight_layout(fig,h_pad=0.0,w_pad=0.0)
 	plt.savefig(pickles+'fig-stressdist-distvc0-'+\
 		bigname+'-span'+str(span_sweep[plot_span])+\
 		('.flat' if flatz0 else '')+\
-		('.subset' if systems_join_span_histogram_subset else '')+\
 		'.png',dpi=300,bbox_inches='tight')
 	plt.show()
-
+	

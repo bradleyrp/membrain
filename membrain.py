@@ -315,6 +315,7 @@ class MembraneSet:
 	def identify_monolayers(self,atomdirectors,startframeno=0):
 		'''General monolayer identifier function. Needs: names of outer, inner atoms on lipids.'''
 		print 'status: identifying monolayers'
+		print 'status: moving to frame '+str(startframeno)
 		self.gotoframe(startframeno)
 		pointouts = self.universe.selectAtoms(atomdirectors[0])
 		pointins = [self.universe.selectAtoms(atomdirectors[j]).coordinates() 

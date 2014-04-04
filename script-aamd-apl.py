@@ -37,7 +37,7 @@ analysis_descriptors = {
                 'whichframes':None},
 	}
 analysis_names = [
-	'v533-40000-54000-100','v534-40000-60000-100'][-1:]
+	'v533-40000-54000-100','v534-40000-60000-100'][:1]
 
 #---MAIN
 #-------------------------------------------------------------------------------------------------------------
@@ -50,7 +50,7 @@ for aname in analysis_names:
 	for traj in trajfile:
 		mset = MembraneSet()
 		mset.load_trajectory((basedir+'/'+grofile,basedir+'/'+traj),resolution='aamd')
-		mset.identify_monolayers(director,startframeno=0)
+		mset.identify_monolayers(director)
 		if residues == 'infer':
 			residues = list(set(mset.universe.residues.resnames()))
 		mset.identify_residues(residues)

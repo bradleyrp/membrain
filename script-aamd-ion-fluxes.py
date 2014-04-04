@@ -66,14 +66,14 @@ analysis_names = [
 	'v531-20000-62000-100',
 	'v509-40000-90000-10'
 	][-1:]
-routine = ['load','compute',][:]
+routine = ['load','compute',][1:]
 
 #---MAIN
 #-------------------------------------------------------------------------------------------------------------
 
 #---decomposing the diffusion by calculating it only from movements that are mostly in a particular z-slice
 
-if 'load' in routine:
+if 'load' in routine or 'monoz' not in globals():
 	for aname in analysis_names:
 		for i in analysis_descriptors[aname]: vars()[i] = (analysis_descriptors[aname])[i]
 		#---load
@@ -210,12 +210,38 @@ if 'compute_old' in routine:
 #---UNDER CONSTRUCTION
 #---re-work the discrete binning function, fix badframes, make flexible zones, etc
 
-desired_binw = 5		
+desired_binw = 5
+
+def binlister():
+
+	nbins_out = int(round(waterdist/desired_binw))
+	nbins_in = int(round(mean([i[0]-i[1] for i in monoz])/desired_binw))
+	nbins_out = 21
+	binlists = []
+	for fr in range(mset_surf.nframes):
+		thick_in = (monoz[fr,0]-monoz[fr,1])/2.
+		thick_out = (vecs[fr][2]-thick_in*2)/2.
+		if (nbins_out % 2) == 1:
+			end_binw = thick_out/(nbins_out/2+0.5)
+			thick_out = thick_out - end_binw
+			binlist = sum([list(i) for i in [
+				linspace(-thick_out-end_binw-thick_in,-thick_out,1+1)[:-1],
+				linspace(-thick_in-thick_out,-thick_in,nbins_out/2+1)[:-1],
+				linspace(-thick_in,thick_in,nbins_in+1)[:-1],
+				linspace(thick_in,thick_in+thick_out,nbins_out/2+1)[:-1],
+				linspace(thick_in+thick_out,thick_in+thick_out+end_binw,2+1)[:]]])
+		else: 
+			binlist = sum([list(i) for i in [
+				linspace(-thick_in-thick_out,-thick_in,nbins_out/2+1)[:-1],
+				linspace(-thick_in,thick_in,nbins_in+1)[:-1],
+				linspace(thick_in,thick_in+thick_out,nbins_out/2+1)[:-1]]])
+		binlists.append(binlist)	
+	return binlists
 		
 if 'compute' in routine:
 	#for aname in analysis_names:
 	aname = analysis_names[0]
-	if 0:
+	if 1:
 		#---midplane positions
 		midz = mean(monoz,axis=1)
 		#---box vectors
@@ -255,12 +281,10 @@ if 'compute' in routine:
 		relpos = []
 		for fr in range(mset_surf.nframes):
 			print fr
-			relpos.append([[pt-\
-				(pt>mset_surf.vec(0)[2]/2)*vecs[fr][2]+\
-				(pt<-1*vecs[fr][2]/2)*vecs[fr][2] \
+			relpos.append([pt-(pt>mset_surf.vec(0)[2]/2)*vecs[fr][2]+(pt<-1*vecs[fr][2]/2)*vecs[fr][2] 
 				for pt in (array(ionspos)[fr,:,2]-midz[fr])])
-			#for fr in range(mset_surf.nframes)]
-			#[where(i<binlist)[0][0] for i in rejigger]
+				#for fr in range(mset_surf.nframes)])
+				#[where(i<binlist)[0][0] for i in rejigger])
 		print 'b'
 		print 1./60*(time.time()-st)
 
