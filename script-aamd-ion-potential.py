@@ -7,6 +7,7 @@ if 'mset' not in globals():
 	execfile('locations.py')
 
 from scipy import stats
+from scipy import optimize
 from mpl_toolkits.axes_grid1 import make_axes_locatable
 
 font = {'family' : 'sans-serif',
@@ -33,16 +34,36 @@ selector = 'name P'
 
 analysis_descriptors = {
 	'v509-40000-90000-10':
-	{'sysname':'membrane-v509',
-	 'sysname_lookup':'membrane-v509-ions',
-	 'trajsel':'s6-kraken-md.part0018.40000-90000-10.ions.xtc',
-	 'sysname_lookup_struct':'membrane-v509-atomP',
-	 'trajsel_struct':'s6-kraken-md.part0018.40000-90000-10.atomP.xtc',
-	 'ion_positive':'NA',
-	 'ion_negative':'CL',
-	 'director':director_aamd_symmetric}}
+		{'sysname':'membrane-v509',
+		'sysname_lookup':'membrane-v509-ions',
+		'trajsel':'s6-kraken-md.part0018.40000-90000-10.ions.xtc',
+		'sysname_lookup_struct':'membrane-v509-atomP',
+		'trajsel_struct':'s6-kraken-md.part0018.40000-90000-10.atomP.xtc',
+		'ion_positive':'NA',
+		'ion_negative':'CL',
+		'director':director_aamd_symmetric},
+	'v510-40000-90000-100':
+		{'sysname':'membrane-v510',
+		'sysname_lookup':'membrane-v510-ions',
+		'trajsel':'s8-kraken-md.part0021.40000-90000-100.ions.xtc',
+		'sysname_lookup_struct':'membrane-v510-atomP',
+		'trajsel_struct':'s8-kraken-md.part0021.40000-90000-100.atomP.xtc',
+		'ion_positive':'MG',
+		'ion_negative':'CL',
+		'director':director_aamd_symmetric},
+	'v511-30000-80000-100':
+		{'sysname':'membrane-v511',
+		'sysname_lookup':'membrane-v511-ions',
+		'trajsel':'s6-kraken-md.part0009.30000-80000-100.ions.xtc',
+		'sysname_lookup_struct':'membrane-v511-atomP',
+		'trajsel_struct':'s6-kraken-md.part0009.30000-80000-100.atomP.xtc',
+		'ion_positive':'Cal',
+		'ion_negative':'CL',
+		'director':director_aamd_symmetric}
+	}
+	
 analysis_names = [
-	'v509-40000-90000-10'
+	'v509-40000-90000-10','v510-40000-90000-100','v511-30000-80000-100'
 	][-1:]
 routine = ['load','compute','average_leaflets','fit_together'][-1:]
 
@@ -100,7 +121,7 @@ if 'compute' in routine:
 			lower_binws = [int(round((monoz[i][1])/desired_binsize)) for i in whichframes]
 			#---pick a standard number of bins for consistent zones
 			bin_nums = [int(round(mean(i))) for i in [lower_binws,mid_binws,upper_binws]]
-			badframes = list(where([ionspos[j][:,2].max()>mset_surf.vec(j)[2] for j in range(5000)])[0])	
+			badframes = list(where([ionspos[j][:,2].max()>mset_surf.vec(j)[2] for j in range(mset.nframes)])[0])	
 			whichframes2 = [i for i in whichframes if i not in badframes]
 			binedges = array([np.concatenate((
 				linspace(0,monoz[i][1],bin_nums[0])[:-1],
@@ -428,6 +449,20 @@ def pot_resids(params,pos,hist,valence):
 				(1 + exp(-kappa*(pos[i]-z0)) * math.tanh(phi/4.)))**2)**2
 	return resids
 
+def pot_resids_sum(params,pos,hist,valence):
+	kappa, phi, z0, bulkp, bulkn = params
+	#z0 = 0
+	resids = zeros(len(valences))
+	for i in range(len(valence)):
+		if valence[i] == 1:
+			resids[i] = (hist[i] - bulkp*((1 + exp(-kappa*(pos[i]-z0)) * math.tanh(phi/4.)) /
+				(1 - exp(-kappa*(pos[i]-z0)) * math.tanh(phi/4.)))**2)**2
+		elif valence[i] == -1:
+			resids[i] = (hist[i] - bulkn*((1 - exp(-kappa*(pos[i]-z0)) * math.tanh(phi/4.)) /
+				(1 + exp(-kappa*(pos[i]-z0)) * math.tanh(phi/4.)))**2)**2
+	result = sum(resids)
+	return result
+
 if 'fit_together' in routine:
 	from scipy.optimize import curve_fit
 	from scipy.optimize import leastsq
@@ -439,7 +474,7 @@ if 'fit_together' in routine:
 	valences = array([1 for i in range(sum(inds_pos))]+[-1 for i in range(sum(inds_neg))])
 
 	posst = [0.08177729, 2.30000692, 0., 2.92884602, -4.]
-	negst = [0.08177729, 2.30000692, -15., 2.92884602, -4.]
+	negst = [0.08177729, 2.30000692, 1., 2.92884602, -5.]
 	print 'Fitting negative ion'
 	p_opt_neg = leastsq(pot_resids,array(negst),
 		args=(pos_cut[sum(inds_pos):],hist_cut[sum(inds_pos):],valences[sum(inds_pos):]))
@@ -449,6 +484,28 @@ if 'fit_together' in routine:
 		args=(pos_cut[2:sum(inds_pos)],hist_cut[2:sum(inds_pos)],valences[2:sum(inds_pos)]))
 	print p_opt_pos	
 
+	myopts = {
+        'schedule'     : 'boltzmann',   # Non-default value.
+        'maxfev'       : None,  # Default, formerly `maxeval`.
+        'maxiter'      : 1000,   # Non-default value.
+        'maxaccept'    : None,  # Default value.
+        'ftol'         : 1e-6,  # Default, formerly `feps`.
+        'T0'           : None,  # Default value.
+        'Tf'           : 1e-12, # Default value.
+        'boltzmann'    : 1.0,   # Default value.
+        'learn_rate'   : 0.5,   # Default value.
+        'quench'       : 1.0,   # Default value.
+        'm'            : 1.0,   # Default value.
+        'n'            : 1.0,   # Default value.
+        'lower'        : [0,0,-2,0,2],   # Non-default value.
+        'upper'        : [1,10,2,0,8],  # Non-default value.
+        'dwell'        : 250,   # Non-default value.
+        'disp'         : True   # Default value.
+        }
+	np.random.seed(777) 
+	res2 = optimize.minimize(pot_resids_sum,array(negst), args=(pos_cut[sum(inds_pos):],hist_cut[sum(inds_pos):],valences[sum(inds_pos):]), method='Anneal', options=myopts)
+	print res2
+	
 	pos_pos_cut = pos_pos[inds_pos]
 	hist_pos_cut = pos_hist[inds_pos]	
 	pos_neg_cut = neg_pos[inds_neg]
@@ -474,13 +531,26 @@ if 'fit_together' in routine:
 	#ax.annotate('Membrane surface', xy=(0, 10), xytext=(-40, 10), arrowprops=dict(facecolor='black', shrink=0.05, width=0.5))
 	#ax1.annotate('Membrane',  xy=(-20, 10))
 	
+	import re
+	keyword_re = re.compile("|".join(map(re.escape, ['Na'])))
+	if (bool(keyword_re.search(ion_positive))):
+		c = clrs[2]
+	keyword_re = re.compile("|".join(map(re.escape, ['MG'])))
+	if (bool(keyword_re.search(ion_positive))):
+		c = clrs[0]
+	keyword_re = re.compile("|".join(map(re.escape, ['Cal'])))
+	if (bool(keyword_re.search(ion_positive))):
+		c = clrs[1]
+	
+	
 	pos_real_data_shift = pos_peak_to_P_surface - pos_pos[pos_hist.argmax()]
 	neg_real_data_shift = neg_peak_to_P_surface - neg_pos[neg_hist.argmin()]
 
-	ax1.bar(pos_pos+pos_real_data_shift,pos_hist/p_opt_pos[0][3],width=bw, color=clrs[2],alpha=0.2) # Synchronized data!
+	ax1.bar(pos_pos+pos_real_data_shift,pos_hist/p_opt_pos[0][3],width=bw, color=c,alpha=0.2) # Synchronized data!
 	ax1.plot(pos_pos_cut+pos_real_data_shift,[pot_func(p_opt_pos[0],pos_pos_cut[i],1)/p_opt_pos[0][3] for i in range(len(pos_pos_cut))],'ko-',label='$\kappa$ = %.2f, $\phi$ = %.2f' %(p_opt_pos[0][0],p_opt_pos[0][1])) # Fit
-	ax2.bar(neg_pos+neg_real_data_shift,neg_hist/p_opt_neg[0][4],width=bw, color=clrs[2],alpha=0.2) # Synchronized data!
+	ax2.bar(neg_pos+neg_real_data_shift,neg_hist/p_opt_neg[0][4],width=bw, color=c,alpha=0.2) # Synchronized data!
 	ax2.plot(pos_neg_cut+neg_real_data_shift,[pot_func(p_opt_neg[0],pos_neg_cut[i],-1)/p_opt_neg[0][4] for i in range(len(pos_neg_cut))],'ko-',label='$\kappa$ = %.2f, $\phi$ = %.2f ' %(p_opt_neg[0][0],p_opt_neg[0][1])) # Fit
+	ax2.plot(pos_neg_cut+neg_real_data_shift,[pot_func(res2.values()[6],pos_neg_cut[i],-1)/p_opt_neg[0][4] for i in range(len(pos_neg_cut))],'go-',label='Annealing $\kappa$ = %.2f, $\phi$ = %.2f ' %(res2.values()[6][0],res2.values()[6][1])) # Fit
 
 	ax1.legend(fontsize=16)
 	ax2.legend(fontsize=16)
