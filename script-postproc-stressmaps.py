@@ -121,7 +121,7 @@ plot_menu = [
 	'neighborhood_unfiltered'
 	][-1:]
 smooth_mean = 1 #---method: histogram > smooth > sum frames > norm (r)
-plot_span = 2 #---method: join all C0 for one span, all systems > histogram
+plot_span = 4 #---method: join all C0 for one span, all systems > histogram
 systems_join_span_histogram_subset = False #---method: join all C0 for one span, all systems > histogram
 
 #---FUNCTIONS
@@ -514,7 +514,7 @@ for plot_type in plot_menu:
 			'.png',dpi=300,bbox_inches='tight')
 		plt.show()
 	#---method: raw histograms in three different domains
-	if plot_type == 'neighborhood_unfiltered':
+	if plot_type == 'neighborhood_unfiltered' and 'allhists' not in globals():
 		'''
 		Notes: in the section called 'systems_join_span_histogram_no_mean', we can plot the raw data in a 
 		...histogram for the full box and subset. In this section, I'm rolling this into a panel plot instead 
@@ -522,12 +522,20 @@ for plot_type in plot_menu:
 		...you to do a raw histogram of points within a certain distance of the protein.
 		'''
 		width = 0.35
-		nbins = 101
-		fig = plt.figure(figsize=(6,10))
+		nbins = 201
+		fig = plt.figure()
 		gs = gridspec.GridSpec(len(msets),1,wspace=0.0,hspace=0.0)
+		gs.update(left=0.0,right=0.45)
+		gs2 = gridspec.GridSpec(1,1,wspace=0.0,hspace=0.0)
+		gs2.update(left=0.55,right=1.)
+		ax2 = fig.add_subplot(gs2[0])
 		extrem = 0
-		boxslice = ['full','center','near']
+		boxslice = ['full','center']+range(20,300+1,20)
 		marklist = ['o','v','>']
+		allpoz = []
+		allneg = []
+		allhists = [[] for i in range(len(md_maps))]
+		alldats = [[] for i in range(len(md_maps))]
 		#---first find the correct limits
 		for j in range(len(md_maps)):
 			for k in boxslice:
@@ -541,7 +549,7 @@ for plot_type in plot_menu:
 					dat = array(array(md_map[plot_span].data)[:,boxlims[0][0]:boxlims[0][1],
 						boxlims[1][0]:boxlims[1][1]]).flatten()/conv_fac
 				elif k == 'full': dat = array(md_map[plot_span].data).flatten()/conv_fac
-				elif k == 'near':
+				elif type(k) == int:
 					#---take the mean protein position and identify all points on the md_maps grid that are 
 					#---...within some cutoff of the time-wise averaged protein locations then use these 
 					#---...points in the histogram
@@ -552,7 +560,7 @@ for plot_type in plot_menu:
 					surfpts = mset.wrappbc(mset.unzipgrid(array(mapper),vecs=mset.vec(0)),vecs=mvecs)
 					cd = scipy.spatial.distance.cdist(protpts[:,:2],surfpts[:,:2])
 					dists = array([np.min(cd,axis=0),surfpts[:,2]]).T
-					shadow_inds = where(np.min(cd,axis=0)<=200)[0]
+					shadow_inds = where(np.min(cd,axis=0)<=k)[0]
 					shadow_inds = array(unravel_index(shadow_inds,shape(mapper))).T
 					dat = array([[md_map[plot_span].data[fr][i[0],i[1]] for i in shadow_inds] 
 						for fr in range(len(md_map[plot_span].data))]).flatten()/conv_fac
@@ -576,7 +584,7 @@ for plot_type in plot_menu:
 					dat = array(array(md_map[plot_span].data)[:,boxlims[0][0]:boxlims[0][1],
 						boxlims[1][0]:boxlims[1][1]]).flatten()/conv_fac
 				elif k == 'full': dat = array(md_map[plot_span].data).flatten()/conv_fac
-				elif k == 'within 10 nm':
+				elif type(k) == int:
 					#---take the mean protein position and identify all points on the md_maps grid that are 
 					#---...within some cutoff of the time-wise averaged protein locations then use these 
 					#---...points in the histogram
@@ -587,39 +595,45 @@ for plot_type in plot_menu:
 					surfpts = mset.wrappbc(mset.unzipgrid(array(mapper),vecs=mset.vec(0)),vecs=mvecs)
 					cd = scipy.spatial.distance.cdist(protpts[:,:2],surfpts[:,:2])
 					dists = array([np.min(cd,axis=0),surfpts[:,2]]).T
-					shadow_inds = where(np.min(cd,axis=0)<=200)[0]
+					shadow_inds = where(np.min(cd,axis=0)<=k)[0]
 					shadow_inds = array(unravel_index(shadow_inds,shape(mapper))).T
-					dat = array([[md_map[plot_span].data[fr][i[0],i[1]] for i in shadow_inds] for 
-						fr in range(len(md_map[plot_span].data))]).flatten()/conv_fac
-				
+					dat = array([[md_map[plot_span].data[fr][i[0],i[1]] for i in shadow_inds] 
+						for fr in range(len(md_map[plot_span].data))]).flatten()/conv_fac
 				counts,edges = histogram(dat,range=lims,bins=nbins,normed=True)
 				mids = (edges[1:]+edges[:-1])/2.
-				if 0: ax.plot(mids,counts,'o-',lw=1,c=clrs[boxslice.index(k)],
+				#---bank the distributions for subsequent statistical testing
+				allhists[j].append(counts)
+				alldats[j].append(dat)
+				#---plots
+				if type(k) == int:
+					rvals = [i for i in boxslice if type(i) == int]
+					color = 'k'
+					color = clrs[j+1]
+					alpha = 1.-float(rvals.index(k))/(len(rvals)+1)
+				else:
+					color = clrs[(boxslice.index(k)+1)%len(clrs)]
+					alpha = 0.
+				if 0: ax.plot(mids,counts,'o-',lw=1,c=color,alpha=alpha,
 					label=k,mec=clrs[boxslice.index(k)],
 					marker=marklist[boxslice.index(k)])
-
-				if 1: ax.plot(mids,counts,'o-',lw=1,c=clrs[boxslice.index(k)],
-					label=k)
-
-
-				pozsums.append(sum(counts[mids>=0]*mids[mids>=0]))
-				negsums.append(abs(sum(counts[mids<=0]*mids[mids<=0])))
-				
+				if 1: ax.plot(mids,counts,'-',lw=2,c=color,alpha=alpha,label=k)
+				pozsums.append(sum(counts[mids>=0]*mids[mids>=0])/sum(counts[mids>=0]))
+				negsums.append(abs(sum(counts[mids<=0]*mids[mids<=0])/sum(counts[mids>=0])))
 			if 1:
 				ax.set_xlim((-0.05,0.05))
-				#ax.set_ylim((5.,6.0))
-				ax.set_ylim((0.8*max(counts),max(counts)*1.1))
-			
+				ax.set_ylim((2,10))
 			ax.set_ylabel((analysis_descriptors[analysis_names[j]])['label'],fontsize=fsaxlabel)
+			allpoz.append(pozsums)
+			allneg.append(negsums)
+			'''
 			if j < len(msets)-1: ax.set_xticklabels([])
-
 			#---inset comparing positive and negative values
 			axins = mpl_toolkits.axes_grid.inset_locator.inset_axes(ax,width="25%",height="40%",loc=1)
-			ind = np.arange(len(md_maps))
+			ind = np.arange(len(boxslice))
 			pozbars = axins.bar(ind+width,pozsums,width,color='r',alpha=0.5)
 			negbars = axins.bar(ind,negsums,width, color='b',alpha=0.5)
-			axins.set_xticklabels([(analysis_descriptors[analysis_names[j]])['label'] 
-				for j in range(len(analysis_names))])
+			#axins.set_xticklabels([(analysis_descriptors[analysis_names[j]])['label'] 
+			#	for j in range(len(analysis_names))])
 			plt.setp(axins.get_xticklabels(), rotation=90)
 			axins.set_yticklabels([])
 			axins.set_xticks(ind+width)
@@ -631,15 +645,186 @@ for plot_type in plot_menu:
 			plt.setp(ax.get_xticklabels(),fontsize=fsaxlabel)
 			ax.set_yticklabels([])
 			ax.grid(True)
-			ax.legend(loc='upper left')
-		'''
-		plt.savefig(pickles+'fig-stressdist-joinhistall-'+\
+			ax.set_yscale('log')
+			#ax.legend(loc='upper left')
+			'''
+		ax2.set_title(r'${C}_{0}\,\mathrm{balance}$',fontsize=fsaxlabel)
+		for i in range(len(allpoz)):
+			ax2.plot(rvals,allpoz[i][-len(rvals):],'o-',
+				label='(+)'+(analysis_descriptors[analysis_names[i]])['label'],
+				color=clrs[i+1])
+		for i in range(len(allneg)):
+			ax2.plot(rvals,allneg[i][-len(rvals):],'s-',
+				label='(-)'+(analysis_descriptors[analysis_names[i]])['label'],
+				color=clrs[i+1])
+		box = ax2.get_position()
+		ax2.set_position([box.x0, box.y0, box.width * 0.8, box.height])
+		plt.savefig(pickles+'fig-stressdist-histscan-'+\
 			bigname+'-span'+str(span_sweep[plot_span])+\
 			('.flat' if flatz0 else '')+\
 			('.subset' if systems_join_span_histogram_subset else '')+\
 			'.png',dpi=300,bbox_inches='tight')
+		#plt.show()
+		plt.close()
 		'''
-		plt.show()
+		from scipy import stats
+		stats.ks_2samp(protdist,baredist)
+		[stats.kurtosis(i) for i in [protdist,baredist]]
+		[stats.skew(i) for i in [protdist,baredist]]
+		stats.bartlett(protdist,baredist)
+		'''
+	#---method: plot section (raw histograms in three different domains)
+	if plot_type == 'neighborhood_unfiltered':
+		example_neighborhood = 6
+		peakzoom = [93,108]
+		viewplot = False
+		if 'descdat' not in globals():
+			from scipy import stats
+			#---statistics of individual distributions
+			drop = 2
+			descdat = [[stats.describe(alldats[i][j]) 
+				for i in range(shape(alldats)[0])] 
+				for j in range(drop,shape(alldats)[1])]
+		#---extra statistics
+		if 1:
+			from scipy import stats
+			ends = [95,105]
+			drop = 2
+			statres = array([[stats.ks_2samp(allhists[0][i][ends[0]:ends[1]+1],
+				allhists[2][i][ends[0]:ends[1]+1]),stats.ks_2samp(allhists[1][i][ends[0]:ends[1]+1],
+				allhists[2][i][ends[0]:ends[1]+1])] for i in range(drop,len(alldats[0]))])
+			#---shapiro tests show that most distributions are normal, however some of the large areas are not
+			#---this justifies the kurtosis and skew results
+			shapiros = array([[scipy.stats.shapiro(x) for x in y] for y in alldats])
+		#---testing different statistics tests
+		if 0:
+			plt.plot(alldats[0][6]);plt.plot(alldats[1][6],'r');plt.plot(alldats[2][6],'k');plt.show()
+			stats.kstest(alldats[0][0],'norm')
+			plt.hist(stats.norm.rvs(size=1000));plt.show()
+			stats.kstest(stats.t.rvs(3,size=100),'norm')
+			plt.hist(stats.t.rvs(2,size=100));plt.show()
+			[mean(allhists[i][0]) for i in range(len(allhists))]
+			stats.ttest_1samp(allhists[0][0],0.)
+			stats.ks_2samp(protdist,baredist)
+			[stats.kurtosis(i) for i in [protdist,baredist]]
+			[stats.skew(i) for i in [protdist,baredist]]
+			stats.bartlett(protdist,baredist)
+		#---show differences in variance
+		if 0:
+			[stats.bartlett(alldats[1][i],alldats[2][i])[1] for i in range(2,len(alldats[1]))]
+			[stats.levene(alldats[1][i],alldats[2][i])[1] for i in range(2,len(alldats[1]))]
+		#---master statistics plots
+		fig = plt.figure(figsize=(12,12))
+		gs1 = gridspec.GridSpec(1,2,wspace=0.0,hspace=0.0)
+		gs1.update(top=1.0,bottom=0.7)
+		gs2 = gridspec.GridSpec(1,3,wspace=0.0,hspace=0.0)
+		gs2.update(top=0.62,bottom=0.40)
+		gs3 = gridspec.GridSpec(1,4)
+		gs3.update(top=0.32,bottom=0.0,wspace=0.25,hspace=0.0)
+		#---means
+		statsaxs = []
+		ax = fig.add_subplot(gs3[0])
+		tmp = array([[i[2] for i in j] for j in descdat]).T
+		for t in range(len(tmp)):
+			ax.plot(array(boxslice[drop:])/10.,tmp[t],'o-',c=clrs[t+1],lw=2)
+		ax.set_title(r'$\mathrm{mean}\,\mathsf{C_{0}(nm^{-1})}$',fontsize=fsaxtitle)
+		ax.set_title(r'$\mathrm{mean}$',fontsize=fsaxtitle)
+		ax.set_title(r'$\mathrm{mean}\,(nm^{-1})$',fontsize=fsaxtitle)
+		if 0: ax.set_ylabel(r'$(nm^{-1})$',fontsize=fsaxlabel)
+		plt.setp(ax.get_yticklabels(),fontsize=fsaxlabel,rotation=90)
+		statsaxs.append(ax)
+		#---variances
+		ax = fig.add_subplot(gs3[1])
+		tmp = array([[i[3] for i in j] for j in descdat]).T
+		for t in range(len(tmp)):
+			ax.plot(array(boxslice[drop:])/10.,tmp[t],'o-',c=clrs[t+1],lw=2)
+		ax.set_title(r'$\mathrm{variance}\,\mathsf{C_{0}(nm^{-1})}$',fontsize=fsaxtitle)
+		ax.set_title(r'$\mathrm{variance}$',fontsize=fsaxtitle)
+		ax.set_title(r'$\mathrm{variance}\,(nm^{-2})$',fontsize=fsaxtitle)
+		if 0: ax.set_ylabel(r'$(nm^{-2})$',fontsize=fsaxlabel)
+		plt.setp(ax.get_yticklabels(),fontsize=fsaxlabel,rotation=90)
+		statsaxs.append(ax)
+		#---skew
+		ax = fig.add_subplot(gs3[2])
+		tmp = array([[i[4] for i in j] for j in descdat]).T
+		for t in range(len(tmp)):
+			ax.plot(array(boxslice[drop:])/10.,tmp[t],'o-',c=clrs[t+1],lw=2)
+		ax.set_title(r'$\mathrm{skew}\,\mathsf{C_{0}(nm^{-1})}$',fontsize=fsaxtitle)
+		ax.set_title(r'$\mathrm{skew}$',fontsize=fsaxtitle)
+		plt.setp(ax.get_yticklabels(),fontsize=fsaxlabel,rotation=90)
+		statsaxs.append(ax)
+		#---kurtosis
+		ax = fig.add_subplot(gs3[3])
+		tmp = array([[i[5] for i in j] for j in descdat]).T
+		for t in range(len(tmp)):
+			ax.plot(array(boxslice[drop:])/10.,array(tmp[t])+1,'o-',c=clrs[t+1],lw=2)
+		ax.set_title(r'$\mathrm{kurtosis}\,\mathsf{C_{0}(nm^{-1})}$',fontsize=fsaxtitle)		
+		ax.set_title(r'$\mathrm{kurtosis}$',fontsize=fsaxtitle)
+		plt.setp(ax.get_yticklabels(),fontsize=fsaxlabel,rotation=90)
+		statsaxs.append(ax)
+		for ax in statsaxs:
+			ax.grid(True)
+			ax.get_yaxis().set_major_locator(mpl.ticker.MaxNLocator(prune='both',nbins=4))
+			ax.set_xlabel(r'$\left|\mathbf{r}_{max}\right|\,\mathrm{(nm)}$',fontsize=fsaxlabel)
+		#---peak distributions
+		ax = fig.add_subplot(gs1[1])
+		for j in range(len(allhists)):
+			ax.plot(mids[peakzoom[0]:peakzoom[1]+1],allhists[j][6][peakzoom[0]:peakzoom[1]+1],
+				'o-',c=clrs[j+1],lw=2)
+		ax.grid(True)
+		ax.get_xaxis().set_major_locator(mpl.ticker.MaxNLocator(prune='both',nbins=7))
+		ax.set_yticklabels([])
+		ax.set_xlabel(r'$\mathsf{C_{0}(nm^{-1})}$',fontsize=fsaxlabel)
+		ax.set_title('most frequent curvatures',fontsize=fsaxtitle)
+		plt.setp(ax.get_xticklabels(),fontsize=fsaxlabel)
+		#---peak distributions
+		ax = fig.add_subplot(gs1[0])
+		for j in range(len(allhists)):
+			ax.plot(mids,allhists[j][example_neighborhood],'o-',c=clrs[j+1],lw=2,
+			label = (analysis_descriptors[analysis_names[j]])['label'])
+		ax.legend(loc='upper left')
+		ax.grid(True)
+		ax.get_xaxis().set_major_locator(mpl.ticker.MaxNLocator(prune='both',nbins=7))
+		ax.set_xlabel(r'$\mathsf{C_{0}(nm^{-1})}$',fontsize=fsaxlabel)
+		ax.set_yticklabels([])
+		ax.set_title('curvatures',fontsize=fsaxtitle)
+		plt.setp(ax.get_xticklabels(),fontsize=fsaxlabel)
+		#---C0 balances
+		lims = [10**10,0]
+		axs = []
+		for i in range(len(allpoz)):
+			ax = fig.add_subplot(gs2[i])
+			ax.plot(array(rvals)/10.,allpoz[i][-len(rvals):],'o-',
+				label=r'$\left\langle C_{0}>0 \right\rangle$ ',
+				color=clrs[i+1])
+			ax.plot(array(rvals)/10.,allneg[i][-len(rvals):],'s-',
+				label=r'$\left\langle C_{0}<0 \right\rangle$ ',
+				color=clrs[i+1])
+			ax.set_title((analysis_descriptors[analysis_names[i]])['label'],fontsize=fsaxtitle)
+			lims[1] = max([max(allneg[i]),max(allpoz[i])]) \
+				if max([max(allneg[i]),max(allpoz[i])]) > lims[1] else lims[1]
+			lims[0] = min([min(allneg[i]),min(allpoz[i])]) \
+				if min([min(allneg[i]),min(allpoz[i])]) < lims[0] else lims[0]
+			if i > 0: ax.set_yticklabels([])
+			else: ax.get_yaxis().set_major_locator(mpl.ticker.MaxNLocator(prune='both',nbins=5))
+			if i == 0: ax.set_ylabel(r'$\left|E[C_{0}]\right|$',fontsize=fsaxlabel)
+			axs.append(ax)
+		for ax in axs:
+			ax.legend(loc='upper right')
+			ax.set_ylim((lims[0]*0.95,lims[1]*1.01))
+			ax.grid(True)
+			ax.get_xaxis().set_major_locator(mpl.ticker.MaxNLocator(prune='both',nbins=7))
+			ax.set_xlabel(r'$\mathsf{C_{0}(nm^{-1})}$',fontsize=fsaxlabel)
+			plt.setp(ax.get_xticklabels(),fontsize=fsaxlabel)
+			ax.set_xlabel(r'$\left|\mathbf{r}_{max}\right|\,\mathrm{(nm)}$',fontsize=fsaxlabel)
+		plt.savefig(pickles+'fig-stressmap-overview-'+bigname+('.flat' if flatz0 else '')+\
+			'-span'+str(span_sweep[plot_span])+\
+			('-blur'+str(smooth_wid) if do_blur else '')+\
+			('-blurfirst'+str(smooth_wid) if do_blur_first else '')+\
+			'.png',dpi=300,bbox_inches='tight')
+		if viewplot: plt.show()
+		plt.close()
+		print 'done'
 	
 #---plot 2D histograms over protein distance and and curvature
 if 'plot_2dhistograms' in routine and 'stack_collected_hists' not in globals():

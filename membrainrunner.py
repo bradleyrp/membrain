@@ -163,6 +163,11 @@ def specname_pickle(sysname,traj,timeslice=None):
 		picklename = sysname+'.'+('.'.join(specname_from_traj(traj).split('.')[:-1]))+\
 			('-'.join([str(i) for i in timeslice]))
 	return picklename
+	
+def status(string):
+	'''Print status to the screen also allows for re-writing the line.'''
+	print '\r'+string+'\t',
+	sys.stdout.flush()
 
 #---MAIN
 #-------------------------------------------------------------------------------------------------------------

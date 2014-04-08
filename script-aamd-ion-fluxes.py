@@ -71,9 +71,8 @@ routine = ['load','compute',][1:]
 #---MAIN
 #-------------------------------------------------------------------------------------------------------------
 
-#---decomposing the diffusion by calculating it only from movements that are mostly in a particular z-slice
-
-if 'load' in routine or 'monoz' not in globals():
+#---generic load routine for analyzing ions relative to the bilayer position
+if 'load' in routine or 'ionspos' not in globals():
 	for aname in analysis_names:
 		for i in analysis_descriptors[aname]: vars()[i] = (analysis_descriptors[aname])[i]
 		#---load
@@ -95,8 +94,7 @@ if 'load' in routine or 'monoz' not in globals():
 			mset.gotoframe(fr)
 			ionspos.append(ion_select.coordinates())
 			clock.append(mset.universe.trajectory[fr].time)
-		#---collect monolaye positions
-		#---Nb this is where we can refine the method
+		#---collect monolayer positions
 		mset_surf.identify_monolayers(director)
 		surf_select = mset_surf.universe.selectAtoms(selector)
 		monoz = []
@@ -104,8 +102,11 @@ if 'load' in routine or 'monoz' not in globals():
 			mset_surf.gotoframe(fr)
 			surfpts = surf_select.coordinates()
 			monoz.append([mean(surfpts[mset_surf.monolayer_residues[m],2],axis=0) for m in range(2)])
+		#---midz and monoz provide the average midplane and average monolayer positions for each frame
 		monoz = array(monoz)
+		midz = mean(monoz,axis=1)
 
+#---following code is on the chopping block ...
 if 'compute_old' in routine:
       for aname in analysis_names:
 		desired_binsize = 1
@@ -210,54 +211,40 @@ if 'compute_old' in routine:
 #---UNDER CONSTRUCTION
 #---re-work the discrete binning function, fix badframes, make flexible zones, etc
 
-desired_binw = 5
+def bilayer_shift(ionspos=None,midz=None,mset=None,vecs=None):
+	'''Function to change coordinate systems so the midplane is at zero.'''
+	#---ionspos holds absolute ion positions
+	#---midz holds the average midplane z-position for each frame
+	if ionspos == None: ionspos = globals()['ionspos']
+	if mset == None: mset = globals()['mset']
+	if midz == None: midz = globals()['midz']
+	vecs = array([mset.vec(i) for i in range(mset.nframes)])
+	deltaz = array(ionspos)[...,2]-tile(midz,(shape(ionspos)[1],1)).T
+	abovez = (deltaz>tile(vecs[:,2]/2.,(shape(deltaz)[1],1)).T)
+	belowz = (deltaz<-1*tile(vecs[:,2]/2.,(shape(deltaz)[1],1)).T)
+	relpos = deltaz - abovez*tile(vecs[:,2],(shape(abovez)[1],1)).T + \
+		belowz*tile(vecs[:,2],(shape(belowz)[1],1)).T
+	return relpos
 
-def binlister():
-
-	nbins_out = int(round(waterdist/desired_binw))
-	nbins_in = int(round(mean([i[0]-i[1] for i in monoz])/desired_binw))
-	nbins_out = 21
-	binlists = []
-	for fr in range(mset_surf.nframes):
-		thick_in = (monoz[fr,0]-monoz[fr,1])/2.
-		thick_out = (vecs[fr][2]-thick_in*2)/2.
-		if (nbins_out % 2) == 1:
-			end_binw = thick_out/(nbins_out/2+0.5)
-			thick_out = thick_out - end_binw
-			binlist = sum([list(i) for i in [
-				linspace(-thick_out-end_binw-thick_in,-thick_out,1+1)[:-1],
-				linspace(-thick_in-thick_out,-thick_in,nbins_out/2+1)[:-1],
-				linspace(-thick_in,thick_in,nbins_in+1)[:-1],
-				linspace(thick_in,thick_in+thick_out,nbins_out/2+1)[:-1],
-				linspace(thick_in+thick_out,thick_in+thick_out+end_binw,2+1)[:]]])
-		else: 
-			binlist = sum([list(i) for i in [
-				linspace(-thick_in-thick_out,-thick_in,nbins_out/2+1)[:-1],
-				linspace(-thick_in,thick_in,nbins_in+1)[:-1],
-				linspace(thick_in,thick_in+thick_out,nbins_out/2+1)[:-1]]])
-		binlists.append(binlist)	
-	return binlists
-		
-if 'compute' in routine:
-	#for aname in analysis_names:
-	aname = analysis_names[0]
-	if 1:
+def binlister(method,monoz=None,mset=None,binw=5):
+	'''This function generates a list of bin limits for a particular system. Feed this to discretizer.'''
+	if mset == None: mset = globals()['mset']
+	if monoz == None: monoz = globals()['monoz']	
+	if method == 'outside-inside':
+		#---this method uses a set of bins inside the bilayer and outside, so the monolayer definitions are 
+		#---...hard-coded as bin edges. bins are determined frame-wise
 		#---midplane positions
 		midz = mean(monoz,axis=1)
 		#---box vectors
-		vecs = [mset_surf.vec(i) for i in range(mset_surf.nframes)]
+		vecs = [mset.vec(i) for i in range(mset.nframes)]
 		#---average distance outside of phosphate groups
 		waterdist = mean(vecs,axis=0)[2]-mean([i[0]-i[1] for i in monoz])
 		#---bin counts in the water
-		nbins_out = int(round(waterdist/desired_binw))
-		nbins_in = int(round(mean([i[0]-i[1] for i in monoz])/desired_binw))
-		nbins_out = 21
+		nbins_out = int(round(waterdist/binw))
+		nbins_in = int(round(mean([i[0]-i[1] for i in monoz])/binw))
 		#---generate list of bin zones
-		#---Nb this is written to be general, so you can define different zones
-		#---here we define bins inside and outside the bilayer
-	if 0:
 		binlists = []
-		for fr in range(mset_surf.nframes):
+		for fr in range(mset.nframes):
 			thick_in = (monoz[fr,0]-monoz[fr,1])/2.
 			thick_out = (vecs[fr][2]-thick_in*2)/2.
 			if (nbins_out % 2) == 1:
@@ -273,19 +260,69 @@ if 'compute' in routine:
 				binlist = sum([list(i) for i in [
 					linspace(-thick_in-thick_out,-thick_in,nbins_out/2+1)[:-1],
 					linspace(-thick_in,thick_in,nbins_in+1)[:-1],
-					linspace(thick_in,thick_in+thick_out,nbins_out/2+1)[:-1]]])
+					linspace(thick_in,thick_in+thick_out,nbins_out/2+1)[:]]])
 			binlists.append(binlist)
-	if 1:
-		st = time.time()
-		print 'a'
-		relpos = []
-		for fr in range(mset_surf.nframes):
-			print fr
-			relpos.append([pt-(pt>mset_surf.vec(0)[2]/2)*vecs[fr][2]+(pt<-1*vecs[fr][2]/2)*vecs[fr][2] 
-				for pt in (array(ionspos)[fr,:,2]-midz[fr])])
-				#for fr in range(mset_surf.nframes)])
-				#[where(i<binlist)[0][0] for i in rejigger])
-		print 'b'
-		print 1./60*(time.time()-st)
+		#---calculate bins corresponding to monolayers
+		monobins = [[where((monoz[i,j]-vecs[i][2]/2.)<binlists[i])[0][0]+[0,-1][j] 
+			for i in range(len(monoz))] for j in range(2)]
+		return binlists,list(mean(monobins,axis=1))
+	if method == 'fixed':
+		#---midplane positions
+		midz = mean(monoz,axis=1)
+		#---box vectors
+		vecs = [mset.vec(i) for i in range(mset.nframes)]
+		#---generate bin edges based on means first in order to figure out bin counts
+		relvec = mean(vecs,axis=0)[2]/2.
+		relmonoz = mean([monoz[fr]-midz[fr] for fr in range(mset.nframes)],axis=0)
+		meanbinlist = [
+			arange(relmonoz[1],-relvec-binw,-binw)[:0:-1],
+			arange(relmonoz[1],0,binw),
+			arange(relmonoz[0],0,-binw)[::-1],
+			arange(relmonoz[0],relvec+binw,binw)[1:]]
+		#---generate list of bin zones
+		binlists = []
+		for fr in range(mset.nframes):
+			relvec = vecs[fr][2]/2.
+			relmonoz = monoz[fr]-midz[fr]
+			#---generate the bins for a simulation segment, then consolidate to match the counts of the mean
+			bl1 = arange(relmonoz[1],-relvec-binw,-binw)[:0:-1]
+			bl2 = arange(relmonoz[1],0,binw)
+			bl3 = arange(relmonoz[0],0,-binw)[::-1]
+			bl4 = arange(relmonoz[0],relvec+binw,binw)[1:]
+			if len(bl1) > len(meanbinlist[0]): bl1 = concatenate((bl1[0:1],bl1[2:]))
+			elif len(bl1) < len(meanbinlist[0]): bl1 = concatenate(([bl1[0]-binw],bl1))
+			if len(bl2) > len(meanbinlist[1]): bl2 = concatenate((bl2[0:-2],bl2[-1:]))
+			elif len(bl2) < len(meanbinlist[1]): bl2 = concatenate((bl2,[0.]))
+			if len(bl3) > len(meanbinlist[2]): bl3 = concatenate((bl3[0:1],bl3[3:]))
+			elif len(bl3) < len(meanbinlist[2]): bl3 = concatenate(([0.],bl3))
+			if len(bl4) > len(meanbinlist[3]): bl4 = concatenate((bl4[0:-2],bl4[-1:]))
+			elif len(bl4) < len(meanbinlist[3]): bl4 = concatenate((bl4,[bl4[-1]+binw]))
+			binlist = concatenate((bl1,bl2,bl3,bl4))
+			binlists.append(list(binlist))
+		#---calculate bins corresponding to monolayers
+		monobins = [[where((monoz[i,j]-vecs[i][2]/2.)<binlists[i])[0][0]+[0,-1][j] 
+			for i in range(len(monoz))] for j in range(2)]
+		return binlists,list(mean(monobins,axis=1))
+	else: 
+		raise Exception('except: you must specify a binning scheme')
 
+def discretizer(binedges,ionspos=None):
+	'''Discretizes an ion trajectory given a set of positions and a list of bins.'''
+	starttime = time.time()
+	if ionspos == None: ionspos = globals()['ionspos']
+	disctraj  = array([[where(relpos[j,i]<binedges[j][1:])[0][0] for i in range(len(relpos[j]))] for j in range(len(binedges))]).T
+	print 1./60*(time.time()-starttime)
+	return disctraj
+
+#---example for doing the coordinate shift and the binning
+if 'compute' in routine:
+	aname = analysis_names[0]
+	#---shift coordinate systems so the frame-wise midplane is at zero
+	relpos = bilayer_shift()
+	#---return a list of bin edges and the bin index for the bin flanking the monolayer
+	#---choose 'fixed' for a fixed bin width or 'outside-inside' to get flush bins that might not be even
+	binlist,monobins = binlister('outside-inside',mset=mset_surf,binw=5)
+	disctraj = discretizer(binlist)
+	#---check the distribution
+	plt.hist(disctraj.flatten(),range=(0,len(binedges[0])),bins=len(binedges[0]));plt.show()
 
