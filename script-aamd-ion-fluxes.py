@@ -321,7 +321,7 @@ if 'compute' in routine:
 	relpos = bilayer_shift()
 	#---return a list of bin edges and the bin index for the bin flanking the monolayer
 	#---choose 'fixed' for a fixed bin width or 'outside-inside' to get flush bins that might not be even
-	binlist,monobins = binlister('outside-inside',mset=mset_surf,binw=5)
+	binlist,monobins = binlister('fixed',mset=mset_surf,binw=5)
 	disctraj = discretizer(binlist)
 	#---check the distribution
 	plt.hist(disctraj.flatten(),range=(0,len(binedges[0])),bins=len(binedges[0]));plt.show()
