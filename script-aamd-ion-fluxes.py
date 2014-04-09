@@ -37,7 +37,10 @@ analysis_descriptors = {
 		'trajsel':'s4-sim-trestles-md.part0007.20000-62000-100.ions.xtc',
 		'structure_pkl':
 			'pkl.structures.membrane-v531.a6-surfacer.s4-sim-trestles-md.part0007.20000-62000-100.pkl',
-		'ionname':'MG'},
+		'ionname':'MG',
+		'sysname_lookup_struct':'membrane-v531-atomP',
+		'trajsel_struct':'s4-sim-trestles-md.part0007.20000-62000-100.atomP.xtc',
+		'director':director_aamd_asymmetric},
 	'v530-30000-100000-100':
 		{'sysname':'membrane-v530',
 		'sysname_lookup':'membrane-v530-ions',
@@ -65,7 +68,7 @@ analysis_names = [
 	'v530-30000-100000-100',
 	'v531-20000-62000-100',
 	'v509-40000-90000-10'
-	][-1:]
+	][-2:-1]
 routine = ['load','compute',][1:]
 
 #---MAIN
@@ -226,7 +229,7 @@ def bilayer_shift(ionspos=None,midz=None,mset=None,vecs=None):
 		belowz*tile(vecs[:,2],(shape(belowz)[1],1)).T
 	return relpos
 
-def binlister(method,monoz=None,mset=None,binw=5):
+def binlister(method,monoz=None,mset=None,binw=5,custom_posts=None):
 	'''This function generates a list of bin limits for a particular system. Feed this to discretizer.'''
 	if mset == None: mset = globals()['mset']
 	if monoz == None: monoz = globals()['monoz']	
@@ -262,11 +265,7 @@ def binlister(method,monoz=None,mset=None,binw=5):
 					linspace(-thick_in,thick_in,nbins_in+1)[:-1],
 					linspace(thick_in,thick_in+thick_out,nbins_out/2+1)[:]]])
 			binlists.append(binlist)
-		#---calculate bins corresponding to monolayers
-		monobins = [[where((monoz[i,j]-vecs[i][2]/2.)<binlists[i])[0][0]+[0,-1][j] 
-			for i in range(len(monoz))] for j in range(2)]
-		return binlists,list(mean(monobins,axis=1))
-	if method == 'fixed':
+	elif method == 'fixed':
 		#---midplane positions
 		midz = mean(monoz,axis=1)
 		#---box vectors
@@ -299,20 +298,144 @@ def binlister(method,monoz=None,mset=None,binw=5):
 			elif len(bl4) < len(meanbinlist[3]): bl4 = concatenate((bl4,[bl4[-1]+binw]))
 			binlist = concatenate((bl1,bl2,bl3,bl4))
 			binlists.append(list(binlist))
-		#---calculate bins corresponding to monolayers
-		monobins = [[where((monoz[i,j]-vecs[i][2]/2.)<binlists[i])[0][0]+[0,-1][j] 
-			for i in range(len(monoz))] for j in range(2)]
-		return binlists,list(mean(monobins,axis=1))
+	elif method == 'custom':
+		#---midplane positions
+		midz = mean(monoz,axis=1)
+		#---box vectors
+		vecs = [mset.vec(i) for i in range(mset.nframes)]
+		binlists = []
+		for fr in range(mset.nframes):
+			relvec = vecs[fr][2]/2.
+			relmonoz = monoz[fr]-midz[fr]
+			binlist = \
+				[-relvec-binw]+[relmonoz[1]-i for i in custom_posts][::-1] +\
+				[relmonoz[0]+i for i in custom_posts]+[relvec+binw]
+			binlists.append(binlist)
 	else: 
 		raise Exception('except: you must specify a binning scheme')
+	#---calculate bins corresponding to monolayers
+	monobins = [[where((monoz[i,j]-midz[i])<binlists[i][1:])[0][0]+[0,-1][j] 
+		for i in range(len(monoz))] for j in range(2)]
+	return binlists,[int(i) for i in list(mean(monobins,axis=1))]
 
 def discretizer(binedges,ionspos=None):
 	'''Discretizes an ion trajectory given a set of positions and a list of bins.'''
-	starttime = time.time()
 	if ionspos == None: ionspos = globals()['ionspos']
-	disctraj  = array([[where(relpos[j,i]<binedges[j][1:])[0][0] for i in range(len(relpos[j]))] for j in range(len(binedges))]).T
-	print 1./60*(time.time()-starttime)
+	disctraj  = array([[where(relpos[j,i]<binedges[j][1:])[0][0] for i in range(len(relpos[j]))] 
+		for j in range(len(binedges))]).T
 	return disctraj
+	
+def plot_ion_distribution(disctraj,binedges,fig=None):
+	'''Generic plotting function for ion distributions by height from midplane according to binedges.'''
+	if fig == None: fig = plt.figure()
+	gs = gridspec.GridSpec(1,1,wspace=0.0,hspace=0.0)
+	ax = fig.add_subplot(gs[0])
+	counts,edges = histogram(disctraj.flatten(),range=(0,len(binedges[0])-1),bins=len(binedges[0])-1,normed=True)
+	meanedges = mean(binedges,axis=0)
+	mids = meanedges[:-1]
+	ax.bar(mids,counts,width=meanedges[1:]-meanedges[:-1])
+	ax.grid(True)
+	plt.setp(ax.get_xticklabels(),fontsize=fsaxlabel)
+	plt.setp(ax.get_yticklabels(),fontsize=fsaxlabel)
+	ax.set_xlabel(r'$z(x,y)\,\mathrm{(nm)}$',fontsize=fsaxlabel)
+	ax.set_ylabel('frequency',fontsize=fsaxlabel)
+	plt.show()
+	return counts,edges
+	
+def plot_ion_transition_matrix(disctraj,binedges,fig=None):
+	'''Plot the transition matrix for the discrete ion trajectories.'''
+	if fig == None: fig = plt.figure()
+	gs = gridspec.GridSpec(1,1,wspace=0.0,hspace=0.0)
+	ax = fig.add_subplot(gs[0])
+	#---prepare the transition matrix
+	disctrajt = disctraj.T
+	tmat = zeros((len(binedges[0])-1,len(binedges[0])-1))
+	for fr in range(len(disctrajt)-1):
+		for i in range(len(disctrajt[fr])):
+			tmat[disctrajt[fr][i],disctrajt[fr+1][i]] += 1
+	#---plot the transition matrix
+	plt.imshow(tmat,interpolation='nearest',origin='lower',
+		cmap=mpl.cm.binary)
+	tickstep = 2
+	meanedges = mean(binedges,axis=0)
+	mids = [int(round(i)) for i in 1./2*(meanedges[1:]+meanedges[:-1])]
+	#---indexing to number about zero in steps
+	tickspots = [i+len(mids)/2 for i in range(0,-len(mids)/2,-tickstep)[:0:-1]+range(0,len(mids)/2,tickstep)]
+	ax.set_xticks(tickspots)
+	ax.set_yticks(tickspots)
+	ax.set_yticklabels([int(round(mids[i])) for i in tickspots])
+	ax.set_xticklabels([int(round(mids[i])) for i in tickspots])
+	ax.set_title('ion transition matrix',fontsize=fsaxtitle)
+	plt.setp(ax.get_xticklabels(),fontsize=fsaxlabel)
+	plt.setp(ax.get_yticklabels(),fontsize=fsaxlabel)
+	ax.set_xlabel(r'$z_t(x,y)\,\textrm{\AA}$',fontsize=fsaxlabel)
+	ax.set_ylabel(r'$z_{t+1}(x,y)\,\textrm{\AA}$',fontsize=fsaxlabel)
+	plt.show()
+	
+def plot_ion_residence(disctraj,binedges,fig=None,ignorezero=True,maxtime=100,
+	mset=None,dofit=False,cumulative=True):
+	'''Plot residence time distributions.'''
+	if fig == None: fig = plt.figure(figsize=(8,10))
+	if mset == None: mset = globals()['mset']
+	#---fineness of the time bins is currently hard-coded
+	ntimes = len(disctraj[0])
+	jumptimes = [concatenate(([0],where((disctraj[i,1:]-disctraj[i,:-1])!=0)[0],[len(disctraj[0])])) 
+		for i in range(len(disctraj))]
+	jumpdurations = [jumptimes[i][1:]-jumptimes[i][:-1] for i in range(len(jumptimes))]
+	#---needs fixed
+	#jumpdurations = [i[i!=0] for i in jumpdurations]
+	#---this step implicitly filters out ions that stay bound the entire time
+	maxresid = max([max(i) for i in jumpdurations if len(i) != 0])
+	jumphists = [histogram(jumpdurations[i],range=(0,ntimes),bins=ntimes+1)[0] 
+		for i in range(len(jumpdurations))]
+	jumpbins = [disctraj[i][jumptimes[i][:-1]] for i in range(len(disctraj))]
+	residences = [[] for i in range(len(binedges[0])-1)]
+	for k in range(len(jumpbins)):
+		if len(jumpbins[k]) > 0:
+			for i in range(len(jumpbins[k])):
+				residences[jumpbins[k][i]].append(jumpdurations[k][i])
+	maxresid = max([max(i) for i in residences if i != []])
+	times = mset.time_dt*histogram(residences[0],range=(0,maxresid),bins=ntimes)[1][1:]
+	resdists = [histogram(residences[i],range=(0,maxresid),bins=ntimes)[0] 
+		for i in range(len(residences)) if i != []]	
+	#---plot
+	vecs = array([mset.vec(i) for i in range(mset.nframes)])
+	halfvec = mean(vecs,axis=0)[2]/2
+	mean(vecs,axis=0)[2]
+	meanedges = mean(binedges,axis=0)
+	mids = [int(round(i)) for i in 1./2*(meanedges[1:]+meanedges[:-1])]
+	ax = plt.subplot(111)
+	for r in range(len(resdists)):
+		if ignorezero == False or mids[r] != 0:
+			dat = resdists[r]
+			indscut = where((1*(times<maxtime)+1*(dat!=0))==2)[0]
+			if mids[r] > 0.: c = 'r'
+			elif mids[r] == 0: c = 'k'
+			else: c = 'b'
+			inds = where(dat!=0)[0]
+			if len(dat[indscut]) > 0 and dofit:
+				[tau,intercept] = numpy.polyfit(log(times[indscut]),log(dat[indscut]),1)
+				fitted = array([exp(intercept)*exp(tau*log(i)) for i in times])
+				ax.plot(times[inds],fitted[inds],'--',lw=0.5,c=c)
+			else: tau = 0
+			if cumulative:
+				ax.plot(times[inds],sum(dat[inds])-cumsum(dat[inds]),'o-',c=c,mec=c,lw=1,
+					alpha=1-abs(mids[r]/halfvec),
+					label=str(mids[r]/10.)+'('+str(round(-tau,2))+')')
+			else:
+				ax.plot(times[inds],dat[inds],'o-',c=c,mec=c,lw=1,alpha=1-abs(mids[r]/halfvec),
+					label=str(mids[r]/10.)+'('+str(round(-tau,2))+')')
+	ax.set_xscale('log')
+	ax.set_yscale('log')
+	ax.set_xlim((1,ntimes*mset.time_dt*2))
+	ax.set_xlabel(r'$\tau\,(ps)$',fontsize=fsaxlabel)
+	ax.set_ylabel(r'$frequency$',fontsize=fsaxlabel)
+	plt.setp(ax.get_xticklabels(),fontsize=fsaxlabel)
+	plt.setp(ax.get_yticklabels(),fontsize=fsaxlabel)
+	ax.set_title('residence times',fontsize=fsaxtitle)
+	ax.legend(loc='upper right')
+	ax.grid(True)
+	plt.show()
 
 #---example for doing the coordinate shift and the binning
 if 'compute' in routine:
@@ -321,8 +444,16 @@ if 'compute' in routine:
 	relpos = bilayer_shift()
 	#---return a list of bin edges and the bin index for the bin flanking the monolayer
 	#---choose 'fixed' for a fixed bin width or 'outside-inside' to get flush bins that might not be even
-	binlist,monobins = binlister('fixed',mset=mset_surf,binw=5)
-	disctraj = discretizer(binlist)
+	#binedges,monobins = binlister('fixed',mset=mset_surf,binw=5)
+	#binedges,monobins = binlister('custom',mset=mset_surf,binw=5,custom_posts=[-6,-5,10,20,30,32,40])
+	#binedges,monobins = binlister('custom',mset=mset_surf,binw=5,custom_posts=[-5,10])
+	#binedges,monobins = binlister('custom',mset=mset_surf,binw=5,custom_posts=[-5,0,15])
+	binedges,monobins = binlister('custom',mset=mset_surf,binw=5,custom_posts=[-10,16])
+	disctraj = discretizer(binedges)
 	#---check the distribution
-	plt.hist(disctraj.flatten(),range=(0,len(binedges[0])),bins=len(binedges[0]));plt.show()
-
+	plot_ion_distribution(disctraj,binedges)
+	#---plot transition matrix
+	plot_ion_transition_matrix(disctraj,binedges)
+	#---plot residence times
+	plot_ion_residence(disctraj,binedges,ignorezero=True,mset=mset_surf)
+	
