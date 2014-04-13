@@ -164,10 +164,18 @@ def specname_pickle(sysname,traj,timeslice=None):
 			('-'.join([str(i) for i in timeslice]))
 	return picklename
 	
-def status(string):
+def status(string,start=None,i=None,looplen=None):
 	'''Print status to the screen also allows for re-writing the line.'''
-	print '\r'+string+'\t',
-	sys.stdout.flush()
+	#---display a refreshable string	
+	if start == None:
+		print '\r'+string+'\t'
+		sys.stdout.flush()
+	#---estimate the remaining time given a start time, loop length, and iterator
+	else:
+		esttime = (time.time()-start)/(float(i+1)/looplen)
+		print '\r'+string.ljust(20)+str(abs(round((esttime-(time.time()-start))/60.,1))).ljust(10)+\
+			'minutes remain',
+		sys.stdout.flush()
 
 #---MAIN
 #-------------------------------------------------------------------------------------------------------------

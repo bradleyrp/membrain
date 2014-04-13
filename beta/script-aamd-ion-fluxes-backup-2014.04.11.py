@@ -68,11 +68,153 @@ analysis_names = [
 	'v530-30000-100000-100',
 	'v531-20000-62000-100',
 	'v509-40000-90000-10'
-	][-1:]
+	][-2:-1]
 routine = ['load','compute',][1:]
 
-#---FUNCTIONS
+#---MAIN
 #-------------------------------------------------------------------------------------------------------------
+
+#---generic load routine for analyzing ions relative to the bilayer position
+if 'load' in routine or 'ionspos' not in globals():
+	for aname in analysis_names:
+		for i in analysis_descriptors[aname]: vars()[i] = (analysis_descriptors[aname])[i]
+		#---load
+		print 'status: loading trajectory'
+		grofile,trajfile = trajectory_lookup(analysis_descriptors,aname,globals())
+		mset.load_trajectory((basedir+'/'+grofile,basedir+'/'+trajfile[0]),resolution='aamd')
+		trajsel = trajsel_struct
+		sysname_lookup = sysname_lookup_struct
+		grofile,trajfile = trajectory_lookup(analysis_descriptors,aname,globals(),
+			keysysname='sysname_lookup_struct',keytrajsel='trajsel_struct')
+		mset_surf = MembraneSet()
+		mset_surf.load_trajectory((basedir+'/'+grofile,basedir+'/'+trajfile[0]),resolution='aamd')
+		#---collect ion positions
+		clock = []
+		ionspos = []
+		ion_select = mset.universe.selectAtoms('name '+ionname)
+		whichframes = range(len(mset.universe.trajectory))
+		for fr in whichframes:
+			mset.gotoframe(fr)
+			ionspos.append(ion_select.coordinates())
+			clock.append(mset.universe.trajectory[fr].time)
+		#---collect monolayer positions
+		mset_surf.identify_monolayers(director)
+		surf_select = mset_surf.universe.selectAtoms(selector)
+		monoz = []
+		for fr in whichframes:
+			mset_surf.gotoframe(fr)
+			surfpts = surf_select.coordinates()
+			monoz.append([mean(surfpts[mset_surf.monolayer_residues[m],2],axis=0) for m in range(2)])
+		#---midz and monoz provide the average midplane and average monolayer positions for each frame
+		monoz = array(monoz)
+		midz = mean(monoz,axis=1)
+
+#---following code is on the chopping block ...
+if 'compute_old' in routine:
+      for aname in analysis_names:
+		desired_binsize = 1
+		upper_binws = [int(round((mset_surf.vec(i)[2]-monoz[i][0])/desired_binsize)) for i in whichframes]
+		mid_binws = [int(round((monoz[i][0]-monoz[i][1])/desired_binsize)) for i in whichframes]
+		lower_binws = [int(round((monoz[i][1])/desired_binsize)) for i in whichframes]
+		#---old code frame-wise, mistaken because number of bins not consistent
+		if 0:
+			binedges = array([np.concatenate((
+				linspace(0,monoz[i][0],lower_binws[i])[:-1],
+				linspace(monoz[i][0],monoz[i][1],mid_binws[i])[:-1],
+				linspace(monoz[i][1],mset_surf.vec(i)[2],upper_binws[i]))) 
+				for i in whichframes])
+			badframes = list(where([ionspos[j][:,2].max()>mset_surf.vec(j)[2] for j in range(5000)])[0])	
+			whichframes2 = [i for i in whichframes if i not in badframes]
+			disctraj  = array([[
+				where(ionspos[j][:,2][i]<binedges[j][1:])[0][0] 
+				for i in range(len(ionspos[0]))] for j in whichframes2]).T
+		#---pick a standard number of bins for consistent zones
+		bin_nums = [int(round(mean(i))) for i in [lower_binws,mid_binws,upper_binws]]
+		badframes = list(where([ionspos[j][:,2].max()>mset_surf.vec(j)[2] for j in range(5000)])[0])	
+		whichframes2 = [i for i in whichframes if i not in badframes]
+		binedges = array([np.concatenate((
+			linspace(0,monoz[i][1],bin_nums[0])[:-1],
+			linspace(monoz[i][1],monoz[i][0],bin_nums[1])[:-1],
+			linspace(monoz[i][0],mset_surf.vec(i)[2],bin_nums[2]))) 
+			for i in whichframes])
+		disctraj  = array([[
+			where(ionspos[j][:,2][i]<binedges[j][1:])[0][0] 
+			for i in range(len(ionspos[0]))] for j in whichframes2]).T
+		#---quick calculation of a transition matrix
+		if 0:
+			disctrajt = disctraj.T
+			tmat = zeros((len(binedges[0])-1,len(binedges[0])-1))
+			for fr in range(len(disctrajt)-1):
+				for i in range(len(disctrajt[fr])):
+					tmat[disctrajt[fr][i],disctrajt[fr+1][i]] += 1
+			#---plot the transition matrix
+			plt.imshow(tmat,interpolation='nearest',origin='lower');plt.show()
+		#---bleeding edge code makes an ugly plot of residence distribution times
+		bincount = len(binedges[0])-1
+		if 0:
+			nbins = 100
+			jumptimes = [where((disctraj[i,1:]-disctraj[i,:-1])!=0)[0] for i in range(len(disctraj))]
+			jumpdurations = [jumptimes[i][1:]-jumptimes[i][:-1] for i in range(len(jumptimes))]
+			maxresid = max([max(i) for i in jumpdurations])
+			jumphists = [histogram(jumpdurations[i],range=(0,maxresid),bins=nbins)[0] 
+				for i in range(len(jumpdurations))]
+			jumpbins = [disctraj[i][jumptimes[i][:-1]] for i in range(len(disctraj))]
+			residences = [[] for i in range(bincount)]
+			for k in range(len(jumpbins)):
+				for i in range(len(jumpbins[k])):
+					residences[jumpbins[k][i]].append(jumpdurations[k][i])
+			maxresid = max([max(i) for i in residences if i != []])
+			resdists = [histogram(residences[i],range=(0,maxresid),bins=nbins)[0] 
+				for i in range(len(residences)) if i != []]	
+			#---accounting
+			binlabels = [int(round(i)) for i in (mean(binedges,axis=0)[1:]+mean(binedges,axis=0)[:-1])/2.]
+			maxz = binedges[0][-1]
+			meanz = mean(mean(monoz,axis=0))
+			#tmp = [(i-meanz)+maxz*((i-meanz)<0)-maxz*((i-meanz)>maxz) for i in binlabels]
+			howfar = [i-meanz-maxz*((i-meanz)>maxz/2.) for i in binlabels]
+			#---plot
+			ax = plt.subplot(111)
+			for r in range(len(resdists)):
+				dat = resdists[r]
+				if howfar[r] > 0.: c = 'b'
+				else: c = 'r'
+				ax.plot(dat,c=c,lw=2,label=binlabels[r],
+					alpha=(1-abs(howfar[r])/max(abs(array(howfar)))/1.1))
+			ax.set_xlim((1,100))
+			ax.set_xscale('log')
+			ax.set_yscale('log')
+			ax.set_title('residence time distributions v509')
+			#ax.legend(loc=1)
+			plt.show()
+		if 0:
+			#---plot some single-frame distributions
+			for i in range(0,shape(disctraj)[1],1):
+			#for i in [1]:
+				hist,edges = histogram(disctraj[:,i],range=(0,bincount),bins=bincount);
+				mids = array(edges[1:]+edges[:-1])/2.
+				plt.plot(mids,hist);
+			plt.show()
+		if 0:
+			#---average the histograms
+			hists = []
+			meanbinedges = mean(binedges,axis=0)	
+			monobins = [array([abs(mean(monoz,axis=0)[i]-meanbinedges[j])
+				for j in range(len(meanbinedges))]).argmin() for i in range(2)][::-1]
+			for i in range(0,shape(disctraj)[1],1):
+				hist,edges = histogram(disctraj[:,i],range=(0,bincount),bins=bincount);
+				hists.append(hist)
+			mids = array(edges[1:]+edges[:-1])/2.
+			bw = mean(meanbinedges[1:]-meanbinedges[:-1]) # bin width in Angstroms.
+			# plt.axvline(x=bw*edges[monobins[0]],ymin=0.,ymax=1.)
+			# plt.axvline(x=bw*edges[monobins[1]],ymin=0.,ymax=1.)
+			plt.plot(bw*mids,mean(hists,axis=0),'o-');
+			plt.show()
+			# Where is the histogram zero? Where is the center of reflection?
+			zeroes = where(mean(hists,axis=0)==0)
+			middle_bin = int(mean(zeroes))
+		
+#---UNDER CONSTRUCTION
+#---re-work the discrete binning function, fix badframes, make flexible zones, etc
 
 def bilayer_shift(ionspos=None,midz=None,mset=None,vecs=None):
 	'''Function to change coordinate systems so the midplane is at zero.'''
@@ -314,7 +456,7 @@ def plot_ion_residence(disctraj,binedges,fig=None,ignorezero=True,maxtime=100,
 	plt.show()
 
 def plot_ion_time_correlations(disctraj,binedges,fig=None,
-	thisax=None,mset=None,t0s_select=None,showlegend=False,plotall=False):
+	thisax=None,mset=None,t0s_select=None,showlegend=False):
 	'''Plot the time correlation function for presence in each zone.'''
 	if fig == None: fig = plt.figure(figsize=(5,6))
 	if mset == None: mset = globals()['mset']
@@ -388,44 +530,6 @@ def plot_ion_time_correlations(disctraj,binedges,fig=None,
 		dpi=500,bbox_inches='tight')
 	plt.show()
 
-#---MAIN
-#-------------------------------------------------------------------------------------------------------------
-
-#---generic load routine for analyzing ions relative to the bilayer position
-if 'load' in routine or 'ionspos' not in globals():
-	for aname in analysis_names:
-		for i in analysis_descriptors[aname]: vars()[i] = (analysis_descriptors[aname])[i]
-		#---load
-		print 'status: loading trajectory'
-		grofile,trajfile = trajectory_lookup(analysis_descriptors,aname,globals())
-		mset.load_trajectory((basedir+'/'+grofile,basedir+'/'+trajfile[0]),resolution='aamd')
-		trajsel = trajsel_struct
-		sysname_lookup = sysname_lookup_struct
-		grofile,trajfile = trajectory_lookup(analysis_descriptors,aname,globals(),
-			keysysname='sysname_lookup_struct',keytrajsel='trajsel_struct')
-		mset_surf = MembraneSet()
-		mset_surf.load_trajectory((basedir+'/'+grofile,basedir+'/'+trajfile[0]),resolution='aamd')
-		#---collect ion positions
-		clock = []
-		ionspos = []
-		ion_select = mset.universe.selectAtoms('name '+ionname)
-		whichframes = range(len(mset.universe.trajectory))
-		for fr in whichframes:
-			mset.gotoframe(fr)
-			ionspos.append(ion_select.coordinates())
-			clock.append(mset.universe.trajectory[fr].time)
-		#---collect monolayer positions
-		mset_surf.identify_monolayers(director)
-		surf_select = mset_surf.universe.selectAtoms(selector)
-		monoz = []
-		for fr in whichframes:
-			mset_surf.gotoframe(fr)
-			surfpts = surf_select.coordinates()
-			monoz.append([mean(surfpts[mset_surf.monolayer_residues[m],2],axis=0) for m in range(2)])
-		#---midz and monoz provide the average midplane and average monolayer positions for each frame
-		monoz = array(monoz)
-		midz = mean(monoz,axis=1)
-
 #---example for doing the coordinate shift and the binning
 if 'compute' in routine:
 	aname = analysis_names[0]
@@ -439,9 +543,7 @@ if 'compute' in routine:
 		binedges,monobins = binlister('custom',mset=mset_surf,binw=5,custom_posts=[-5,10])
 		binedges,monobins = binlister('custom',mset=mset_surf,binw=5,custom_posts=[-5,0,15])
 		binedges,monobins = binlister('custom',mset=mset_surf,binw=5,custom_posts=[-10,16])
-		binedges,monobins = binlister('custom',mset=mset_surf,binw=5,custom_posts=list(arange(-5,40+1,5)))	
-		binedges,monobins = binlister('fixed',mset=mset_surf,binw=5)
-	binedges,monobins = binlister('custom',mset=mset_surf,binw=5,custom_posts=[-10,16])
+	binedges,monobins = binlister('custom',mset=mset_surf,binw=5,custom_posts=list(arange(-5,45+1,5)))		
 	disctraj = discretizer(binedges)
 	if 0:
 		#---check the distribution

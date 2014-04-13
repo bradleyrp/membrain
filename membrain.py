@@ -132,7 +132,8 @@ class MembraneSet:
 			self.time_dt = self.universe.trajectory.dt
 		if hasattr(self.universe,'trajectory'):
 			self.time_list = [self.universe.trajectory[i].time 
-				for i in range(len(self.universe.trajectory))]
+				for i in range(len(self.universe.trajectory)) 
+				if hasattr(self.universe.trajectory[i],'time')]
 		print 'status: the trajectory file has '+str(self.nframes)+' frames'
 
 	def load_points(self,xyzdir,nbase=0,start=None,end=None,
