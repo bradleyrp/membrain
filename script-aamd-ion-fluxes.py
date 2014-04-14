@@ -212,8 +212,8 @@ def define_zones(zonetype):
 	if zonetype == 'radial_binary':
 		zonelist = [0,1]
 		zonecolors = ['b','r']
-		zonealphas = [1.,1.]
-		zonelabels = ['bound','free']
+		zonealphas = [0.5,0.5]
+		zonelabels = ['free','bound']
 		return [zonelist,zonecolors,zonealphas,zonelabels]
 		
 #---plotting and analysis functions for the discrete trajectories
@@ -381,7 +381,7 @@ def plot_ion_time_correlations(disctraj,binedges,fig=None,
 			if len(init_occupants[t0][binn]) > 0 else []) for i in range(t0,len(disctrajt))] 
 			for binn in range(nslices)]
 		if mean([i[0] for i in rt if i[0] != []]) != 1.:
-			raw_input('...fail!...')
+			raw_input('status: calculation failure')
 		for n in range(nslices):
 			if mids[n] > 0.: c = 'r'
 			elif mids[n] == 0: c = 'k'
@@ -510,12 +510,12 @@ def plot_ion_temporary_experiment():
 		plt.show()
 		
 def plot_ion_residence_radial_binary(disctraj,zonetype,fig=None,ignorezero=True,
-	mset=None,dofit=False,cumulative=True):
+	mset=None,dofit=False,cumulative=True,scale_by_time=None):
 	'''Plot residence time distributions, radial binary version.'''
 	if fig == None: fig = plt.figure(figsize=(8,10))
 	if mset == None: mset = globals()['mset']
 	ntimes = len(disctraj[0])
-	jumptimes = [concatenate(([0],where((disctraj[i,1:]-disctraj[i,:-1])!=0)[0],[len(disctraj[0])])) 
+	jumptimes = [concatenate(([0],where((disctraj[i,1:]-disctraj[i,:-1])!=0)[0]+1,[len(disctraj[0])])) 
 		for i in range(len(disctraj))]
 	jumpdurations = [jumptimes[i][1:]-jumptimes[i][:-1] for i in range(len(jumptimes))]
 	jumphists = [histogram(jumpdurations[i],range=(0,ntimes),bins=ntimes+1)[0] 
@@ -528,30 +528,105 @@ def plot_ion_residence_radial_binary(disctraj,zonetype,fig=None,ignorezero=True,
 		if len(jumpbins[k]) > 0:
 			for i in range(len(jumpbins[k])):
 				residences[int(jumpbins[k][i])].append(jumpdurations[k][i])
-	times = mset.time_dt*histogram(residences[0],range=(1,ntimes),bins=ntimes-1)[1][:-1]
-	resdists = [histogram(residences[i],range=(1,ntimes),bins=ntimes-1)[0] 
+	times = mset.time_dt*histogram(residences[0],range=(1,ntimes+1),bins=ntimes)[1][:-1]
+	resdists = [histogram(residences[i],range=(1,ntimes+1),bins=ntimes)[0] 
 		for i in range(len(residences)) if i != []]
 	#---plot
 	ax = plt.subplot(111)
+	extrem = [10**30,0]
 	for r in range(len(resdists)):
 		dat = resdists[r]
 		c = zonecolors[r]
 		alpha = zonealphas[r]
 		label = zonelabels[r]
 		inds = where(dat!=0)[0]
-		ax.plot(times[inds],dat[inds],'o-',c=c,mec=c,lw=1,alpha=alpha,label=label)
+		if scale_by_time == True:
+			plotdat = dat[inds]*times[inds]/float(times[-1])/len(disctraj)
+			ax.plot(times[inds],plotdat,
+				'o-',c=c,mec=c,lw=1,alpha=alpha,label=label+' ('+\
+				str(round(float(sum(disctraj==zonelist[r]))/product(shape(disctraj)),2))+','+
+				(str(int(plotdat[-1]*len(disctraj)))+'bound' 
+					if times[inds][-1] == mset.time_dt*ntimes else '')+')')
+		else:
+			plotdat = dat[inds]
+			ax.plot(times[inds],plotdat,'o-',c=c,mec=c,lw=1,alpha=alpha,label=label)
+		if extrem[0] > min(plotdat): extrem[0] = min(plotdat)
+		if extrem[1] < max(plotdat): extrem[1] = max(plotdat)
+	if scale_by_time == True: ax.set_ylim((0.5*extrem[0],10*extrem[1]))
 	ax.set_xscale('log')
 	ax.set_yscale('log')
 	ax.set_xlim((1,ntimes*mset.time_dt*2))
 	ax.set_xlabel(r'$\tau\,(ps)$',fontsize=fsaxlabel)
-	ax.set_ylabel(r'$frequency$',fontsize=fsaxlabel)
+	if scale_by_time == True: ax.set_ylabel(r'$\mathrm{P(\tau)}$',fontsize=fsaxlabel)
+	else: ax.set_ylabel(r'$frequency$',fontsize=fsaxlabel)
 	plt.setp(ax.get_xticklabels(),fontsize=fsaxlabel)
 	plt.setp(ax.get_yticklabels(),fontsize=fsaxlabel)
-	ax.set_title('residence times',fontsize=fsaxtitle)
 	ax.legend(loc='upper right')
 	ax.grid(True)
+	plt.savefig(pickles+'fig-ion_residence-'+specname_guess(sysname,trajsel).strip('membrane-')+\
+		('-pdf' if scale_by_time == True else '')+'.png',
+		dpi=500,bbox_inches='tight')
 	plt.show()
-
+	
+def plot_ion_residence_radial_binary_dev(disctraj,zonetype,fig=None,ignorezero=True,
+	mset=None,dofit=False,cumulative=True,scale_by_time=None):
+	'''Plot residence time distributions, radial binary version.'''
+	if fig == None: fig = plt.figure(figsize=(8,10))
+	if mset == None: mset = globals()['mset']
+	#---header is the same as the original residence time calculator
+	ntimes = len(disctraj[0])
+	jumptimes = [concatenate(([0],where((disctraj[i,1:]-disctraj[i,:-1])!=0)[0]+1,[len(disctraj[0])])) 
+		for i in range(len(disctraj))]
+	jumpdurations = [jumptimes[i][1:]-jumptimes[i][:-1] for i in range(len(jumptimes))]
+	jumphists = [histogram(jumpdurations[i],range=(0,ntimes),bins=ntimes+1)[0] 
+		for i in range(len(jumpdurations))]
+	jumpbins = [disctraj[i][jumptimes[i][:-1]] for i in range(len(disctraj))]
+	zonelist,zonecolors,zonealphas,zonelabels = define_zones(zonetype)
+	residences = [[] for i in range(len(zonelist))]
+	for k in range(len(jumpbins)):
+		if len(jumpbins[k]) > 0:
+			for i in range(len(jumpbins[k])):
+				residences[int(jumpbins[k][i])].append(jumpdurations[k][i])
+	times = mset.time_dt*histogram(residences[0],range=(1,ntimes+1),bins=ntimes)[1][:-1]
+	resdists = [histogram(residences[i],range=(1,ntimes+1),bins=ntimes)[0] 
+		for i in range(len(residences)) if i != []]
+	zonetype = 'radial_binary'
+	times = mset.time_dt*arange(mset.nframes)+10.
+	zonelist,zonecolors,zonealphas,zonelabels = define_zones(zonetype)
+	disctrajt = array(disctraj).T
+	t0s = range(0,len(disctrajt)-1)
+	starttime = time.time()
+	init_occupants = []
+	for t0 in t0s:
+		init_occupants_by_bin = []
+		for binn in zonelist:
+			init_occupants_by_bin.append(where(disctrajt[t0]==binn)[0])
+		status('t0 = '+str(t0),start=starttime,i=t0,looplen=len(t0s))
+		init_occupants.append(init_occupants_by_bin)
+	#---new code
+	collected = [[] for i in zonelist]
+	for t0 in t0s:
+		for z in zonelist:
+			inds = init_occupants[t0][z]
+			staytimes = [jumptimes[i][jumptimes[i]>t0][0]-t0 for i in inds]
+			counts,edges = histogram(staytimes,range=(1,ntimes+1),bins=ntimes)
+			collected[z].append(counts)
+	ax = plt.subplot(111)
+	for z in zonelist:
+		ax.plot(times,mean(collected[z],axis=0),lw=2,
+			c=zonecolors[z],label=zonelabels[z])
+	ax.set_xlim((1,times[-1]))
+	ax.set_xscale('log')
+	ax.set_yscale('log')
+	ax.grid(True)
+	ax.set_ylabel(r'$\mathrm{N_0}$',fontsize=fsaxlabel)
+	ax.set_xlabel(r'$\mathrm{\mathbf{\tau}\:(ps)}$',fontsize=fsaxlabel)
+	plt.setp(ax.get_xticklabels(),fontsize=fsaxlabel)
+	plt.setp(ax.get_yticklabels(),fontsize=fsaxlabel)
+	ax.legend(loc='upper right')
+	plt.savefig(pickles+'fig-ion_residence_dev-'+specname_guess(sysname,trajsel).strip('membrane-')+'.png',
+		dpi=500,bbox_inches='tight')
+	plt.show()
 
 #---MAIN
 #-------------------------------------------------------------------------------------------------------------
@@ -619,7 +694,7 @@ if 'compute_z' in routine:
 		plot_ion_time_correlations(disctraj,binedges,mset=mset_surf)
 
 #---example for doing the coordinate shift and the binning relative to key phospholipids
-if 'compute_radial_binary' in routine:
+if 'compute_radial_binary2' in routine:
 	aname = analysis_names[0]
 	#---define selections
 	#---Nb the following definitions need to be moved to the header, or at least get ion name from dictionary
@@ -628,9 +703,12 @@ if 'compute_radial_binary' in routine:
 	selstring_refs = 'name O4 or name OP42 or name OP43 or name OP44 or name P4 or name O5 '+\
 		'or name OP52 or name OP53 or name P5 or name O11 or name O12 or name O13 or name O14 or name P'
 	selstring = 'name '+ionname+' and around '+str(buffer_size)+' ('+selstring_refs+')'
+	expt_name = 'buffer'+str(buffer_size)+'-allheadgroup'
 	#---discretize the trajectory
 	frameslice = slice(0,400) #---set to None if you want the whole trajectory
+	frameslice = None
 	disctraj = discretizer_radial_binary(selstring,ionname,mset=mset,frameslice=frameslice)
 	#---plot the residence time distributions
-	plot_ion_residence_radial_binary(disctraj,'radial_binary')
-
+	plot_ion_residence_radial_binary(disctraj,'radial_binary',scale_by_time=False)
+	#---new method that averages the distribution of leaving times for each t0
+	plot_ion_residence_radial_binary_dev(disctraj,'radial_binary')

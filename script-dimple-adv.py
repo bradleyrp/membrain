@@ -72,8 +72,8 @@ analysis_names = [
 	'v612-10000-80000-200',
 	'v550-300000-400000-200',
 	][:3]
-routine = ['compute','compute_mean_fits','plot','plot_residmaps','plot_mean_fits','plotpub'][-2:-1]
-bigname = 'v614-v612-v550-ver2'
+routine = ['compute','compute_mean_fits','plot','plot_residmaps','plot_mean_fits','plotpub'][-1:]
+bigname = 'v614-v612-v550-ver3'
 
 #---Nb you must run compute_mean_fits with decay_z0_min = True and False if you want to do both plots
 
