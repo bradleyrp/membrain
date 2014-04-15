@@ -188,7 +188,7 @@ def discretizer_z(binedges,relpos=None):
 	return disctraj
 	
 def discretizer_radial_binary(selstring,ionname,mset=None,frameslice=None):
-	'''Discretizes a trajectory into inside-outside bins for a radial distance defintion given by selstring.'''
+	'''Discretizes a trajectory into inside-outside bins for a radial distance defintion.'''
 	if mset == None: mset = globals()['mset']
 	if frameslice == None: frameslice = slice(None,None)
 	allresids = sort(mset.universe.selectAtoms('name '+ionname).resids())
@@ -510,7 +510,7 @@ def plot_ion_temporary_experiment():
 		plt.show()
 		
 def plot_ion_residence_radial_binary(disctraj,zonetype,fig=None,ignorezero=True,
-	mset=None,dofit=False,cumulative=True,scale_by_time=None):
+	mset=None,dofit=False,cumulative=False,scale_by_time=None):
 	'''Plot residence time distributions, radial binary version.'''
 	if fig == None: fig = plt.figure(figsize=(8,10))
 	if mset == None: mset = globals()['mset']
@@ -541,12 +541,15 @@ def plot_ion_residence_radial_binary(disctraj,zonetype,fig=None,ignorezero=True,
 		label = zonelabels[r]
 		inds = where(dat!=0)[0]
 		if scale_by_time == True:
-			plotdat = dat[inds]*times[inds]/float(times[-1])/len(disctraj)
+			if cumulative == False:
+				plotdat = dat[inds]*times[inds]/float(times[-1])/len(disctraj)
+			else:
+				plotdat = cumsum(dat[inds]*times[inds]/float(times[-1])/len(disctraj))
 			ax.plot(times[inds],plotdat,
 				'o-',c=c,mec=c,lw=1,alpha=alpha,label=label+' ('+\
-				str(round(float(sum(disctraj==zonelist[r]))/product(shape(disctraj)),2))+','+
-				(str(int(plotdat[-1]*len(disctraj)))+'bound' 
-					if times[inds][-1] == mset.time_dt*ntimes else '')+')')
+				str(round(float(sum(disctraj==zonelist[r]))/product(shape(disctraj)),2))+
+				(','+str(int(plotdat[-1]*len(disctraj)))+'bound' 
+					if (times[inds][-1] == mset.time_dt*ntimes and cumulative == False) else '')+')')
 		else:
 			plotdat = dat[inds]
 			ax.plot(times[inds],plotdat,'o-',c=c,mec=c,lw=1,alpha=alpha,label=label)
@@ -563,13 +566,16 @@ def plot_ion_residence_radial_binary(disctraj,zonetype,fig=None,ignorezero=True,
 	plt.setp(ax.get_yticklabels(),fontsize=fsaxlabel)
 	ax.legend(loc='upper right')
 	ax.grid(True)
+	if cumulative and scale_by_time: extratag = '-cdf'
+	elif scale_by_time and not cumulative: extratag = '-pdf'
+	else: extratag = ''
 	plt.savefig(pickles+'fig-ion_residence-'+specname_guess(sysname,trajsel).strip('membrane-')+\
-		('-pdf' if scale_by_time == True else '')+'.png',
+		extratag+'.png',
 		dpi=500,bbox_inches='tight')
 	plt.show()
 	
-def plot_ion_residence_radial_binary_dev(disctraj,zonetype,fig=None,ignorezero=True,
-	mset=None,dofit=False,cumulative=True,scale_by_time=None):
+def plot_ion_residence_radial_binary_dev(disctraj,zonetype,fig=None,
+	mset=None,normed=True,scale_by_time=None,residence_exact=False):
 	'''Plot residence time distributions, radial binary version.'''
 	if fig == None: fig = plt.figure(figsize=(8,10))
 	if mset == None: mset = globals()['mset']
@@ -601,21 +607,37 @@ def plot_ion_residence_radial_binary_dev(disctraj,zonetype,fig=None,ignorezero=T
 		init_occupants_by_bin = []
 		for binn in zonelist:
 			init_occupants_by_bin.append(where(disctrajt[t0]==binn)[0])
-		status('t0 = '+str(t0),start=starttime,i=t0,looplen=len(t0s))
 		init_occupants.append(init_occupants_by_bin)
-	#---new code
 	collected = [[] for i in zonelist]
+	collected_residence = [[] for i in zonelist]
 	for t0 in t0s:
 		for z in zonelist:
 			inds = init_occupants[t0][z]
-			staytimes = [jumptimes[i][jumptimes[i]>t0][0]-t0 for i in inds]
+			staytimes = array([jumptimes[i][jumptimes[i]>t0][0]-t0 for i in inds])
 			counts,edges = histogram(staytimes,range=(1,ntimes+1),bins=ntimes)
 			collected[z].append(counts)
+			if residence_exact:
+				residence_curve = [sum(staytimes>i) for i in range(ntimes-t0)]#+[0 for i in range(t0)]
+				collected_residence[z].append(residence_curve)
+		status('t0 = '+str(t0),start=starttime,i=t0,looplen=len(t0s))
+	if residence_exact:
+		meanrescurves = [[mean([collected_residence[k][t0][j] 
+			for t0 in t0s if j < len(collected_residence[k][t0])]) 
+			for j in range(ntimes)] 
+			for k in range(len(collected_residence))]
 	ax = plt.subplot(111)
 	for z in zonelist:
-		ax.plot(times,mean(collected[z],axis=0),lw=2,
-			c=zonecolors[z],label=zonelabels[z])
-	ax.set_xlim((1,times[-1]))
+		if normed and not residence_exact:
+			#---could normalize by len(mean(collected[z],axis=0)) or sum(mean(collected[z],axis=0)) also
+			ax.plot(times,mean(collected[z],axis=0)/mean(collected[z],axis=0)[0],lw=2,
+				c=zonecolors[z],label=zonelabels[z])
+		elif not normed and not residence_exact:
+			ax.plot(times,mean(collected[z],axis=0),lw=2,
+				c=zonecolors[z],label=zonelabels[z])
+		elif residence_exact:
+			ax.plot(times,meanrescurves[z],'.-',lw=1,
+				c=zonecolors[z],label=zonelabels[z])
+	ax.set_xlim((1,2*times[-1]))
 	ax.set_xscale('log')
 	ax.set_yscale('log')
 	ax.grid(True)
@@ -623,8 +645,12 @@ def plot_ion_residence_radial_binary_dev(disctraj,zonetype,fig=None,ignorezero=T
 	ax.set_xlabel(r'$\mathrm{\mathbf{\tau}\:(ps)}$',fontsize=fsaxlabel)
 	plt.setp(ax.get_xticklabels(),fontsize=fsaxlabel)
 	plt.setp(ax.get_yticklabels(),fontsize=fsaxlabel)
-	ax.legend(loc='upper right')
-	plt.savefig(pickles+'fig-ion_residence_dev-'+specname_guess(sysname,trajsel).strip('membrane-')+'.png',
+	ax.legend(loc='lower left')
+	if residence_exact: extratag = '_dev_exact'
+	elif normed: extratag = '_dev_normed'
+	else: extratag = '_dev'
+	plt.savefig(pickles+'fig-ion_residence'+extratag+'-'+\
+		specname_guess(sysname,trajsel).strip('membrane-')+'.png',
 		dpi=500,bbox_inches='tight')
 	plt.show()
 
@@ -708,7 +734,12 @@ if 'compute_radial_binary2' in routine:
 	frameslice = slice(0,400) #---set to None if you want the whole trajectory
 	frameslice = None
 	disctraj = discretizer_radial_binary(selstring,ionname,mset=mset,frameslice=frameslice)
-	#---plot the residence time distributions
-	plot_ion_residence_radial_binary(disctraj,'radial_binary',scale_by_time=False)
-	#---new method that averages the distribution of leaving times for each t0
-	plot_ion_residence_radial_binary_dev(disctraj,'radial_binary')
+	if 0:
+		#---plot the residence time distributions
+		plot_ion_residence_radial_binary(disctraj,'radial_binary',scale_by_time=False)
+		#---new method that averages the distribution of leaving times for each t0
+		plot_ion_residence_radial_binary_dev(disctraj,'radial_binary',normed=False)
+		#---PDF of durations in the zones
+		plot_ion_residence_radial_binary(disctraj,'radial_binary',scale_by_time=False)
+		plot_ion_residence_radial_binary(disctraj,'radial_binary',scale_by_time=False,cumulative=True)
+		plot_ion_residence_radial_binary_dev(disctraj,'radial_binary',normed=False,residence_exact=True)
