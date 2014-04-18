@@ -570,8 +570,7 @@ def plot_ion_residence_radial_binary(disctraj,zonetype,fig=None,ignorezero=True,
 	elif scale_by_time and not cumulative: extratag = '-pdf'
 	else: extratag = ''
 	plt.savefig(pickles+'fig-ion_residence-'+specname_guess(sysname,trajsel).strip('membrane-')+\
-		extratag+'.png',
-		dpi=500,bbox_inches='tight')
+		extratag+'.png',dpi=500,bbox_inches='tight')
 	plt.show()
 	
 def plot_ion_residence_radial_binary_dev(disctraj,zonetype,fig=None,
@@ -639,7 +638,7 @@ def plot_ion_residence_radial_binary_dev(disctraj,zonetype,fig=None,
 				c=zonecolors[z],label=zonelabels[z])
 	ax.set_xlim((1,2*times[-1]))
 	ax.set_xscale('log')
-	ax.set_yscale('log')
+	#ax.set_yscale('log')
 	ax.grid(True)
 	ax.set_ylabel(r'$\mathrm{N_0}$',fontsize=fsaxlabel)
 	ax.set_xlabel(r'$\mathrm{\mathbf{\tau}\:(ps)}$',fontsize=fsaxlabel)
@@ -649,8 +648,9 @@ def plot_ion_residence_radial_binary_dev(disctraj,zonetype,fig=None,
 	if residence_exact: extratag = '_dev_exact'
 	elif normed: extratag = '_dev_normed'
 	else: extratag = '_dev'
+	extratag2 = '-'+str(buffer_size)
 	plt.savefig(pickles+'fig-ion_residence'+extratag+'-'+\
-		specname_guess(sysname,trajsel).strip('membrane-')+'.png',
+		specname_guess(sysname,trajsel).strip('membrane-')+extratag2+'.png',
 		dpi=500,bbox_inches='tight')
 	plt.show()
 
@@ -720,12 +720,12 @@ if 'compute_z' in routine:
 		plot_ion_time_correlations(disctraj,binedges,mset=mset_surf)
 
 #---example for doing the coordinate shift and the binning relative to key phospholipids
-if 'compute_radial_binary2' in routine:
+if 'compute_radial_binary' in routine:
 	aname = analysis_names[0]
 	#---define selections
 	#---Nb the following definitions need to be moved to the header, or at least get ion name from dictionary
 	ionname = 'NA'
-	buffer_size = 3
+	buffer_size = 4
 	selstring_refs = 'name O4 or name OP42 or name OP43 or name OP44 or name P4 or name O5 '+\
 		'or name OP52 or name OP53 or name P5 or name O11 or name O12 or name O13 or name O14 or name P'
 	selstring = 'name '+ionname+' and around '+str(buffer_size)+' ('+selstring_refs+')'

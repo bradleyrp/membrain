@@ -20,11 +20,11 @@ analysis_descriptors_extra = {
 	'v614-120000-220000-200':
 		{'whichframes':slice(None,None),
 		'protein_pkl':None,
-		'testlist':testlist_control},
+		'testlist':testlist_std},
 	'v612-75000-175000-200':
 		{'protein_pkl':None,
 		'whichframes':slice(None,None),
-		'testlist':testlist_control},
+		'testlist':testlist_mono},
 	'v550-400000-500000-160':
 		{'nprots':1,
 		'whichframes':slice(0,500),
@@ -46,7 +46,7 @@ analysis_descriptors_extra = {
 	'v616-210000-310000-200':
 		{'whichframes':slice(None,None),
 		'protein_pkl':None,
-		'testlist':testlist_control}}
+		'testlist':testlist_dynamic}}
 		
 #---coallate two dictionaries
 execfile('header-cgmd.py')
@@ -67,14 +67,15 @@ analysis_names = [
 	'v614-40000-140000-200',
 	'v612-10000-80000-200',
 	'v550-300000-400000-200',
-	][:4]
+	][:1]
 routine = [
 	'compute',
 	'compute_mean_fits',
+	'plot',
 	'plot_residmaps',
 	'plot_mean_fits',
 	'plotpub',
-	][-1:]
+	][2:3]
 bigname = 'v616-v614-v612-v550-ver1'
 
 #---Nb you must run compute_mean_fits with decay_z0_min = True and False if you want to do both plots
@@ -129,9 +130,6 @@ It is also possible to change whether the curves decay to z = 0 at long distance
 CRITICAL NOTES:
 Due to an error in the definition of mean curvature, if you are using older parts of this code, check for a 
 ...factor of 2 denoted by "critical notes" throughout the text.
-
-DEVELOPMENT NOTES:
-Recently found duplicate entries from a full parameter sweep and a short one and had to delete manually.
 '''
 
 #---scaling factor
@@ -194,18 +192,6 @@ def colordict(ask):
 	elif type(ask) == int:
 		return clrsdict_leftovers[ask%len(clrsdict_leftovers)]		
 	else: return 'y'
-
-#---FUNCTION
-#-------------------------------------------------------------------------------------------------------------
-
-def save_dimple_data(aname):
-	'''Saves the global result data object for a particular system name.'''
-	for i in analysis_descriptors[aname]: vars()[i] = (analysis_descriptors[aname])[i]
-	anum = analysis_names.index(aname)
-	filespec = specname_guess(sysname,trajsel)
-	if 'compute_mean_fits' in routine: pklname = 'pkl.dimple2avg.'+filespec+'.pkl'
-	else: pklname = 'pkl.dimple2.'+filespec+'.pkl'
-	pickledump(msdats[anum],pklname,directory=pickles)
 	
 #---MAIN
 #-------------------------------------------------------------------------------------------------------------
@@ -222,7 +208,6 @@ if 'msets' not in globals():
 
 #---compute fits
 if 'compute' in routine or 'compute_mean_fits' in routine:
-	#---the compute_mean_fits is a separate option which only does one fit to the average structure
 	if 'compute' in routine and 'compute_mean_fits' in routine:
 		raise Exception('except: cannot do both compute and compute_mean_fits')
 	#---load the current set of msdats which may already have some of the requested tests in the sweep
@@ -240,7 +225,7 @@ if 'compute' in routine or 'compute_mean_fits' in routine:
 	#---outer loop is over parameters in the sweep
 	for param in params:
 		cutoff,zfiltdir = param
-		#---inner loop is over systems with new fits appended the msdats list and dumped to original pickle
+		#---next loop is over systems with new fits appended the msdats list and dumped to original pickle
 		for aname in analysis_names:
 			for i in analysis_descriptors[aname]: vars()[i] = (analysis_descriptors[aname])[i]
 			anum = analysis_names.index(aname)
@@ -251,7 +236,7 @@ if 'compute' in routine or 'compute_mean_fits' in routine:
 			mset = msets[anum]
 			#---protein accounting
 			if protein_pkl == None: mset_protein = msets[anum]
-			#---retrieve protein points from a different dictionary item if analyzing the control
+			#---retrieve protein points from a different dictionary item
 			else:
 				protein_pkl_name = protein_pkl
 				for i in analysis_descriptors[protein_pkl_name]: 
@@ -260,15 +245,9 @@ if 'compute' in routine or 'compute_mean_fits' in routine:
 				mset_protein = unpickle_special('pkl.structures.'+filespec+'.pkl')
 				#---re-populate the variables for the original system now that you got the protein pickle
 				for i in analysis_descriptors[aname]: vars()[i] = (analysis_descriptors[aname])[i]
-			#---identify protein monolayers by atom/bead number
 			nresprot = shape(mset_protein.protein)[1]/nprots
 			prot_slices = [slice(i*nresprot,(i+1)*nresprot) for i in range(nprots)]
 			#---innermost loop is over the following list of geographic locations relative to proteins
-			#---Note: we have several options for choosing the geography of the proteins
-			#---...1. We can use either the full collection of proteins or individual monomers
-			#---...2. We can use the peak or valley on the average midplane (useful for control)
-			#---...3. We can also specify a random shift to move the perceived location elsewhere
-			#---...4. Finally, we can find the frame-wise maximum or minimum and use that as the protein location
 			tl = []
 			for test in testlist:
 				if test == 'full':
@@ -420,8 +399,218 @@ if 'compute' in routine or 'compute_mean_fits' in routine:
 					del result_data_collection
 	if wait_save:
 		for aname in analysis_names:
-			save_dimple_data(aname)
+			for i in analysis_descriptors[aname]: vars()[i] = (analysis_descriptors[aname])[i]
+			anum = analysis_names.index(aname)
+			filespec = specname_guess(sysname,trajsel)
+			if 'compute_mean_fits' in routine: pklname = 'pkl.dimple2avg.'+filespec+'.pkl'
+			else: pklname = 'pkl.dimple2.'+filespec+'.pkl'
+			pickledump(msdats[anum],pklname,directory=pickles)
 
+#---plot summary
+if 'plot' in routine:
+	hmax_nbins = int(2*hifilt/hist_step)+1
+	msdats = [[] for i in range(len(analysis_names))]
+	for aname in analysis_names:
+		for i in analysis_descriptors[aname]: vars()[i] = (analysis_descriptors[aname])[i]
+		filespec = specname_guess(sysname,trajsel)
+		msdat = unpickle_special('pkl.dimple2.'+filespec+'.pkl')
+		anum = analysis_names.index(aname)
+		msdats[anum] = msdat
+	fp = open(pickles+'calc-dimple2-'+bigname+'.txt','w')
+	for param in params_plot:
+		fp.write('parameters = '+str(param))
+		cutoff,zfiltdir = param
+		#---lookup correct msdat items		
+		msdats_subset = [[] for i in range(len(analysis_names))]
+		for aname in analysis_names:
+			for i in analysis_descriptors[aname]: vars()[i] = (analysis_descriptors[aname])[i]
+			anum = analysis_names.index(aname)
+			for ms in range(len(msdats[anum])):
+				if msdats[anum][ms].getnote('cutoff') == cutoff and \
+					msdats[anum][ms].getnote('zfiltdir') == zfiltdir:
+					msdats_subset[anum].append(ms)
+		#---plot
+		fig = plt.figure(figsize=(10,len(analysis_names)*2))
+		gs = gridspec.GridSpec(len(analysis_names),(3 if residplot == False else 4),wspace=0.0,hspace=0.0)
+		axlist = []
+		maxpeak = 0.
+		#---limits of Hmax
+		extremz = max([max([mean(mset.surf,axis=0).max(),abs(mean(mset.surf,axis=0).min())])
+			for mset in msets])
+		for aname in analysis_names:
+			for i in analysis_descriptors[aname]: vars()[i] = (analysis_descriptors[aname])[i]
+			#---choose a test
+			anum = analysis_names.index(aname)
+			mset = msets[anum]
+			dat = [msdats[anum][i] for i in msdats_subset[anum]]
+			casual_names = [test.getnote('testlist')[test.getnote('this_test')] for test in dat]
+			casual_names = [i[0] if type(i) == list else i for i in casual_names]
+			color_order = [casual_names.index(i) for i in casual_names if i not in ['peak','valley','full']]
+			#---plot Hmax		
+			ax = plt.subplot(gs[anum,0:2])
+			axlist.append(ax)
+			if inset_raw_hmax or inset_extents: 
+				axins = mpl_toolkits.axes_grid.inset_locator.inset_axes(ax,
+					width="30%",height="30%",loc=1)
+			ax.grid(True)
+			if anum != len(analysis_names)-1: ax.set_xticklabels([])
+			else: 
+				ax.set_xlabel('$\mathsf{H_{max}\,(nm^{-1})}$',fontsize=16)
+				plt.setp(ax.get_yticklabels(),fontsize=fsaxlabel)
+			ax.set_yticklabels([])
+			ax.set_ylabel(label,fontsize=fsaxlabel)
+			ax.axvline(x=0,ymax=1.,ymin=0.,lw=1.5,color='k')
+			for pnum in range(len(dat)):
+				test = dat[pnum]
+				if type(label) == list: label = label[0]
+				if casual_names[pnum] == 'peak': color = colordict('blue')
+				elif casual_names[pnum] == 'valley': color = colordict('red')
+				elif casual_names[pnum] == 'full': color = colordict('black')
+				else: color = colordict(color_order.index(pnum))
+				#---find valid, fitted frames for calculating the mean
+				fitted_inds = [type(test.data[i][1]) != list for i in range(len(test.data))]
+				hmaxdat = array(test.data)[fitted_inds,1]
+				#---two-step filtering first to get valid fits and then to apply the curvature filter
+				cfilt_inds = [i for i in range(len(array(test.data))) 
+					if (type(array(test.data)[i][1]) != list 
+					and 10*abs(array(test.data)[i,1])>smallfilt 
+					and 10*abs(array(test.data)[i,1])<hifilt)]
+				cfilt_inds_small = [i for i in range(len(array(test.data))) 
+					if (type(array(test.data)[i][1]) != list and 10*abs(array(test.data)[i,1])<smallfilt)]
+				hmaxdat = 10*array(test.data)[cfilt_inds,1]
+				#---plot below small curvature limit for comparison
+				hist,edges = numpy.histogram(array(test.data)[cfilt_inds_small,1],
+					range=(-smallfilt,smallfilt),bins=1)
+				ax.plot(1./2*(edges[1:]+edges[:-1]),hist,'o',c=color,
+					lw=2)
+				#---compute means
+				valid_frames = len(hmaxdat)
+				fp.write('test = '+str(casual_names[pnum])+' mean Hmax = '+str(mean(hmaxdat))+\
+					' valid = '+str('%1.2f'%valid_frames))
+				#---filter by residuals
+				if resid_filters != None and resid_filters != []:
+					#unfilt_params = test.get(['type','params'])
+					#valid_inds = [i for i in range(len(unfilt_params)) if type(unfilt_params[i]) != list]
+					params = test.get(['type','params'])[cfilt_inds]
+					#---CRITICAL NOTE: I have fixed the curvature equation here H vs 2H, the most downstream
+					maxhs = 0.5*10*test.get(['type','maxhs'])[cfilt_inds]
+					target_zones = test.get(['type','target_zones'])[cfilt_inds]
+					resids = [sqrt(mean([abs(gauss2d(params[j],i[0],i[1])-i[2])**2 for i in target_zones[j]])) 
+						for j in range(len(target_zones))]
+					means_by_resid_filt = []
+					for i in range(len(resid_filters)):
+						hist,edges = numpy.histogram(maxhs[array(resids)<resid_filters[i][0]],
+							range=(-hifilt,hifilt),bins=hmax_nbins)				
+						ax.plot(1./2*(edges[1:]+edges[:-1]),hist,'-',c=color,lw=2,alpha=resid_filters[i][1])
+						means_by_resid_filt.append(mean(maxhs[array(resids)<resid_filters[i][0]]))
+				#---filtered data
+				hist,edges = numpy.histogram(hmaxdat[abs(hmaxdat)>smallfilt],
+					range=(-hifilt,hifilt),bins=hmax_nbins)
+				if max(hist) > maxpeak: maxpeak = max(hist)
+				ax.plot(1./2*(edges[1:]+edges[:-1]),hist,'-',c=color,
+					lw=2,label=(casual_names[pnum]+' ' if casual_names[pnum].find('monomer') == -1 else '')+\
+					(str('%0.3f'%mean(hmaxdat)) if valid_frames > 0 else '0')+\
+					(','+','.join([str('%0.3f'%i) 
+						for i in means_by_resid_filt]) \
+						if (len(resid_filters) > 0 and valid_frames > 0) else '')+\
+						r'$\,\mathrm{{nm}^{-1}}$('+\
+						(str('%3.d'%(valid_frames)) if valid_frames > 0. else '0')+str(')'))
+				#---inset with raw data, usually unnecessary if the fits are good enough
+				#---Nb disabled this because most points were included			
+				if inset_raw_hmax:
+					hist,edges = numpy.histogram(hmaxdat[abs(hmaxdat)>hifilt],
+						range=(-extrem_c0dat,extrem_c0dat),bins=hmax_nbins)
+					axins.plot(1./2*(edges[1:]+edges[:-1]),hist,'-',c=color,lw=2)
+					hist,edges = numpy.histogram(hmaxdat[abs(hmaxdat)<hifilt],
+						range=(-extrem_c0dat,extrem_c0dat),bins=hmax_nbins)
+					axins.plot(1./2*(edges[1:]+edges[:-1]),hist,'.',c=color,lw=2)
+				if inset_extents:
+					extdat = sqrt(abs(array([test.data[i][0][4:6] for i in cfilt_inds \
+						if type(test.data[i][1]) != list]).flatten()))
+					hist,edges = numpy.histogram(extdat,
+						range=(0,extent_range),bins=extent_range+1)
+					axins.plot(1./2*(edges[1:]+edges[:-1]),hist,'-',c=color,lw=2)
+					#---temporarily disabled					
+					if 0 and resid_filters != None and resid_filters != []:
+						for i in range(len(resid_filters)):
+							if len(extdat) > 0:
+								hist,edges = numpy.histogram(extdat[array(resids)<resid_filters[i][0]],
+									range=(0,extent_range),bins=extent_range+1)				
+								axins.plot(1./2*(edges[1:]+edges[:-1]),hist,'-',c=color,lw=2,
+									alpha=resid_filters[i][1])
+			ax.legend(loc='upper left',prop={'size':fsaxlegend_small})
+			if inset_raw_hmax:
+				axins.set_yticklabels([])
+				axins.get_xaxis().set_major_locator(mpl.ticker.MaxNLocator(prune='both',nbins=4))
+				axins.set_xlabel('unfiltered')
+			if inset_extents:
+				axins.set_yticklabels([])
+				axins.get_xaxis().set_major_locator(mpl.ticker.MaxNLocator(prune='both',nbins=4))
+				axins.set_xlabel('extent '+r'$\mathrm{\sigma_{a,b}\,(nm)}$')
+			#---get protein
+			if protein_pkl == None: mset_protein = msets[anum]
+			#---retrieve protein points from a different dictionary item
+			else:
+				protein_pkl_name = protein_pkl
+				for i in analysis_descriptors[protein_pkl_name]: 
+					vars()[i] = (analysis_descriptors[protein_pkl_name])[i]
+				filespec = specname_guess(sysname,trajsel)
+				mset_protein = unpickle_special('pkl.structures.'+filespec+'.pkl')
+				#---re-populate the variables for the original system now that you got the protein pickle
+				for i in analysis_descriptors[aname]: vars()[i] = (analysis_descriptors[aname])[i]
+			#---plot structure
+			ax = plt.subplot(gs[anum,2])
+			im = plotter2d(ax,mset,dat=mean(mset.surf,axis=0)/10.,lognorm=False,cmap=mpl.cm.RdBu_r,
+				inset=False,cmap_washout=1.0,ticklabel_show=[1,1],tickshow=[1,1],centertick=False,
+				fs=fsaxlabel,label_style='xy',lims=[-extremz/10.,extremz/10.])
+			if analysis_names.index(aname) < len(analysis_names)-1:
+				ax.set_yticklabels([])				
+			#---height color scale
+			axins2 = inset_axes(ax,width="5%",height="100%",loc=3,
+				bbox_to_anchor=(1.,0.,1.,1.),
+				bbox_transform=ax.transAxes,
+				borderpad=0)
+			cbar = plt.colorbar(im,cax=axins2,orientation="vertical")
+			if inset_raw_hmax or inset_extents: plt.setp(axins.get_yticklabels(),fontsize=fsaxlabel)
+			axins2.set_ylabel(r'$\left\langle z(x,y)\right\rangle \:(\mathrm{nm})$',
+				fontsize=fsaxlabel,rotation=270)
+			#---plot protein hulls
+			for pnum in range(len(dat)):
+				test = dat[pnum]
+				ps = test.getnote('tl')[test.getnote('this_test')]
+				if type(ps) == slice:
+					protpts = mean(mset_protein.protein,axis=0)[ps,0:2]
+				else: 
+					protpts = mean(mset_protein.protein,axis=0)[:,0:2]+ps
+				casual_name = test.getnote('testlist')[test.getnote('this_test')]
+				if casual_name != 'full' or len(casual_names) == 1:
+					if casual_name == 'peak': color = colordict('blue')
+					elif casual_name == 'valley': color = colordict('red')
+					elif casual_name == 'full': color = colordict('black')
+					else: color = colordict(color_order.index(pnum))
+					plothull(ax,protpts,mset=mset_protein,subdivide=None,c=color,alpha=1.)
+				if pnum == 0 and residplot == True:
+					axresid = plt.subplot(gs[anum,3])
+					resid_scan = []
+					for fr in range(len(target_zones)):
+						H, xedges, yedges = histogram2d(
+							linalg.norm(target_zones[fr][:,:2]-mean(protpts,axis=0),axis=1),
+							[abs(gauss2d(params[0],i[0],i[1])-i[2])**2 for i in target_zones[fr]],
+							range=((0,700),(0,10)),bins=(100,20))
+						resid_scan.append(H)
+					axresid.imshow(sum(resid_scan,axis=0).T,interpolation='nearest',origin='lower')
+		for ax in axlist:
+			ax.set_ylim((0,maxpeak))
+		fp.close()
+		if zfiltdir == 0: filtstring = 'no'
+		elif zfiltdir == -1: filtstring = 'down'
+		elif zfiltdir == 1: filtstring = 'up'
+		fig.set_size_inches(fig.get_size_inches()[0]*1.5,fig.get_size_inches()[1]*1.5)
+		plt.savefig(pickles+'fig-dimple2-'+bigname+'.cut'+str(cutoff)+'.filt-'+\
+			str(filtstring)+'.png',dpi=300,bbox_inches='tight')
+		if show_plots: plt.show()
+		plt.clf()
+		
 #---plot summary
 if 'plotpub' in routine:
 	hmax_nbins = int(2*hifilt/hist_step)+1
@@ -760,7 +949,6 @@ if 'plot_residmaps' in routine:
 		if show_plots: plt.show()
 		plt.clf()
 
-#---plot dimple fits to the mean surface only but include a sweep over protein neighborhoods
 if 'plot_mean_fits' in routine:
 	msdats = [[] for i in range(len(analysis_names))]
 	for aname in analysis_names:
@@ -794,7 +982,12 @@ if 'plot_mean_fits' in routine:
 				msdats[anum][ms].getnote('decay_z0_min') == True:
 				msdats_subset2[anum].append(ms)
 	fig = plt.figure(figsize=(5,len(analysis_names)*2))
+	#gs = gridspec.GridSpec(len(analysis_names),3,wspace=0.0,hspace=0.0)
 	gs = gridspec.GridSpec(len(analysis_names),2,wspace=0.0,hspace=0.0)
+	#gs = gridspec.GridSpec(len(analysis_names),2,wspace=0.0,hspace=0.0)
+	#gs.update(left=0.0,right=0.7)
+	#gs2 = gridspec.GridSpec(len(analysis_names),1,wspace=0.0,hspace=0.0)
+	#gs2.update(left=0.75,right=1.0)
 	cuts = [i[0] for i in params_plot]	
 	extremz = max([max([mean(mset.surf,axis=0).max(),abs(mean(mset.surf,axis=0).min())]) for mset in msets])
 	for aname in analysis_names:
@@ -849,6 +1042,7 @@ if 'plot_mean_fits' in routine:
 			ax.set_ylabel(label,fontsize=fsaxlabel)
 		#---plot Hmax values for the average structures, z0_min (note I switched these)
 		if 0:
+			#ax = plt.subplot(gs[anum,1])
 			ax = plt.subplot(gs[anum,0])
 			testnames = [i[0] if type(i) == list else i for i in msdats[anum][0].getnote('testlist')]
 			dat = [msdats[anum][i] for i in msdats_subset2[anum]]
@@ -878,7 +1072,10 @@ if 'plot_mean_fits' in routine:
 			ax.get_yaxis().set_major_locator(mpl.ticker.MaxNLocator(prune='both'))
 			if analysis_names.index(aname) == 0:
 				ax.set_title('$\mathsf{H_{max}\,(nm^{-1})}$',fontsize=16)
+		#ax.yaxis.tick_right()
+		#ax.set_yticklabels([])
 		#---plot structure
+		#ax = plt.subplot(gs2[anum])
 		ax = plt.subplot(gs[anum,1])
 		im = plotter2d(ax,mset,dat=mean(mset.surf,axis=0)/10.,lognorm=False,cmap=mpl.cm.RdBu_r,
 			inset=False,cmap_washout=1.0,ticklabel_show=[1,1],tickshow=[1,1],centertick=False,

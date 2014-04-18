@@ -10,6 +10,7 @@ execfile('locations.py')
 #---parameters
 rounder = 20.0
 
+#---load the standard header defintions
 execfile('header-cgmd.py')
 		
 analysis_names = [
@@ -21,7 +22,7 @@ analysis_names = [
 	'v550-300000-400000-200',
 	'v614-40000-140000-200',
 	'v612-10000-80000-200',
-	'v616-61100-117100-1000',
+	'v616-210000-310000-200',
 	][-1:]
 
 #---MAIN
