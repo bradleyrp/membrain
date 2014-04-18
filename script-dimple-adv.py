@@ -20,11 +20,11 @@ analysis_descriptors_extra = {
 	'v614-120000-220000-200':
 		{'whichframes':slice(None,None),
 		'protein_pkl':None,
-		'testlist':testlist_control},
+		'testlist':testlist_std},
 	'v612-75000-175000-200':
 		{'protein_pkl':None,
 		'whichframes':slice(None,None),
-		'testlist':testlist_control},
+		'testlist':testlist_std},
 	'v550-400000-500000-160':
 		{'nprots':1,
 		'whichframes':slice(0,500),
@@ -46,7 +46,7 @@ analysis_descriptors_extra = {
 	'v616-210000-310000-200':
 		{'whichframes':slice(None,None),
 		'protein_pkl':None,
-		'testlist':testlist_control}}
+		'testlist':testlist_std}}
 		
 #---coallate two dictionaries
 execfile('header-cgmd.py')
@@ -67,14 +67,14 @@ analysis_names = [
 	'v614-40000-140000-200',
 	'v612-10000-80000-200',
 	'v550-300000-400000-200',
-	][:4]
+	][:1]
 routine = [
 	'compute',
 	'compute_mean_fits',
 	'plot_residmaps',
 	'plot_mean_fits',
 	'plotpub',
-	][-1:]
+	][:1]
 bigname = 'v616-v614-v612-v550-ver1'
 
 #---Nb you must run compute_mean_fits with decay_z0_min = True and False if you want to do both plots
@@ -315,9 +315,11 @@ if 'compute' in routine or 'compute_mean_fits' in routine:
 				index = [i for i in range(len(msdats[anum])) if all([
 					msdats[anum][i].getnote('cutoff') == cutoff,
 					msdats[anum][i].getnote('zfiltdir') == zfiltdir,
-					msdats[anum][i].getnote('decay_z0_min') == decay_z0_min,
+					(msdats[anum][i].getnote('decay_z0_min') == decay_z0_min or 
+					(msdats[anum][i].getnote('decay_z0_min') == None and decay_z0_min == False)),
 					msdats[anum][i].getnote('decay_z0') == decay_z0,
 					all(msdats[anum][i].getnote('tl')[msdats[anum][i].getnote('this_test')] == test)])]
+				raw_input('...')
 				for i in index: chopblock.append(i)
 			tl = [tl[i] for i in range(len(tl)) if i not in chopblock]
 			if tl == []:
@@ -339,13 +341,9 @@ if 'compute' in routine or 'compute_mean_fits' in routine:
 					target_zones_frame = []
 					for ps in tl:
 						#---define so-called protein points
-						
 						#---this is where we define reference points !!!!!!!!!! replace with dynamic measure
-						
 						if type(ps) == slice: protpts = mset_protein.protein[fr][ps,0:2]
 						else: protpts = mset_protein.protein[fr][:,0:2]+ps
-						
-						
 						#---get surface points
 						if fr == -1:
 							surfpts = mset.wrappbc(mset.unzipgrid(mean(mset.surf,axis=0),
