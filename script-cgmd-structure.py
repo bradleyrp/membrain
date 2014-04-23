@@ -8,22 +8,22 @@ execfile('locations.py')
 #-------------------------------------------------------------------------------------------------------------
 
 #---parameters
-rounder = 20.0
+rounder = 10
 
 #---load the standard header defintions
 execfile('header-cgmd.py')
 		
-analysis_names = [
+analysis_names = [[
 	'v701-60000-160000-200',
 	'v614-120000-220000-200',
 	'v700-500000-600000-200',
 	'v612-75000-175000-200',
-	'v550-4000000-5000000-160',
+	'v550-400000-500000-160',
 	'v550-300000-400000-200',
 	'v614-40000-140000-200',
 	'v612-10000-80000-200',
 	'v616-210000-310000-200',
-	][-1:]
+	][i] for i in [[8,1,3,4],[0,2,5,6,7]][-1]]
 
 #---MAIN
 #-------------------------------------------------------------------------------------------------------------
@@ -52,13 +52,15 @@ for aname in analysis_names:
 			else: tslicepos = -2
 			timeslice = [int(i) for i in trajsel.split('.')[tslicepos].split('-')]
 		if protein_select == None:
-			mset.midplaner(selector,skip=skip,rounder=rounder,framecount=framecount,timeslice=timeslice)
+			mset.midplaner(selector,skip=skip,rounder=float(rounder),
+				framecount=framecount,timeslice=timeslice)
 		else:
-			mset.midplaner(selector,skip=skip,rounder=rounder,framecount=framecount,
+			mset.midplaner(selector,skip=skip,rounder=float(rounder),framecount=framecount,
 				protein_selection=protein_select,timeslice=timeslice)
 		mset.calculate_undulations()
 		#---save the data
-		pickledump(mset,'pkl.structures.'+specname_pickle(sysname,traj)+'.pkl',directory=pickles)
+		pickledump(mset,'pkl.structures.'+'space'+str(rounder)+'A.'+\
+			specname_pickle(sysname,traj)+'.pkl',directory=pickles)
 		if erase_when_finished:
 			del mset
 		checktime()

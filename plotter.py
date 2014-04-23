@@ -245,8 +245,9 @@ def plotter2d(ax,mset,dat=None,nlabels=None,tickshow=False,cmap=None,lims=None,
 			list(arange(0,n/2,sskipy)))*mset.rounder/mset.lenscale]
 	else:
 		scalefac = mset.rounder/mset.lenscale
-		xticks = range(0,m,tickskip)
-		yticks = range(0,n,tickskip)
+		#---recently changed this to start at tickskip instead of zero
+		xticks = range(tickskip,m,tickskip)
+		yticks = range(tickskip,n,tickskip)
 		xticklabels = [int(scalefac*i) for i in xticks]
 		yticklabels = [int(scalefac*i) for i in yticks]
 	#---plot
@@ -488,7 +489,7 @@ def plotmov(dat,basename,altdat=None,panels=1,plotfunc=None,figsize=None,keep_sn
 		os.popen('rm -r -f '+pickles+'/figs-'+sysname+'-dimple-view')
 		
 def plothull(ax,points,griddims=None,vecs=None,c=None,mset=None,subdivide=None,
-	alpha=None,nine=False,fill=None):
+	alpha=None,nine=False,fill=None,radius=0.5):
 	if alpha == None: alpha = 0.65
 	if vecs == None: vecs = mean(mset.vecs,axis=0)
 	if griddims == None: m,n = mset.griddims
@@ -511,7 +512,7 @@ def plothull(ax,points,griddims=None,vecs=None,c=None,mset=None,subdivide=None,
 					facecolor=c,lw=2,alpha=alpha,edgecolor=c))
 	else:
 		pts = [mean(points,axis=0)[i]/mean(mset.vecs,axis=0)[i]*mset.griddims[i] for i in range(2)]
-		ax.add_patch(mpl.patches.Circle(pts,radius=0.5,color=c,edgecolor=c,lw=2,alpha=alpha))
+		ax.add_patch(mpl.patches.Circle(pts,radius=radius,color=c,edgecolor=c,lw=2,alpha=alpha))
 
 
 

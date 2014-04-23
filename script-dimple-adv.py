@@ -13,7 +13,8 @@ from scipy.optimize import leastsq
 testlist_std = ['full','monomers']
 testlist_mono = ['full']
 testlist_control = ['peak','valley']
-testlist_dynamic = ['peak_dynamic']
+testlist_dynamic = ['peak (framewise)','valley (framewise)']
+testlist_control2 = testlist_control+[['test',[328.,279.]]]
 
 #---additions to the library of available simulations
 analysis_descriptors_extra = {
@@ -28,8 +29,8 @@ analysis_descriptors_extra = {
 	'v550-400000-500000-160':
 		{'nprots':1,
 		'whichframes':slice(0,500),
-		'protein_pkl':'v612-75000-175000-200',
-		'testlist':testlist_control+[['test',[328.,279.]]]},
+		'protein_pkl':'v614-120000-220000-200',
+		'testlist':testlist_dynamic},
 	'v614-40000-140000-200':
 		{'whichframes':slice(None,None),
 		'protein_pkl':None,
@@ -42,7 +43,7 @@ analysis_descriptors_extra = {
 		{'nprots':1,
 		'whichframes':slice(0,500),
 		'protein_pkl':'v612-75000-175000-200',
-		'testlist':testlist_control+[['test',[328.,279.]]]},
+		'testlist':testlist_dynamic},
 	'v616-210000-310000-200':
 		{'whichframes':slice(None,None),
 		'protein_pkl':None,
@@ -67,14 +68,14 @@ analysis_names = [
 	'v614-40000-140000-200',
 	'v612-10000-80000-200',
 	'v550-300000-400000-200',
-	][:1]
+	][:4]
 routine = [
 	'compute',
 	'compute_mean_fits',
 	'plot_residmaps',
 	'plot_mean_fits',
 	'plotpub',
-	][:1]
+	][-1:]
 bigname = 'v616-v614-v612-v550-ver1'
 
 #---Nb you must run compute_mean_fits with decay_z0_min = True and False if you want to do both plots
@@ -287,7 +288,7 @@ if 'compute' in routine or 'compute_mean_fits' in routine:
 					protein_com = mean(mean(mset_protein.protein,axis=0),axis=0)[:2]
 					shift = maxxy - protein_com
 					tl.append(shift)
-				elif test == 'peak_dynamic':
+				elif test == 'peak (framewise)':
 					shiftlist = []
 					for fr in range(len(mset.surf))[whichframes]:
 						maxpos = unravel_index(mset.surf[fr].argmax(),mset.surf[fr].shape)
@@ -295,12 +296,21 @@ if 'compute' in routine or 'compute_mean_fits' in routine:
 						protein_com = mean(mean(mset_protein.protein,axis=0),axis=0)[:2]
 						shift = maxxy - protein_com
 						shiftlist.append(shift)
-					tl.append(shift)
-					raw_input('......')			
+					tl.append(shiftlist)
+				elif test == 'valley (framewise)':
+					shiftlist = []
+					for fr in range(len(mset.surf))[whichframes]:
+						minpos = unravel_index(mset.surf[fr].argmin(),mset.surf[fr].shape)
+						minxy = [minpos[i]*mset.vec(fr)[i]/mset.griddims[i] for i in range(2)]
+						protein_com = mean(mean(mset_protein.protein,axis=0),axis=0)[:2]
+						shift = minxy - protein_com
+						shiftlist.append(shift)
+					tl.append(shiftlist)
 				elif type(test) == list:
 					protein_com = mean(mean(mset_protein.protein,axis=0),axis=0)[:2]
 					shift =  test[1] - protein_com
 					tl.append(shift)
+				print test
 			#---if monomer-specificity is requested, replace the names
 			if 'monomers' in testlist:
 				ind_cleave = testlist.index('monomers')
@@ -312,14 +322,8 @@ if 'compute' in routine or 'compute_mean_fits' in routine:
 			chopblock = []
 			for k in range(len(tl)):
 				test = tl[k]
-				index = [i for i in range(len(msdats[anum])) if all([
-					msdats[anum][i].getnote('cutoff') == cutoff,
-					msdats[anum][i].getnote('zfiltdir') == zfiltdir,
-					(msdats[anum][i].getnote('decay_z0_min') == decay_z0_min or 
-					(msdats[anum][i].getnote('decay_z0_min') == None and decay_z0_min == False)),
-					msdats[anum][i].getnote('decay_z0') == decay_z0,
-					all(msdats[anum][i].getnote('tl')[msdats[anum][i].getnote('this_test')] == test)])]
-				raw_input('...')
+				#index = [i for i in range(len(msdats[anum])) if all([msdats[anum][i].getnote('cutoff') == cutoff,msdats[anum][i].getnote('zfiltdir') == zfiltdir,(msdats[anum][i].getnote('decay_z0_min') == decay_z0_min or (msdats[anum][i].getnote('decay_z0_min') == None and decay_z0_min == False)),msdats[anum][i].getnote('decay_z0') == decay_z0])]
+				index = [i for i in range(len(msdats[anum])) if all([msdats[anum][i].getnote('cutoff') == cutoff,msdats[anum][i].getnote('zfiltdir') == zfiltdir,(msdats[anum][i].getnote('decay_z0_min') == decay_z0_min or (msdats[anum][i].getnote('decay_z0_min') == None and decay_z0_min == False)),msdats[anum][i].getnote('decay_z0') == decay_z0,(all([msdats[anum][i].getnote('tl')[msdats[anum][i].getnote('this_test')][j] == test[j] for j in range(len(test)) if j < len(msdats[anum][i].getnote('tl')[msdats[anum][i].getnote('this_test')])]) if len(shape(test)) == 2 else all(msdats[anum][i].getnote('tl')[msdats[anum][i].getnote('this_test')] == test)),])]
 				for i in index: chopblock.append(i)
 			tl = [tl[i] for i in range(len(tl)) if i not in chopblock]
 			if tl == []:
@@ -343,7 +347,11 @@ if 'compute' in routine or 'compute_mean_fits' in routine:
 						#---define so-called protein points
 						#---this is where we define reference points !!!!!!!!!! replace with dynamic measure
 						if type(ps) == slice: protpts = mset_protein.protein[fr][ps,0:2]
-						else: protpts = mset_protein.protein[fr][:,0:2]+ps
+						elif type(ps) == list and len(shape(ps)) == 1:
+							protpts = mset_protein.protein[fr][:,0:2]+ps
+						elif type(ps) == list and len(shape(ps)) == 2:
+							protpts = mset_protein.protein[fr][:,0:2]+ps[fr]
+						#raw_input('...')
 						#---get surface points
 						if fr == -1:
 							surfpts = mset.wrappbc(mset.unzipgrid(mean(mset.surf,axis=0),
@@ -425,6 +433,7 @@ if 'plotpub' in routine:
 	hmax_nbins = int(2*hifilt/hist_step)+1
 	msdats = [[] for i in range(len(analysis_names))]
 	for aname in analysis_names:
+		print aname
 		for i in analysis_descriptors[aname]: vars()[i] = (analysis_descriptors[aname])[i]
 		filespec = specname_guess(sysname,trajsel)
 		msdat = unpickle_special('pkl.dimple2.'+filespec+'.pkl')
@@ -602,7 +611,7 @@ if 'plotpub' in routine:
 				ps = test.getnote('tl')[test.getnote('this_test')]
 				if type(ps) == slice:
 					protpts = mean(mset_protein.protein,axis=0)[ps,0:2]
-				else: 
+				elif len(shape(ps)) == 1: 
 					protpts = mean(mset_protein.protein,axis=0)[:,0:2]+ps
 				casual_name = test.getnote('testlist')[test.getnote('this_test')]
 				if casual_name != 'full' or len(casual_names) == 1:
@@ -917,4 +926,3 @@ if 'plot_mean_fits' in routine:
 	plt.savefig(pickles+'fig-dimple2avg-'+bigname+'.png',dpi=300,bbox_inches='tight')
 	if show_plots: plt.show()
 	plt.clf()
-	

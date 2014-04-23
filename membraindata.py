@@ -2,6 +2,7 @@
 
 import numpy
 import collections
+import itertools
 
 #---MEMBRANEDATA CLASS
 #-------------------------------------------------------------------------------------------------------------
@@ -79,8 +80,12 @@ class MembraneData:
 			self.struct_opts = {'type': {'mastermsd_zones':0,'distsxy':1,'distsz':2}}
 		elif self.calctype == 'spanangle':
 			self.struct = {'frame':0,'resid':1,'headspan':2,'headangle':3}
-		#---type: updated/advanced dimple fitting
+		#---type: updated/advanced dimple fitting (dimple2 pkl objects)
 		elif self.calctype == 'dimple2':
+			self.struct = {'frame':0,'type':1}
+			self.struct_opts = {'type' : {'params':0,'maxhs':1,'maxhxys':2,'target_zones':3,'frameno':4}}
+		#---type: updated/advanced dimple fitting (dimple3 pkl objects)
+		elif self.calctype == 'dimple3':
 			self.struct = {'frame':0,'type':1}
 			self.struct_opts = {'type' : {'params':0,'maxhs':1,'maxhxys':2,'target_zones':3,'frameno':4}}
 		#---default values for label if no extra descriptors

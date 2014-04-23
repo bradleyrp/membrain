@@ -168,7 +168,7 @@ def status(string,start=None,i=None,looplen=None):
 	'''Print status to the screen also allows for re-writing the line.'''
 	#---display a refreshable string	
 	if start == None:
-		print '\r'+string+'\t'
+		print '\r'+string+'\t',
 		sys.stdout.flush()
 	#---estimate the remaining time given a start time, loop length, and iterator
 	else:
