@@ -19,33 +19,26 @@ from mpl_toolkits.axes_grid import Divider
 from mpl_toolkits.axes_grid1.inset_locator import inset_axes
 
 #---plan
-analysis_descriptors = {
-	'v614-120000-220000-200':
-		{'sysname':'membrane-v614','sysname_lookup':None,
-		'trajsel':'s9-lonestar/md.part0004.120000-220000-200.xtc',
-		'label':r'$\mathrm{{ENTH}\ensuremath{\times}4}$',
-		'nprots':4,
-		'whichframes':slice(None,None),
+analysis_descriptors_extra = {
+	'v614-120000-220000-200': {
 		'protein_pkl':None,
 		'custom_topogcorr_specs':None,
-		'topogcorr_pkl':'pkl.topogcorr.membrane-v614-s9-lonestar-120000-220000-200.pkl'},
-	'v612-75000-175000-200':
-		{'sysname':'membrane-v612','sysname_lookup':None,
-		'trajsel':'t4-lonestar/md.part0007.75000-175000-200.xtc',
-		'label':r'$\mathrm{{ENTH}\ensuremath{\times}1}$',
-		'nprots':1,
+		'topogcorr_pkl':'pkl.topogcorr.membrane-v614-s9-lonestar-120000-220000-200.pkl'
+		},
+	'v612-75000-175000-200': {
 		'protein_pkl':None,
 		'custom_topogcorr_specs':None,
-		'whichframes':slice(None,None)},
-	'v550-400000-500000-160':
-		{'sysname':'membrane-v550','sysname_lookup':None,
-		'trajsel':'v1-lonestar/md.part0010.400000-500000-160.xtc',
-		'label':r'$\mathrm{control}$',
-		'nprots':1,
-		'whichframes':slice(0,500),
-		'protein_pkl':'pkl.structures.membrane-v612.t4-lonestar.md.part0007.75000-175000-200.pkl',
+		'whichframes':slice(None,None)
+		},
+	'v550-400000-500000-160': {
+		'protein_pkl':'pkl.structures.space10A.membrane-v612.t4-lonestar.md.part0007.75000-175000-200.pkl',
 		'custom_topogcorr_specs':None,
-		'custom_protein_shifts':['unshifted','peak','valley',[0.,-70.]][1:]}}
+		'custom_protein_shifts':['unshifted','peak','valley',[0.,-70.]][1:-1],
+		},
+	}
+		
+#---access central dictionary and combine it with the specifications above
+execfile('header-cgmd.py')
 		
 #---analysis menu
 do = ['phasecomp','topography_calc','topography_plot'][2]
@@ -76,7 +69,7 @@ elif do == 'topography_plot':
 		][:]
 	plot_reord = analysis_names
 	dolist = ['topogcorr_calc','topogcorr_plot_alt'][1:]
-	topogcorr_plot_zrange = (-2.5,2.5)
+	topogcorr_plot_zrange = (-2.0,2.0)
 	bigname = 'v614-v612-v550-ver2'
 	nhistbins = 80
 	nhistbins_smooth = 10
@@ -88,6 +81,13 @@ clrdict = {'red':0,'blue':1}
 
 #---method, topographic correlate
 topogcorr_plot_struct = True
+
+#---specify grid spacing for more recent midplane data
+gridspacing = 1.0
+spacetag = 'space'+str(int(round(gridspacing*10,0)))+'A.'
+
+#---specify how many frames to use
+whichframes = slice(0,500)
 
 #---MAIN, PHASE PLOTS
 #-------------------------------------------------------------------------------------------------------------
@@ -114,7 +114,7 @@ if 'msets' not in globals():
 	msets = []
 	for a in analysis_names:
 		for i in analysis_descriptors[a]: vars()[i] = (analysis_descriptors[a])[i]
-		msets.append(unpickle(pickles+'pkl.structures.'+specname_guess(sysname,trajsel)+'.pkl'))
+		msets.append(unpickle(pickles+'pkl.structures.'+spacetag+specname_guess(sysname,trajsel)+'.pkl'))
 		msets[-1].calculate_undulations()
 		#---hack
 		msets[-1].rounder = 20.
@@ -171,7 +171,7 @@ if 'phase_std_spec2d' in dolist:
 			ax = gs[calcs.index(calc)][(plot_reord).index(a)]
 			im = plotter2d(ax,mset,dat=data,cmap=cmap,lognorm=False,lims=[vmin,vmax],
 				ticklabel_show=[(1 if c == len(calcs)-1 else 0),0],tickshow=True,label_style='q',
-				centertick=True)
+				centertick=True,tickskip=int(round(mset.griddims[0]/6,-1)))
 			#---plot details
 			if c == 0: ax.set_title(label)
 		#---colorbar for this row
@@ -330,8 +330,10 @@ if 'topogcorr_plot' in dolist:
 			histdatnorm = nan_to_num([array(tc.topoghist[h][i]/(tc.topoghist[h][i].sum(axis=0))) 
 				for i in range(len(tc.topoghist[h]))])
 			hcorr = mean(histdatnorm,axis=0)
-			hcorr_smooth = [mean([tc.yedges[hcorr[j].argmax()] for j in range(i+smoothwid)]) for i in range(len(hcorr)-smoothwid)]
-			hcorr_smooth_std = [std([tc.yedges[hcorr[j].argmax()] for j in range(i+smoothwid)]) for i in range(len(hcorr)-smoothwid)]
+			hcorr_smooth = [mean([tc.yedges[hcorr[j].argmax()] for j in range(i+smoothwid)]) 
+				for i in range(len(hcorr)-smoothwid)]
+			hcorr_smooth_std = [std([tc.yedges[hcorr[j].argmax()] for j in range(i+smoothwid)]) 
+				for i in range(len(hcorr)-smoothwid)]
 			#---extra attempt to distinguish control from protein simulation			
 			if 0:
 				extra_smoothwid = 20
@@ -397,7 +399,7 @@ if 'topogcorr_plot' in dolist:
 				bbox_to_anchor=(1.,0.,1.,1.),
 				bbox_transform=ax.transAxes,
 				borderpad=0)
-			cbar = plt.colorbar(im,cax=axins,orientation="vertical")
+			cbar = plt.colorbar(im,cax=axins,orientation='vertical')
 			plt.setp(axins.get_yticklabels(),fontsize=fsaxlabel)
 			axins.set_ylabel(r'$\left\langle z(x,y)\right\rangle \:(\mathrm{nm})$',
 				fontsize=fsaxlabel,rotation=270)
@@ -453,9 +455,9 @@ if 'topogcorr_plot_alt' in dolist:
 			else gs[(m if swaprows else 1),(1 if swaprows else m)]))
 		maxval = max(abs(mean(mset.surf,axis=0).min()/10.),abs(mean(mset.surf,axis=0).max()/10.))
 		im = plotter2d(axbot,mset,dat=mean(mset.surf,axis=0)/10.,lognorm=False,cmap=cmap,
-			inset=False,cmap_washout=1.0,ticklabel_show=[1,1],tickshow=[1,1],centertick=False,
-			fs=fsaxlabel,label_style='xy',
-				lims=([-maxval,maxval] if zrange == None else [zrange[0],zrange[1]]))
+			inset=False,cmap_washout=1.0,ticklabel_show=[1,1],tickshow=[1,1],
+			centertick=False,fs=fsaxlabel,label_style='xy',
+			lims=([-maxval,maxval] if zrange == None else [zrange[0],zrange[1]]))
 		if m != 0:
 			axbot.set_yticklabels([])
 			axbot.set_ylabel('')
@@ -495,7 +497,7 @@ if 'topogcorr_plot_alt' in dolist:
 				for pbcshift in [[0,0],[1,0],[0,1],[1,1],[-1,0],[0,-1],[-1,-1],[-1,1],[1,-1]]:
 					plothull(axbot,mean(mset_protein.protein,axis=0)[tc.prots_refs[h],:2]+\
 						shift+array([mean(mset.vecs,axis=0)[i]*pbcshift[i] for i in range(2)]),
-						mset=mset_protein,c= color,alpha=1.)
+						mset=mset_protein,c=color,alpha=1.,ec='w')
 		#---inset axis colorbar
 		if m == len(analysis_names)-1:
 			axins = inset_axes(axbot,width="5%",height="100%",loc=3,
@@ -522,7 +524,6 @@ if 'topogcorr_plot_alt' in dolist:
 		x0,x1 = ax.get_xlim()
 		y0,y1 = ax.get_ylim()
 		ax.set_aspect((x1-x0)/(y1-y0))
-	#plt.legend()
 	fig.set_size_inches(fig.get_size_inches()[0]*1.5,fig.get_size_inches()[1]*1.5)
 	plt.savefig(pickles+'fig-topography_alt-'+bigname+'.png',dpi=500,bbox_inches='tight')
 	if plotviewflag: plt.show()
@@ -555,3 +556,4 @@ if 0:
 	ax.plot([std(mean(mean(tcs[2].topoghist[2][:,s:s+smoothwind],axis=0),axis=0)) 
 		for s in range(0,70-smoothwind,1)],'go-')
 	plt.show()
+

@@ -35,6 +35,11 @@ import scipy.interpolate
 #---Custom classes
 from membraindata import *
 
+#---Status update function
+def status(string):
+	print '\r'+string+'\t',
+	sys.stdout.flush()
+
 #---MEMBRANESET CLASS
 #-------------------------------------------------------------------------------------------------------------
 
@@ -327,8 +332,6 @@ class MembraneSet:
 		monos.append([pointouts.resids()[i]-1 for i in range(len(whichlayer)) if whichlayer[i] == 1])
 		#---monolayer rerack hack if some residue IDs are missing
 		#---Nb this may affect the tilter, mesher, identify_residues, and batch_gr functions so beware
-		print monos[0]
-		print monos[1]
 		if (max(monos[0]+monos[1])-min(monos[0]+monos[1])) != len(monos[0]+monos[1])-1:
 			print 'warning: resorting the monolayer indices because there is a mismatch'
 			reracker = list(sort(monos[0]+monos[1]))	
@@ -444,8 +447,9 @@ class MembraneSet:
 			skip = int(float(self.nframes)/framecount)
 			skip = 1 if skip < 1 else skip
 		self.griddims = [int(round(self.vec(1)[0]/rounder)),int(round(self.vec(1)[1]/rounder))]
+		starttime = time.time()
 		for k in range(start,end,skip):
-			print 'status: calculating midplane for frame: '+str(k)
+			status('status: calculating midplane fr = '+str(k+1)+'/'+str(len(range(start,end,skip))))
 			self.calculate_midplane(selector,k,rounder=rounder,interp=interp,residues=residues,
 				thick=thick)
 			if protein_selection != None:

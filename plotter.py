@@ -366,7 +366,7 @@ def plotter_grid_undulations():
 	plt.show()
 
 def plotmov_panels(dat,basename,panels=1,figsize=None,keep_snapshots=True,cmap=None,lowres=False,smooth=None,
-	xedges=None,yedges=None,lims=None):
+	xedges=None,yedges=None,lims=None,nrows=1):
 	'''Generic wrapper for making movies from imshow with multiple panels.'''
 	#---Nb input must be a list of numpy arrays
 	import scipy.ndimage
@@ -418,7 +418,7 @@ def plotmov_panels(dat,basename,panels=1,figsize=None,keep_snapshots=True,cmap=N
 
 def plotmov(dat,basename,altdat=None,panels=1,plotfunc=None,figsize=None,keep_snapshots=True,
 	cmap=None,lowres=False,smooth=None,xedges=None,yedges=None,whitezero=False,lims=None,
-	args=None,slowdown=None):
+	args=None,slowdown=None,nrows=None):
 	'''Generic wrapper for making movies.'''
 	import scipy.ndimage
 	#---names
@@ -460,10 +460,10 @@ def plotmov(dat,basename,altdat=None,panels=1,plotfunc=None,figsize=None,keep_sn
 			#---then I switched it back. needs resolved
 			if args != None:
 				globals()[plotfunc]([dat[i][fr] for i in range(panels)],fig,altdat=altdat,
-					vmin=vmin,vmax=vmax,fr=fr,args=args)
+					vmin=vmin,vmax=vmax,fr=fr,args=args,nrows=nrows)
 			else:
 				globals()[plotfunc]([dat[i][fr] for i in range(panels)],fig,altdat=altdat,
-					vmin=vmin,vmax=vmax,fr=fr)
+					vmin=vmin,vmax=vmax,fr=fr,nrows=nrows)
 			#globals()[plotfunc](array(dat_vor)[...,fr],fig,altdat=altdat,
 			#	vmin=vmin,vmax=vmax,fr=fr)
 		plt.savefig(pickles+plot_video_filebase+'.fr.'+str('%04d'%framenums.index(fr))+'.png',
@@ -489,7 +489,7 @@ def plotmov(dat,basename,altdat=None,panels=1,plotfunc=None,figsize=None,keep_sn
 		os.popen('rm -r -f '+pickles+'/figs-'+sysname+'-dimple-view')
 		
 def plothull(ax,points,griddims=None,vecs=None,c=None,mset=None,subdivide=None,
-	alpha=None,nine=False,fill=None,radius=0.5):
+	alpha=None,nine=False,fill=None,radius=0.5,ec=None):
 	if alpha == None: alpha = 0.65
 	if vecs == None: vecs = mean(mset.vecs,axis=0)
 	if griddims == None: m,n = mset.griddims
@@ -501,7 +501,7 @@ def plothull(ax,points,griddims=None,vecs=None,c=None,mset=None,subdivide=None,
 			hull = scipy.spatial.ConvexHull(pts)
 			ax.add_patch(mpl.patches.Polygon(pts[hull.vertices],
 				closed=True,fill=(True if fill else False),
-				facecolor=c,lw=2,alpha=alpha,edgecolor=c))
+				facecolor=c,lw=1,alpha=alpha,edgecolor=(c if ec == None else ec)))
 		else:
 			slicesize = len(pts)/subdivide
 			for s in range(subdivide):
@@ -509,7 +509,7 @@ def plothull(ax,points,griddims=None,vecs=None,c=None,mset=None,subdivide=None,
 				hull = scipy.spatial.ConvexHull(ptssub)
 				ax.add_patch(mpl.patches.Polygon(ptssub[hull.vertices],
 					closed=True,fill=(True if fill else False),
-					facecolor=c,lw=2,alpha=alpha,edgecolor=c))
+					facecolor=c,lw=1,alpha=alpha,edgecolor=(c if ec == None else ec)))
 	else:
 		pts = [mean(points,axis=0)[i]/mean(mset.vecs,axis=0)[i]*mset.griddims[i] for i in range(2)]
 		ax.add_patch(mpl.patches.Circle(pts,radius=radius,color=c,edgecolor=c,lw=2,alpha=alpha))

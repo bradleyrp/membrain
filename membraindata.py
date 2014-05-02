@@ -88,6 +88,9 @@ class MembraneData:
 		elif self.calctype == 'dimple3':
 			self.struct = {'frame':0,'type':1}
 			self.struct_opts = {'type' : {'params':0,'maxhs':1,'maxhxys':2,'target_zones':3,'frameno':4}}
+		#---type: updated object which holds height distributions near certain neighborhoods (topography)
+		elif self.calctype == 'topography3':
+			self.struct = {'frame':0,'heights':1}
 		#---default values for label if no extra descriptors
 		if label != None:
 			self.description = label 

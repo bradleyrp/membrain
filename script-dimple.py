@@ -4,21 +4,9 @@ interact = True
 from membrainrunner import *
 execfile('locations.py')
 
+#---imports
 from scipy.optimize import leastsq
-
-'''
-Dimple-fitting code
-This is the latest version created 2014.04.20
-Here I introduce "dimple3" pickle objects and try to make the bookkeeping easier.
-
-Code plan. 
-	Make the membrane data object
-	Make a function which designs the note objects
-	Make a function which checks for pkls of previously created parameter sets
-	Check the exponent on the fitting
-	Check the RMSD
-	Make a lattice code for testing the control
-'''
+import matplotlib.image as mpimg
 
 #---PARAMETERS
 #-------------------------------------------------------------------------------------------------------------
@@ -36,23 +24,6 @@ analysis_descriptors_extra = {
 		
 #---coallate two dictionaries
 execfile('header-cgmd.py')
-master_dict = dict()
-for key in analysis_descriptors.keys():
-	if key in analysis_descriptors_extra.keys():
-		master_dict.update({key:dict(analysis_descriptors[key],
-			**analysis_descriptors_extra[key])})
-	else: master_dict.update({key:analysis_descriptors[key]})
-analysis_descriptors = master_dict
-
-def dimple_compile_notes(aname,expt):
-	'''Compile a "notes" object with all parameters for a test+system combination.'''
-	notes_list = []
-	for i in analysis_descriptors[aname]:
-		notes_list.append([i,(analysis_descriptors[aname])[i]])
-	for key in expt.keys():
-		notes_list.append([key,expt[key]])
-	notes_list.append(['callsign',aname])
-	return notes_list
 
 #---analysis plan
 analysis_names = [
@@ -63,158 +34,53 @@ analysis_names = [
 	'v614-40000-140000-200',
 	'v612-10000-80000-200',
 	'v550-300000-400000-200',
+	'v700-500000-600000-200',
+	'v701-60000-160000-200',
 	][:4]
 routine = [
-	'compute',
-	'plot',
-	][1:]
-bigname = 'v616-v614-v612-v550-ver2'
+	'compute_dimple',
+	'plot_dimple',
+	'plot_radar',
+	'compute_topog',
+	'plot_topog',
+	][-1:]
+bigname = 'v616-v614-v612-v550-ver2-test'
 
-#---EXPERIMENT PARAMETERS
-#-------------------------------------------------------------------------------------------------------------
-
-#---global settings
-gridspacing = 1.0
-
-'''
-Experiment/analysis parameters list
-	1. decay_z0 : 
-		zero = dimple decays to zero (average height) at infinity
-		min = dimple decays to the average bilayer minimum height at infinity
-	2. cutoff : cutoff about protein points which defines a neighborhood (in Angstroms)
-	3. z_filter : 
-		inclusive = 
-		up =
-		down =
-	4. fit_dynamics_type : 
-		dynamic = 
-		mean = 
-	5. framecounts : if None use all frames, if slice or integer, use that to get a subset of frames
-	6. geography : 
-		proteins = use the proteins themselves as geographic sources
-		lattice = sample random points and use a fixed single point as the center of the neighborhood
-'''
-
-#---experiment parameters
-params_expt = {
-	'decay_z0' : 'zero',
-	'cutoff' : 100,
-	'fit_dynamics_type' : 'dynamic',
-	'z_filter' : 'inclusive',
-	'framecounts' : 500, 
-	'geography' : '',
-	}
+#---available dimple plots
+dimple_plot_type = [
+	'lattice6',
+	'extrema',
+	'proteins_controls',
+	][1]
 	
-#---sweeping parameters
-params_sweeps = {
-	'cutoff':[100],
-	'geography':[
-		'proteins',
-		['control','v614-120000-220000-200'],
-		['control','v612-75000-175000-200'],
-		'max','min',
-		'max_dynamic','min_dynamic',
-		['lattice_grid',6],
-		][:],
-	}	
+#---available radar plots
+radar_plot_type = ['radar_proteins','radar_extrema'][-1]
+
+#---available topography plots
+topog_plot_type = [
+	'extrema',
+	][0]
 	
-#---PLOT PARAMETERS
+#---DOWNSTREAM
 #-------------------------------------------------------------------------------------------------------------
-
-#---general parameters
-show_plots = True
-
-#---general settings
-params_plot_settings = {
-	'hifilt' : 0.06,
-	'smallfilt' : 0.001,
-	'hist_step' : 0.005,
-	'extent_range' : 32,
-	}
-
-#---master list of parameters
-params_plot_master,params_plot_master_names = [],[]
-
-#---plot parameter set "lattice6"
-params_plot_master_names.append('lattice6')
-params_plot_master.append([
-	[dimple_compile_notes(aname,
-	dict({
-		'decay_z0' : 'zero',
-		'cutoff' : 100,
-		'fit_dynamics_type' : 'dynamic',
-		'z_filter' : 'inclusive',
-		'framecounts' : 500, 
-		'geography' : geog,
-		},))
-		for geog in [['lattice_grid',6]]]
-	for aname in analysis_names])
-
-#---plot parameter set "proteins_controls"
-params_plot_master_names.append('proteins_controls')
-params_plot_master.append(
-	[[dimple_compile_notes(aname,
-		dict({
-			'decay_z0' : 'zero',
-			'cutoff' : 100,
-			'fit_dynamics_type' : 'dynamic',
-			'z_filter' : 'inclusive',
-			'framecounts' : 500, 
-			'geography' : geog,
-			},))
-		for geog in ['proteins']] 
-			for aname in analysis_names 
-			if (analysis_descriptors[aname])['nprots'] > 0]+\
-	[[dimple_compile_notes(aname,
-	dict({
-		'decay_z0' : 'zero',
-		'cutoff' : 100,
-		'fit_dynamics_type' : 'dynamic',
-		'z_filter' : 'inclusive',
-		'framecounts' : 500, 
-		'geography' : geog,
-		},))
-	for geog in [['control','v614-120000-220000-200'],['control','v612-75000-175000-200']]
-		for aname in analysis_names
-		if (analysis_descriptors[aname])['nprots'] == 0]])
-
-#---plot parameter set "extrema"
-params_plot_master_names.append('extrema')
-params_plot_master.append(
-	[[dimple_compile_notes(aname,
-		dict({
-			'decay_z0' : 'zero',
-			'cutoff' : 100,
-			'fit_dynamics_type' : 'dynamic',
-			'z_filter' : 'inclusive',
-			'framecounts' : 500, 
-			'geography' : geog,
-			},))
-		for geog in ['max_dynamic','min_dynamic','max','min']] 
-			for aname in analysis_names])
-
-#---select a plot scheme
-params_plot = params_plot_master[0]
-plot_scheme_name = params_plot_master_names[params_plot_master.index(params_plot)]
-
-#---NOTES
-#-------------------------------------------------------------------------------------------------------------
-
-'''
-COMPUTE WORKFLOW
-	1. Set experiment or analysis parameters and choose systems.
-	2. If sweeping, make a set of dictionaries with the parameters.
-	3. Over each sub-experiment, get the systems and assemble the notes list.
-	4. Use the notes list to see if you have already done that experiment.
-	5. If not, run the experiment and store the notes list.
-	6. Save the pickle either after each experiment, or at the end.
-'''
 	
+#---set downstream parameters
+if sum([i in routine for i in ['compute_dimple','compute_topog']]) > 1:
+	raise Exception('except: contradicting computations')
+#---settings for test types
+if any([i in routine for i in ['compute_dimple','plot_dimple']]): 
+	execfile('specs-dimple.py')
+	pklprefix = 'pkl.dimple3.'
+	testtype = 'dimple'
+elif any([i in routine for i in ['compute_topog','plot_topog']]): 
+	execfile('specs-topography.py')
+	pklprefix = 'pkl.topog3.'
+	testtype = 'topography'
+
 #---FUNCTIONS
 #-------------------------------------------------------------------------------------------------------------
 
-#---NOTE
-#---The function gauss2dh returns a value equal to 2H, which is corrected with the following factor.
+#---NOTE: the function gauss2dh returns a value equal to 2H, which is corrected with the following factor
 curvfac = float32(0.5)
 
 #---load expressions for mean and Gaussian curvature
@@ -250,42 +116,75 @@ def gauss2d_residual_z0_global(params,x,y,z):
 #---FUNCTIONS
 #-------------------------------------------------------------------------------------------------------------
 
-#---tag for referring to gridspacing/rounder in structure objects
-spacetag = 'space'+str(int(round(gridspacing*10,0)))+'A.'
-
 def dimple_save_data(aname):
 	'''Saves the global dimple3 result data object for a particular system name (name msdats[anum]).'''
 	for i in analysis_descriptors[aname]: vars()[i] = (analysis_descriptors[aname])[i]
 	anum = analysis_names.index(aname)
 	filespec = specname_guess(sysname,trajsel)
-	pklname = 'pkl.dimple3.'+spacetag+filespec+'.pkl'
+	pklname = pklprefix+spacetag+filespec+'.pkl'
 	pickledump(msdats[anum],pklname,directory=pickles)
 
 def listlook(data,name):
 	'''Treat a list like a dictionary and look up a value.'''
 	for i in data:
-		if i[0] == name:
-			return i[1]
+		if i[0] == name: return i[1]
 
 def dimple_test_lookup(notes,aname):
 	'''Find the indices corresponding to a particular test.'''
 	anum = analysis_names.index(aname)
 	inds = [j for j in range(len(msdats[anum])) if all([i in msdats[anum][j].notes for i in notes]) == True]
+	#inds = [j for j in range(len(msdats[anum])) if all([i in notes for i in msdats[anum][j].notes]) == True]
 	if inds != []: return inds
 	else: return False
+
+def prepare_experiments():	
+	'''Prepare a list of experiments according to any requested sweeps.'''
+	list_params_expts = []
+	keylist = params_sweeps.keys()
+	sweeps = [params_sweeps[key] for key in keylist]
+	param_combos = list(itertools.product(*sweeps))
+	for new_expt in param_combos:
+		expt_copy = params_expt.copy()
+		for key in keylist:
+			expt_copy[key] = new_expt[keylist.index(key)]
+		list_params_expts.append(expt_copy)
+	return list_params_expts
+	
+def compile_expt_notes(aname,expt,analysis_descriptors):
+	'''Compile a "notes" object with all parameters for a test+system combination.'''
+	notes_list = []
+	for i in analysis_descriptors[aname]:
+		notes_list.append([i,(analysis_descriptors[aname])[i]])
+	for key in expt.keys():
+		notes_list.append([key,expt[key]])
+	notes_list.append(['callsign',aname])
+	return notes_list
+	
+def compile_plot_params(plotname,analysis_descriptors):
+	'''Selects a plotname from the master list and compiles experiment/system combinations for plotting.'''
+	params_plot = []
+	for i in params_plot_master[params_plot_master_names.index(plotname)]:
+		subplot = []
+		for j in i:
+			subplot.append(compile_expt_notes(j[0],j[1],analysis_descriptors))
+		params_plot.append(subplot)
+	return params_plot
 
 def dimple_generate_neighborhood(notes):
 	'''Generate neighborhood points.'''
 	request_geography = listlook(notes,'geography')
-	#---select frames
-	framecounts = listlook(notes,'framecounts')
-	if framecounts != None and type(framecounts) != slice: frame_select = range(framecounts)
-	elif type(framecounts) == slice: frame_select = range(len(mset_protein.protein))[framecounts]
-	else: frame_select = range(len(mset_protein.protein))
 	#---select the surface
 	aname = listlook(notes,'callsign')
 	anum = analysis_names.index(aname)
 	mset = msets[anum]
+
+	#---select frames
+	framecounts = listlook(notes,'framecounts')
+	if framecounts != None and type(framecounts) != slice: frame_select = range(framecounts)
+	elif type(framecounts) == slice: frame_select = range(len(mset.surf))[framecounts]
+	else: frame_select = range(len(mset.surf))
+
+
 	#---geography is based on the protein positions
 	if request_geography == 'proteins' or request_geography[0] == 'control':
 		#---get protein points
@@ -391,10 +290,10 @@ if 'msets' not in globals():
 		anum = analysis_names.index(aname)
 		mset = unpickle(pickles+'pkl.structures.'+spacetag+filespec+'.pkl')
 		msets[anum] = mset
-
+		
 #---compute fits
-if 'compute' in routine:
-
+if 'compute_dimple' in routine or 'compute_topog' in routine:
+	
 	#---load the current set of msdats which may already have some of the requested tests in the sweep
 	msdats = [[] for i in range(len(analysis_names))]
 	for aname in analysis_names:
@@ -402,27 +301,18 @@ if 'compute' in routine:
 		anum = analysis_names.index(aname)
 		#---load the pickle to see if it exists	
 		filespec = specname_guess(sysname,trajsel)
-		pklname = 'pkl.dimple3.'+spacetag+filespec+'.pkl'
+		pklname = pklprefix+spacetag+filespec+'.pkl'
 		msdat = unpickle(pickles+pklname)
 		if msdat == None: msdats[anum] = []
 		else: msdats[anum] = msdat
-
-	#---prepare a list of experiments according to any requested sweeps
-	list_params_expts = []
-	keylist = params_sweeps.keys()
-	sweeps = [params_sweeps[key] for key in keylist]
-	param_combos = list(itertools.product(*sweeps))
-	for new_expt in param_combos:
-		expt_copy = params_expt.copy()
-		for key in keylist:
-			expt_copy[key] = new_expt[keylist.index(key)]
-		list_params_expts.append(expt_copy)
+	#---prepare a list of experiments according to sweeps
+	list_params_expts = prepare_experiments()
 
 	#---loop over experiments and systems and combine valid experiments into a list of notes objects
 	list_expts = []
 	for expt in list_params_expts:
 		for aname in analysis_names:
-			notes = dimple_compile_notes(aname,expt)
+			notes = compile_expt_notes(aname,expt,analysis_descriptors)
 			#---remove contradictory protein/control tests and see if test was already completed
 			if not (listlook(notes,'nprots') == 0 and listlook(notes,'geography') == 'proteins') and \
 				not (listlook(notes,'nprots') > 0 and listlook(notes,'geography')[0] == 'control'):				
@@ -444,24 +334,27 @@ if 'compute' in routine:
 		#---select frames
 		framecounts = listlook(notes,'framecounts')
 		if framecounts != None and type(framecounts) != slice: frame_select = range(framecounts)
-		elif type(framecounts) == slice: frame_select = range(len(mset_protein.protein))[framecounts]
-		else: frame_select = range(len(mset_protein.protein))
+		elif type(framecounts) == slice: frame_select = range(len(mset.surf))[framecounts]
+		else: frame_select = range(len(mset.surf))
 
 		#---loop over neighborhoods within each test type
 		for nborhood_ind in range(len(nborhoods)):
 			nborhood = nborhoods[nborhood_ind]
-			
+		
 			#---check to see if this calculation was already completed
 			notes_nbor = notes+[['neighborhood_name',nbornames[nborhood_ind]]]
-			if (False == dimple_test_lookup(notes_nbor,aname)):
+			needs_test = (False == dimple_test_lookup(notes_nbor,aname))
+
+			#---unpack the notes
+			for i in notes_nbor: vars()[i[0]] = i[1]
+
+			#---dimple fitting calculation
+			if needs_test and testtype == 'dimple':
 			
 				#---prepare the result file
 				result_data = MembraneData('dimple3',label=sysname)
 				result_data.notes = notes_nbor
 					
-				#---unpack the notes
-				for i in notes_nbor: vars()[i[0]] = i[1]
-		
 				#---dimple fitting code
 				print 'status: running test'
 				params = []
@@ -510,7 +403,6 @@ if 'compute' in routine:
 						target_zones.append([])
 						maxhxys.append([])
 						maxhs.append([])
-
 				#---populate the result object with the dimple fit results
 				for i in range(len(params)):
 					#---store order is params, maxhs, maxhxys, target_zones
@@ -520,11 +412,44 @@ if 'compute' in routine:
 				print '\n',
 				dimple_save_data(aname)
 
+			#---topography calculation
+			if needs_test and testtype == 'topography':
+
+				#---prepare the result file
+				result_data = MembraneData('dimple3',label=sysname)
+				result_data.notes = notes_nbor	
+
+				#---catalog bilayer heights in the neighborhood
+				heights = []
+				for fr in frame_select:
+					status(str(fr))
+					status('neighborhood = '+str(nborhood_ind+1)+'/'+str(len(nborhoods))+' frame = '+str(fr))
+					#---replicate surface points under periodic boundary conditions
+					surfpts = mset.wrappbc(mset.unzipgrid(mset.surf[fr],vecs=mset.vec(0)),
+						vecs=mset.vec(fr),mode='nine')
+					#---find minimum distances
+					cd = scipy.spatial.distance.cdist(nborhood[fr],surfpts[:,:2])
+					tmp = array([np.min(cd,axis=0),surfpts[:,2]]).T
+					selected = where(tmp[:,0]<cutoff)[0]
+					target = surfpts[selected]
+					heights.append(list(target[:,2]))
+
+				#---populate the result object with the dimple fit results
+				for i in range(len(heights)):
+					result_data.add([heights[i]],[frame_select[i]])
+				msdats[anum].append(result_data)
+				dimple_save_data(aname)
+				
+
 #---MAIN, PLOT
 #-------------------------------------------------------------------------------------------------------------
 
 #---plot summary
-if 'plot' in routine:
+if 'plot_dimple' in routine:
+
+	#---compile the plot specifications
+	params_plot = compile_plot_params(dimple_plot_type,analysis_descriptors)	
+	for i in params_plot_settings: vars()[i] = params_plot_settings[i]
 	
 	if 'msdats' not in globals():
 		#---load the current set of msdats
@@ -534,12 +459,12 @@ if 'plot' in routine:
 			anum = analysis_names.index(aname)
 			#---load the pickle to see if it exists	
 			filespec = specname_guess(sysname,trajsel)
-			pklname = 'pkl.dimple3.'+spacetag+filespec+'.pkl'
+			pklname = pklprefix+spacetag+filespec+'.pkl'
 			msdat = unpickle(pickles+pklname)
 			if msdat == None: msdats[anum] = []
 			else: msdats[anum] = msdat
-			
 	#---prepare plot panels	
+			
 	fig = plt.figure(figsize=(10,len(params_plot)*2))
 	gs = gridspec.GridSpec(len(params_plot),3,wspace=0.0,hspace=0.0)
 	gs.update(left=0.0,right=0.7)
@@ -548,7 +473,8 @@ if 'plot' in routine:
 	axlist,axlist_struct,axlist_extent = [],[],[]
 	fp = open(pickles+'calc-dimple3-'+bigname+\
 		'.cut'+str(listlook(params_plot[0][0],'cutoff'))+spacetag+\
-		plot_scheme_name+'.txt','w')
+		'filter-'+filter_type+'.'+\
+		dimple_plot_type+'.txt','w')
 
 	#---global plot specifications
 	extremz = max([max([mean(mset.surf,axis=0).max(),abs(mean(mset.surf,axis=0).min())])
@@ -576,12 +502,14 @@ if 'plot' in routine:
 			mset = msets[anum]
 			for i in analysis_descriptors[aname]: vars()[i] = (analysis_descriptors[aname])[i]
 			nborhoods,nbornames = dimple_generate_neighborhood(expt)
+			
 			#---write header for the calculations text output
-			fp.write('\nsystem = '+str(aname)+'\t'+(analysis_descriptors[aname])['label_text']+'\n\n')
-			table_top = 'name        '+'<H_max> (nm^-1)   '+'frames  '+'RMSD(A) '+\
-				'sigma_a,b (nm)  '+'sigma_a,b unfiltered (nm)'
-			fp.write(table_top+'\n')
-			fp.write('-'.join(['' for i in range(len(table_top)+1)])+'\n')
+			if dimple_plot_type != 'extrema' or gnum == 0:
+				fp.write('\nsystem = '+str(aname)+'\t'+(analysis_descriptors[aname])['label_text']+'\n\n')
+				table_top = 'name                '+'<H_max> (nm^-1)   '+'<H_max> scaled    '+\
+					'frames  '+'RMSD(A) '+'sigma_a,b (nm)  '+'sigma_a,b unfiltered (nm)'
+				fp.write(table_top+'\n')
+				fp.write('-'.join(['' for i in range(len(table_top)+1)])+'\n')
 	
 			#---get indices for plotting
 			dat_inds = dimple_test_lookup(expt,aname)
@@ -608,34 +536,87 @@ if 'plot' in routine:
 					color = dimple_colordict_systems((analysis_descriptors[geog[1]])['label_text'])[0]
 				else: 
 					label = listlook(test.notes,'neighborhood_name')
-					if listlook(test.notes,'nprots') == 1 and plot_scheme_name != 'extrema' and \
-						re.match('lattice.+',plot_scheme_name) == None:
+					if listlook(test.notes,'nprots') == 1 and dimple_plot_type != 'extrema' and \
+						re.match('lattice.+',dimple_plot_type) == None:
 						nprots = 1
 					else: nprots = None
 					nprots = (listlook(test.notes,'nprots') if \
-							re.match('lattice.+',plot_scheme_name) == None else None)
+							re.match('lattice.+',dimple_plot_type) == None else None)
 					color = dimple_colordict(nnames[cnum],listing=nnames,
-						scheme=plot_scheme_name,nprots=nprots)
+						scheme=dimple_plot_type,nprots=nprots)
 				if label in ['peak (dynamic)','valley (dynamic)']: alpha = 0.5
 				else: alpha = 1.
 				status('panel = '+str(pnum+1)+'/'+str(len(params_plot))+
 					' curve = '+str(cnum+1)+'/'+str(len(dat_inds)))
-			
-				#---filtering
-				fitted_inds = [type(test.data[i][1]) != list for i in range(len(test.data))]
-				hmaxdat = curvfac*array(test.data)[fitted_inds,1]
-				#---two-step filtering first to get valid fits and then to apply the curvature filter
-				cfilt_inds = [i for i in range(len(array(test.data))) 
-					if (type(array(test.data)[i][1]) != list 
-					and curvfac*10*abs(array(test.data)[i,1])>smallfilt 
-					and curvfac*10*abs(array(test.data)[i,1])<hifilt)]
-				hmaxdat = curvfac*10*array(test.data)[cfilt_inds,1]
-				#---report residuals
-				params = test.get(['type','params'])[cfilt_inds]
-				maxhs = curvfac*10*test.get(['type','maxhs'])[cfilt_inds]
-				target_zones = test.get(['type','target_zones'])[cfilt_inds]
-				resids = [sqrt(mean([abs(gauss2d(params[j],i[0],i[1])-i[2])**2 for i in target_zones[j]])) 
-					for j in range(len(target_zones))]
+				#---standard filtering
+				if filter_type == 'std':
+					fitted_inds = [type(test.data[i][1]) != list for i in range(len(test.data))]
+					hmaxdat = curvfac*array(test.data)[fitted_inds,1]
+					#---two-step filtering first to get valid fits and then to apply the curvature filter
+					cfilt_inds = [i for i in range(len(array(test.data))) 
+						if (type(array(test.data)[i][1]) != list 
+						and curvfac*10*abs(array(test.data)[i,1])>smallfilt 
+						and curvfac*10*abs(array(test.data)[i,1])<hifilt)]
+					hmaxdat = curvfac*10*array(test.data)[cfilt_inds,1]
+					#---report residuals
+					params = test.get(['type','params'])[cfilt_inds]
+					maxhs = curvfac*10*test.get(['type','maxhs'])[cfilt_inds]
+					target_zones = test.get(['type','target_zones'])[cfilt_inds]
+					resids = [sqrt(mean([abs(gauss2d(params[j],i[0],i[1])-i[2])**2 
+						for i in target_zones[j]])) for j in range(len(target_zones))]
+				#---alternate filtering 1
+				#---note that the "mod1" handle will never change
+				#---this filters for magnitudes within smallfilt and hifilt and dimples within cutoff 
+				#---...of the COM of the full neighborhood so that for point neighborhoods with buffer
+				#---...this method only counts dimples that are inside of the neighborhood
+				elif filter_type == 'mod1':
+					vecs = mean(mset.vecs,axis=0)
+					fitted_inds = array([type(test.data[i][1]) != list for i in range(len(test.data))])
+					#---dropped the following test for being the box because PBCs were used on the 
+					if 0: inbox_inds = array([all([i[0][2] < vecs[0] and i[0][3] < vecs[1] and 
+						i[0][2] > 0. and i[0][3] > 0.]) for i in test.data])
+					#---hack only works for pointsize neighborhoods
+					inbox_inds = array([linalg.norm(array([i[0][2],i[0][2]])-\
+						mean(i[-1],axis=0)[:2])/10.<listlook(test.notes,'cutoff') for i in test.data])
+					hmaxraw = []
+					for i in range(len(test.data)):
+						if fitted_inds[i]:
+							z0,c0,x0,y0,sx,sy,th = test.data[i][0]
+							hmaxraw.append(-1*10*curvfac*gauss2dh(test.data[i][0],x0,y0))
+						else: hmaxraw.append(0)
+					magfilter = array([(abs(hmaxraw[i])>smallfilt and abs(hmaxraw[i])<hifilt) \
+						for i in range(len(hmaxraw))])
+					cfilt_inds = where(array(1*magfilter+1*inbox_inds+1*fitted_inds)==3)[0]
+					hmaxdat = array(hmaxraw)[cfilt_inds]
+					params = test.get(['type','params'])[cfilt_inds]
+					target_zones = test.get(['type','target_zones'])[cfilt_inds]
+					resids = [sqrt(mean([abs(gauss2d(params[j],i[0],i[1])-i[2])**2 
+						for i in target_zones[j]])) for j in range(len(target_zones))]
+				#---alternate filtering 2
+				#---note that the "mod2" handle will never change
+				#---this filters for magnitudes within smallfilt and hifilt and dimples within the box
+				elif filter_type == 'mod2':
+					vecs = mean(mset.vecs,axis=0)
+					fitted_inds = array([type(test.data[i][1]) != list for i in range(len(test.data))])
+					target_zones = test.get(['type','target_zones'])
+					hmaxraw = []
+					center_near_nborhood = [False for i in range(len(test.data))]
+					for i in range(len(test.data)):
+						if fitted_inds[i]:
+							z0,c0,x0,y0,sx,sy,th = test.data[i][0]
+							hmaxraw.append(-1*10*curvfac*gauss2dh(test.data[i][0],x0,y0))
+							center_near_nborhood[i] = scipy.spatial.distance.cdist(target_zones[i][:,:2],[[x0,y0]]).min() < 10.
+						else: hmaxraw.append(0)
+					center_near_nborhood = array(center_near_nborhood)
+					magfilter = array([(abs(hmaxraw[i])>smallfilt and abs(hmaxraw[i])<hifilt) \
+						for i in range(len(hmaxraw))])
+					cfilt_inds = where(array(1*magfilter+1*center_near_nborhood+1*fitted_inds)==3)[0]
+					hmaxdat = array(hmaxraw)[cfilt_inds]
+					params = test.get(['type','params'])[cfilt_inds]
+					target_zones = test.get(['type','target_zones'])[cfilt_inds]
+					resids = [sqrt(mean([abs(gauss2d(params[j],i[0],i[1])-i[2])**2 
+						for i in target_zones[j]])) for j in range(len(target_zones))]
+				else: print 'error: filter modification is underspecified'
 				#---filtered data
 				hist,edges = numpy.histogram(hmaxdat[abs(hmaxdat)>smallfilt],
 					range=(-hifilt-hist_step/2,hifilt+hist_step/2),bins=hmax_nbins)
@@ -669,22 +650,22 @@ if 'plot' in routine:
 				axins2.get_yaxis().set_major_locator(mpl.ticker.MaxNLocator(prune='both'))
 				if pnum == 0 and 0: ax_struct.set_title(r'$\left\langle z(x,y)\right\rangle \:(\mathrm{nm})$')
 				#---plot hulls according to scheme type
-				if re.match('lattice.+',plot_scheme_name):
+				if re.match('lattice.+',dimple_plot_type):
 					abs_pts = mean(nborhoods[cnum],axis=0)[0]
 					pt = [abs_pts[i]/mean(mset.vecs,axis=0)[i]*mset.griddims[i] for i in range(2)]
 					ax_struct.add_patch(plt.Circle((pt[0],pt[1]),
 						radius=0.5*mset.griddims[0]/35,color=color,alpha=1.))
-				elif plot_scheme_name == 'proteins_controls':
+				elif dimple_plot_type == 'proteins_controls':
 					if nbornames[cnum] != 'oligomer':
 						protpts = mean(nborhoods[cnum],axis=0)
 						plothull(ax_struct,protpts,mset=mset,subdivide=None,
 							c=color,alpha=1.,fill=(False if geog[0] == 'control' else True))
-				if plot_scheme_name == 'extrema' and label in ['valley (dynamic)','peak (dynamic)']:
+				if dimple_plot_type == 'extrema' and label in ['valley (dynamic)','peak (dynamic)']:
 					for protpts in nborhoods[cnum]:
 						plothull(ax_struct,protpts,mset=mset,subdivide=None,
 							c=color,alpha=1.,fill=(False if geog[0] == 'control' else True),
 							radius=0.25*mset.griddims[0]/35)
-				if plot_scheme_name == 'extrema' and label in ['valley','peak']:
+				if dimple_plot_type == 'extrema' and label in ['valley','peak']:
 					pt = [mean(nborhoods[cnum],axis=0)[0][i]/mean(mset.vecs,axis=0)[i]*mset.griddims[i] 
 						for i in range(2)]
 					for shift in [[i,j] for j in [-1,0,1] for i in [-1,0,1]]:
@@ -708,28 +689,30 @@ if 'plot' in routine:
 						mpl.ticker.MaxNLocator(prune='both',nbins=4))
 					axlist_extent[pnum].set_xlabel('extent '+r'$\mathrm{\sigma_{a,b}\,(nm)}$',
 						fontsize=fsaxlabel)
-						
 				#---computations
 				valid_frames = len(hmaxdat)
+				scaled_mean = float(valid_frames)/len(test.data)*mean(hmaxdat)
 				result_nums = [
 					(round(mean(hmaxdat),4) if valid_frames > 0 else np.nan),
+					(round(scaled_mean,4) if valid_frames > 0 else np.nan),
 					round(mean(resids),1),
 					round(mean(extdat[extdat<2*extent_range]),2),
 					round(mean(extdat),2)]
+				print result_nums
 				geog = listlook(test.notes,'geography')
 				if geog[0] == 'control':
 					casual_name = analysis_descriptors[geog[1]]['label_text']
 				else: casual_name = nbornames[cnum]
 				fp.write(
-					str(casual_name).ljust(12)+\
+					str(casual_name).ljust(20)+\
 					str((' ' if result_nums[0] > 0 else '')+str(result_nums[0])).ljust(18)+\
+					str((' ' if result_nums[1] > 0 else '')+str(result_nums[1])).ljust(18)+\
 					str('%1.0f'%valid_frames).ljust(8)+\
-					str(str(' ' if result_nums[1] > 0 else '')+str(result_nums[1])).ljust(8)+\
-					str(str(' ' if result_nums[2] > 0 else '')+str(result_nums[2])).ljust(16)+\
-					str(str(' ' if result_nums[3] > 0 else '')+str(result_nums[3])).ljust(25)+'\n')
-					
+					str(str(' ' if result_nums[2] > 0 else '')+str(result_nums[2])).ljust(8)+\
+					str(str(' ' if result_nums[3] > 0 else '')+str(result_nums[3])).ljust(16)+\
+					str(str(' ' if result_nums[4] > 0 else '')+str(result_nums[4])).ljust(25)+'\n')
 				#---save the mean Hmax if performing the lattice test for later histogram
-				if re.match('lattice.+',plot_scheme_name) and not isnan(result_nums[0]):
+				if re.match('lattice.+',dimple_plot_type) and not isnan(result_nums[0]):
 					lattice_mean_collect[pnum].append(result_nums[0])
 	
 			#---truncate the legend if too large
@@ -767,52 +750,300 @@ if 'plot' in routine:
 	fig.set_size_inches(fig.get_size_inches()[0]*1.5,fig.get_size_inches()[1]*1.5)
 	plt.savefig(pickles+'fig-dimple3-'+bigname+\
 		'.cut'+str(listlook(expt,'cutoff'))+spacetag+\
-		plot_scheme_name+\
+		'filter-'+filter_type+'.'+\
+		dimple_plot_type+\
 		'.png',dpi=300,bbox_inches='tight')
 	if show_plots: plt.show()
 	plt.close()
 	fp.close()
 	print 'status: plot saved'
 
-#---additional summary plot
-if 'plot' in routine and re.match('lattice.+',plot_scheme_name):
+#---additional summary plot, updated and expanded
+if 'plot_dimple' in routine and re.match('lattice.+',dimple_plot_type):
+
+	#---compile the plot specifications
+	params_plot = compile_plot_params(which_dimple_plot,analysis_descriptors)	
 
 	#---plot the sum of the distributions for clarity (or weight by quantity of valid frames)
-	fig = plt.figure(figsize=(10,10))
-	ax1 = plt.subplot(211)
-	ax2 = plt.subplot(212)
+	fig = plt.figure(figsize=((1+len(phists))*2,8))
+	axeslist = []
+	gs = gridspec.GridSpec(len(phists)+2,1,wspace=0.0,hspace=0.0)
+	ax = plt.subplot(gs[0:2])
+	axeslist.append(ax)
+	for p in range(2,len(phists)+2):
+		ax = plt.subplot(gs[p])
+		axeslist.append(ax)
+	
 	nnames = [listlook(params_plot[p][0],'label_text') for p in range(len(phists))]
 	for p in range(len(phists)):
 		color,proper_name = dimple_colordict_systems(nnames[p])
 		status('curve = '+str(p+1)+'/'+str(len(params_plot)))
-		ax1.plot(hmax_mids,phists[p],lw=2,color=color,
+		axeslist[0].plot(hmax_mids,phists[p],lw=2,color=color,
 			label=proper_name+' ('+str(round(sum(phists[p]*hmax_mids)/sum(phists[p]),3))+\
 			r'$\mathsf{\,(nm^{-1})}$'+')')
 		hist,edges = numpy.histogram(lattice_mean_collect[p],
 			range=(-hifilt-hist_step/2,hifilt+hist_step/2),bins=hmax_nbins)
-		ax2.bar(1./2*(edges[1:]+edges[:-1]),hist*sum(phists[p])/sum(hist),'-',c=color,lw=2,
+		axeslist[p+1].bar(edges[:-1],hist,width=(edges[1]-edges[0]),alpha=0.5,color=color,linewidth=0,
 			label=proper_name+' ('+str(round(mean(lattice_mean_collect[p]),3))+r'$\mathsf{\,nm^{-1}}$'+')')
+		axeslist[p+1].set_ylabel(proper_name,fontsize=fsaxlabel-2)
 	#---plot parameters
-	for ax in [ax1,ax2]:
+	for a in range(len(axeslist)):
+		ax = axeslist[a]
 		ax.axvline(x=0,ymax=1.,ymin=0.,lw=1.5,color='k')	
-		ax.legend(prop={'size':fsaxlegend_small})
+		ax.legend(loc='upper left',prop={'size':fsaxlegend_small-(2 if a == 0 else 0)})
 		ax.grid(True)
 		ax.set_xlim((-hifilt,hifilt))
 		ax.set_yticklabels([])
 		ax.axvline(x=0,ymax=1.,ymin=0.,lw=1.5,color='k')
-		ax.set_xlabel('$\mathsf{H_{max}\,(nm^{-1})}$',fontsize=16)
+		if a == len(axeslist)-1: ax.set_xlabel('$\mathsf{H_{max}\,(nm^{-1})}$',fontsize=16)
 		plt.setp(ax.get_xticklabels(),fontsize=fsaxlabel)	
-	ax1.set_ylabel('summed distributions',fontsize=fsaxlabel)
-	ax2.set_ylabel('distribution of means',fontsize=fsaxlabel)
-	ax1.set_title('lattice test',fontsize=fsaxtitle)
+		if 0: ax.set_ylabel('distribution of means',fontsize=fsaxlabel)
+		if a < len(axeslist)-1: ax.set_xticklabels([])
+	axeslist[0].set_ylabel('distribution sum',fontsize=fsaxlabel)
+	axeslist[0].set_title('lattice test',fontsize=fsaxtitle)
 	
 	#---clean and save
 	print '\nstatus: saving plot'
 	plt.savefig(pickles+'fig-dimple3-'+bigname+\
 		'.cut'+str(listlook(expt,'cutoff'))+spacetag+\
-		plot_scheme_name+'.summary'\
+		'filter-'+filter_type+'.'+\
+		dimple_plot_type+'.summary'\
 		'.png',dpi=300,bbox_inches='tight')
 	if show_plots: plt.show()
 	plt.close()
 	print 'status: plot saved'
+	
+#---plot summary
+if 'plot_radar' in routine:
+
+	#---compile the plot specifications
+	params_plot = compile_plot_params('plot_radar',analysis_descriptors)
+	
+	params_plot = params_plot_master[params_plot_master_names.index('radar')]
+	dimple_plot_type = params_plot_master_names[params_plot_master.index(params_plot)]	
+	if 'msdats' not in globals():
+		#---load the current set of msdats
+		msdats = [[] for i in range(len(analysis_names))]
+		for aname in analysis_names:
+			for i in analysis_descriptors[aname]: vars()[i] = (analysis_descriptors[aname])[i]
+			anum = analysis_names.index(aname)
+			#---load the pickle to see if it exists	
+			filespec = specname_guess(sysname,trajsel)
+			pklname = pklprefix+spacetag+filespec+'.pkl'
+			msdat = unpickle(pickles+pklname)
+			if msdat == None: msdats[anum] = []
+			else: msdats[anum] = msdat
+	
+	#---prepare plot panels	
+	fig = plt.figure(figsize=(5,2*len(params_plot)))
+	gs = gridspec.GridSpec(len(params_plot),3,wspace=0.0,hspace=0.0)
+	gs.update(left=0.0,right=1.0)
+	gs2 = gridspec.GridSpec(len(params_plot),1,wspace=0.0,hspace=0.0)
+	gs2.update(left=0.75,right=1.0)
+	axlist,axlist2,axlist3,axhists = [],[],[],[]
+	fp = open(pickles+'calc-dimple3-'+bigname+\
+		'.cut'+str(listlook(params_plot[0][0],'cutoff'))+spacetag+\
+		'filter-'+filter_type+'.'+\
+		dimple_plot_type+'.txt','w')
+	
+	#---loop over rows
+	for pnum in range(len(params_plot)):
+		ax = plt.subplot(gs[pnum,0])
+		axlist.append(ax)
+		ax2 = plt.subplot(gs[pnum,1])
+		axlist2.append(ax2)
+		ax3 = plt.subplot(gs[pnum,2])
+		axlist3.append(ax3)
+		
+		#---loop over plots within a panel
+		for gnum in range(len(params_plot[pnum])):
+			expt = params_plot[pnum][gnum]
+			aname = listlook(expt,'callsign')
+			anum = analysis_names.index(aname)
+			mset = msets[anum]
+			for i in analysis_descriptors[aname]: vars()[i] = (analysis_descriptors[aname])[i]
+			nborhoods,nbornames = dimple_generate_neighborhood(expt)
+			
+			#---lightly plot structure in the background
+			ax = axlist[pnum]
+			im = plotter2d(ax,mset,dat=mean(mset.surf,axis=0)/10.,
+				lognorm=False,cmap=mpl.cm.RdBu_r,inset=False,cmap_washout=0.65,
+				ticklabel_show=[1,1],tickshow=[1,1],centertick=False,
+				fs=fsaxlabel,label_style='xy',lims=[-extremz/10.,extremz/10.],
+				tickskip=int(round(mset.griddims[0]/6,-1)),nine=False)
+			
+			#---plot dots for the location of the center of each dimple
+			dat_ind = dimple_test_lookup(expt,aname)[0]
+			maxhxys_inds = msdats[anum][dat_ind].get(['type','maxhxys'])
+			target_zones = msdats[anum][dat_ind].get(['type','target_zones'])
+			for fr in range(len(maxhxys_inds)):
+				abs_pt = target_zones[fr][maxhxys_inds[fr]][:2]
+				pt = [abs_pt[i]/mean(mset.vecs,axis=0)[i]*mset.griddims[i] for i in range(2)]
+				ax.add_patch(plt.Circle((pt[0],pt[1]),
+					radius=0.5*mset.griddims[0]/35,color='k',alpha=1.,fc='w',fill=True,lw=1.,ec='k'))
+			
+			#---plot the centers of the dimple		
+			ax2 = axlist2[pnum]
+			im = plotter2d(ax2,mset,dat=mean(mset.surf,axis=0)/10.,
+				lognorm=False,cmap=mpl.cm.RdBu_r,inset=False,cmap_washout=0.4,
+				ticklabel_show=[1,1],tickshow=[1,1],centertick=False,
+				fs=fsaxlabel,label_style='xy',lims=[-extremz/10.,extremz/10.],
+				tickskip=int(round(mset.griddims[0]/6,-1)),nine=False)
+			params = msdats[anum][dat_ind].get(['type','params'])
+			centers = [[i[2],i[3]] for i in params]
+			for fr in range(len(params)):
+				abs_pt = centers[fr]
+				pt = [abs_pt[i]/mean(mset.vecs,axis=0)[i]*mset.griddims[i] for i in range(2)]
+				ax2.add_patch(plt.Circle((pt[0],pt[1]),
+					radius=0.5*mset.griddims[0]/35,color='k',alpha=1.,fc='w',fill=True,lw=1.,ec='k'))
+			shown_count = sum([all([all([centers[c][i] > 0 and centers[c][j] < mset.vec(c)[j]]) 
+				for j in range(2)]) for c in range(len(centers))])
+			ax2.text(0.95,0.9,str(shown_count),transform=ax2.transAxes,fontsize=fsaxlabel,
+				horizontalalignment='right')
+
+			#---plot the centers of the dimple		
+			ax3 = axlist3[pnum]
+			im = plotter2d(ax3,mset,dat=mean(mset.surf,axis=0)/10.,
+				lognorm=False,cmap=mpl.cm.RdBu_r,inset=False,cmap_washout=1.0,
+				ticklabel_show=[1,1],tickshow=[1,1],centertick=False,
+				fs=fsaxlabel,label_style='xy',lims=[-extremz/10.,extremz/10.],
+				tickskip=int(round(mset.griddims[0]/6,-1)),nine=False)
+			protpts = mean(nborhoods[0],axis=0)
+			nnames = [listlook(msdats[anum][0].notes,'neighborhood_name')]
+			color = dimple_colordict(nnames[0],listing=nnames,scheme=dimple_plot_type,nprots=nprots)
+			plothull(ax3,protpts,mset=mset,subdivide=None,
+				c=color,alpha=1.,fill=False)
+				
+			#---plot settings
+			ax3.set_ylabel(listlook(expt,'label'),rotation=270,fontsize=fsaxlabel)
+			ax3.yaxis.set_label_position("right")
+		
+		#---plot settings
+		for a in range(len(axlist)):
+			if a < len(axlist)-1: 
+				axlist[a].set_xticklabels([])
+				axlist[a].set_xlabel('')
+			if a == 0: axlist[a].set_title(r'$H_{max}(x,y)$',fontsize=fsaxlabel)
+		for a in range(len(axlist2)):
+			axlist2[a].set_yticklabels([])
+			axlist2[a].set_ylabel('')
+			if a < len(axlist)-1: 
+				axlist2[a].set_xticklabels([])
+				axlist2[a].set_xlabel('')
+			if a == 0: axlist2[a].set_title(r'dimple centers',fontsize=fsaxlabel)
+		for a in range(len(axlist3)):
+			axlist3[a].set_yticklabels([])
+			if a < len(axlist)-1: 
+				axlist3[a].set_xticklabels([])
+				axlist3[a].set_xlabel('')
+				
+	#---clean and save
+	print '\nstatus: saving plot'
+	fig.set_size_inches(fig.get_size_inches()[0]*1.5,fig.get_size_inches()[1]*1.5)
+	plt.savefig(pickles+'fig-dimple3-'+bigname+\
+		'.cut'+str(listlook(expt,'cutoff'))+spacetag+\
+		'filter-'+filter_type+'.'+\
+		dimple_plot_type+\
+		'.png',dpi=300,bbox_inches='tight')
+	if show_plots: plt.show()
+	plt.close()
+	fp.close()
+	print 'status: plot saved'
+	
+#---plot summary
+if 'plot_topog' in routine:
+	#---compile the plot specifications
+	params_plot = compile_plot_params(topog_plot_type,analysis_descriptors)	
+	if 'msdats' not in globals():
+		#---load the current set of msdats
+		msdats = [[] for i in range(len(analysis_names))]
+		for aname in analysis_names:
+			for i in analysis_descriptors[aname]: vars()[i] = (analysis_descriptors[aname])[i]
+			anum = analysis_names.index(aname)
+			#---load the pickle to see if it exists	
+			filespec = specname_guess(sysname,trajsel)
+			pklname = pklprefix+spacetag+filespec+'.pkl'
+			msdat = unpickle(pickles+pklname)
+			if msdat == None: msdats[anum] = []
+			else: msdats[anum] = msdat
+	topog_nbins = 30
+	params_plot = compile_plot_params(topog_plot_type,analysis_descriptors)
+	dats = [[array(flatten(msdats[i][k].data)) for k in range(len(msdats[i]))] for i in range(len(msdats))]
+	maxz = round(max([abs(min(flatten(dats))),abs(max(flatten(dats)))]),-1)+10
+	extremz = max([max([mean(mset.surf,axis=0).max(),abs(mean(mset.surf,axis=0).min())])
+		for mset in msets])
+	fig = plt.figure(figsize=((1+len(dats))*2.90,12))
+	axeslist,structlist = [],[]
+	gs = gridspec.GridSpec(3,len(dats),wspace=0.0,hspace=0.0)
+	nnames = [listlook(msdats[0][i].notes,'neighborhood_name') for i in range(len(params_plot[0]))]
+	maxfreq = 0
+	for pnum in range(len(params_plot)):
+		ax = plt.subplot(gs[2,pnum])
+		axeslist.append(ax)
+		for gnum in range(len(params_plot[pnum])):
+			expt = params_plot[pnum][gnum]
+			aname = listlook(expt,'callsign')
+			anum = analysis_names.index(aname)
+			mset = msets[anum]
+			for i in analysis_descriptors[aname]: vars()[i] = (analysis_descriptors[aname])[i]
+			nborhoods,nbornames = dimple_generate_neighborhood(expt)
+			dat_ind = dimple_test_lookup(expt,aname)[0]
+			hist,edges = numpy.histogram(flatten(msdats[anum][dat_ind].data),range=(-maxz,maxz),bins=topog_nbins)
+			mids = 1./2*(edges[1:]+edges[:-1])/10.
+			color = dimple_colordict(nnames[gnum],listing=nnames,scheme=topog_plot_type)
+			ls = '--' if nnames[gnum] in ['valley (dynamic)','peak (dynamic)'] else '-'
+			axeslist[pnum].plot(mids,hist,ls,c=color)
+			maxfreq = max([maxfreq,max(hist)])
+		ax.set_xlabel(r'$z_{max},z_{min}\:\mathrm{(nm)}$',fontsize=fsaxlabel)
+		ax.get_xaxis().set_major_locator(mpl.ticker.MaxNLocator(prune='both'))
+		if pnum == 0: ax.set_ylabel('extrema (dynamic)',fontsize=fsaxlabel)
+		ax = plt.subplot(gs[1,pnum])
+		structlist.append(ax)
+		im = plotter2d(ax,mset,dat=mean(mset.surf,axis=0)/10.,
+			lognorm=False,cmap=mpl.cm.RdBu_r,inset=False,cmap_washout=0.65,
+			ticklabel_show=[1,1],tickshow=[1,1],centertick=False,
+			fs=fsaxlabel,label_style='xy',lims=[-extremz/10.,extremz/10.],
+			tickskip=int(round(mset.griddims[0]/6,-1)),nine=False)
+		if nprots > 0:
+			protpts = mean(mset.protein,axis=0)
+			plothull(ax,protpts,mset=mset,subdivide=nprots,
+				c='k',alpha=1.,fill=False)
+		if pnum == len(params_plot)-1:
+			axins2 = inset_axes(ax,width="5%",height="100%",loc=3,
+				bbox_to_anchor=(1.,0.,1.,1.),
+				bbox_transform=ax.transAxes,
+				borderpad=0)
+			cbar = plt.colorbar(im,cax=axins2,orientation="vertical")
+			axins2.set_ylabel(r'$\left\langle z(x,y)\right\rangle \:(\mathrm{nm})$',
+				fontsize=fsaxlabel,rotation=270)
+			axins2.get_yaxis().set_major_locator(mpl.ticker.MaxNLocator(prune='both'))
+		img = mpimg.imread(pickles+imagelist[aname])
+		ax = plt.subplot(gs[0,pnum])
+		if pnum == 0: ax.set_ylabel('snapshots',fontsize=fsaxlabel)
+		ax.set_title(label,fontsize=fsaxtitle)
+		imgplot = ax.imshow(img)
+		imgplot.set_cmap('hot')
+		ax.set_yticks([])
+		ax.set_xticks([])
+	for ax in axeslist:
+		ax.set_ylim((0,1.1*maxfreq))
+		ax.grid(True)
+		ax.set_yticklabels([])
+		ax.set(aspect=float(maxz*2/maxfreq/10))
+	for a in range(len(structlist)):
+		ax = structlist[a]
+		if a > 0: 
+			ax.set_ylabel('')
+			ax.set_yticklabels([])
+	
+	#---clean and save
+	print '\nstatus: saving plot'
+	plt.savefig(pickles+'fig-topography-summary-'+bigname+\
+		'.cut'+str(listlook(expt,'cutoff'))+spacetag+\
+		('filter-'+filter_type+'.' if 'filter_type' in globals() else '')+\
+		dimple_plot_type+\
+		'.png',dpi=300,bbox_inches='tight')
+	if show_plots: plt.show()
+	plt.close()
+	print 'status: plot saved'	
 	

@@ -1,2 +1,0 @@
-/usr/lib64/python2.7/site-packages/scipy/optimize/minpack.py:418: RuntimeWarning: Number of calls to function has reached maxfev = 1600.
-  warnings.warn(errors[info][0], RuntimeWarning)

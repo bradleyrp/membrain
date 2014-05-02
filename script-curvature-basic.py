@@ -7,68 +7,9 @@ execfile('locations.py')
 #---SETTINGS
 #-------------------------------------------------------------------------------------------------------------
 
-#---plan
-analysis_descriptors = {
-	'v614-120000-220000-200':
-		{'sysname':'membrane-v614','sysname_lookup':None,
-		'trajsel':'s9-lonestar/md.part0004.120000-220000-200.xtc',
-		'label':r'$\mathrm{{ENTH}\ensuremath{\times}4}$',
-		'nprots':4,
-		'whichframes':slice(None,None),
-		'protein_pkl':None,
-		'custom_topogcorr_specs':None,
-		'topogcorr_pkl':'pkl.topogcorr.membrane-v614-s9-lonestar-120000-220000-200.pkl'},
-	'v612-75000-175000-200':
-		{'sysname':'membrane-v612','sysname_lookup':None,
-		'trajsel':'t4-lonestar/md.part0007.75000-175000-200.xtc',
-		'label':r'$\mathrm{{ENTH}\ensuremath{\times}1}$',
-		'nprots':1,
-		'protein_pkl':None,
-		'custom_topogcorr_specs':None,
-		'whichframes':slice(None,None)},
-	'v614-40000-140000-200':
-		{'sysname':'membrane-v614','sysname_lookup':None,
-		'trajsel':'s6-sim-lonestar/md.part0002.40000-140000-200.xtc',
-		'label':r'$\mathrm{{ENTH}\ensuremath{\times}4}$',
-		'nprots':4,
-		'whichframes':slice(None,None),
-		'protein_pkl':None,
-		'custom_topogcorr_specs':None},
-	'v616-210000-310000-200':
-		{'sysname':'membrane-v616','sysname_lookup':None,
-		'trajsel':'u6-trestles/md.part0005.210000-310000-200.xtc',
-		'label':r'$\mathrm{{ENTH}\ensuremath{\times}8}$',
-		'nprots':8,
-		'whichframes':slice(None,None),
-		'protein_pkl':None,
-		'custom_topogcorr_specs':None},
-	'v612-10000-80000-200':
-		{'sysname':'membrane-v612','sysname_lookup':None,
-		'trajsel':'s9-trestles/md.part0003.10000-80000-200.xtc',
-		'label':r'$\mathrm{{ENTH}\ensuremath{\times}1}$',
-		'nprots':1,
-		'protein_pkl':None,
-		'custom_topogcorr_specs':None,
-		'whichframes':slice(None,None)},		
-	'v550-300000-400000-200':
-		{'sysname':'membrane-v550','sysname_lookup':None,
-		'trajsel':'s0-trajectory-full/md.part0006.300000-400000-200.xtc',
-		'label':r'$\mathrm{control}$',
-		'nprots':1,
-		'whichframes':slice(0,500),
-		'protein_pkl':'pkl.structures.membrane-v612.t4-lonestar.md.part0007.75000-175000-200.pkl',
-		'custom_topogcorr_specs':None,
-		'custom_protein_shifts':['peak','valley']},
-	'v550-400000-500000-160':
-		{'sysname':'membrane-v550','sysname_lookup':None,
-		'trajsel':'v1-lonestar/md.part0010.400000-500000-160.xtc',
-		'label':r'$\mathrm{control}$',
-		'nprots':1,
-		'whichframes':slice(0,500),
-		'protein_pkl':'pkl.structures.membrane-v612.t4-lonestar.md.part0007.75000-175000-200.pkl',
-		'custom_topogcorr_specs':None,
-		'custom_protein_shifts':['peak','valley']}}
-		
+#---get dictionaries
+execfile('header-cgmd.py')
+	
 #---analysis menu
 analysis_names = [
 	'v616-210000-310000-200',
@@ -86,9 +27,9 @@ routine = [
 	'plot_gaussian',
 	'video_height',
 	'extrema_dynamics',
-	][-1:]
+	][-2:-1]
 bigname = 'v616-v614-v612-v550'
-panel_nrows = 1
+panel_nrows = [1,2][-1]
 
 #---FUNCTIONS
 #-------------------------------------------------------------------------------------------------------------
@@ -105,7 +46,7 @@ def curvcalc(z,lenscale):
 	return [H,K]
 	
 def gridprop_panel_plot(dat,fig,fr=None,cmap=None,vmax=None,vmin=None,
-	altdat=None,extrarow=False,nine=False,args=None,fill=None,sidebar=True,protalpha=1):
+	altdat=None,extrarow=False,nine=False,args=None,fill=None,sidebar=True,protalpha=1,nrows=None):
 	'''Function which plots a map with proteins.'''
 	#---process pass-through argument list from plotmov if available
 	if args != None:
@@ -115,17 +56,22 @@ def gridprop_panel_plot(dat,fig,fr=None,cmap=None,vmax=None,vmin=None,
 	panels = len(dat)
 	if cmap == None: cmap = mpl.cm.RdBu_r
 	if fr == None: fr = 0
+	if nrows == None: nrows = 1
 	#---axes
 	axeslist = []
-	gs = gridspec.GridSpec((2 if extrarow else 1),panels,wspace=0.0,hspace=0.0)
+	#gs = gridspec.GridSpec((2 if extrarow else 1),panels,wspace=0.0,hspace=0.0)
+	#---prepare rows and columns
+	ncols = int(ceil(float(panels)/nrows))
+	gs = gridspec.GridSpec(nrows,ncols,wspace=0.0,hspace=0.0)
+	poslist = [[i,j] for i in range(nrows) for j in range(ncols)]
 	for p in range(panels):
-		if extrarow: ax = fig.add_subplot(gs[1,p])
-		else: ax = fig.add_subplot(gs[p])
+		#if extrarow: ax = fig.add_subplot(gs[1,p])
+		#else: ax = fig.add_subplot(gs[p])
+		ax = fig.add_subplot(gs[poslist[p][0],poslist[p][1]])
 		axeslist.append(ax)
 		im = plotter2d(ax,msets[p],dat=dat[p],tickshow=True,
 			label_style='xy',lims=[vmin,vmax],lognorm=False,
 			cmap=cmap,fs=fsaxlabel,nine=nine,tickskip=(25 if nine else 10))
-		if p > 0: ax.set_ylabel('')
 		if altdat != None and altdat[p].protein != []:
 			if nine:
 				vecs=mean(msets[p].vecs,axis=0)
@@ -150,8 +96,17 @@ def gridprop_panel_plot(dat,fig,fr=None,cmap=None,vmax=None,vmin=None,
 		plt.setp(ax.get_yticklabels(),fontsize=fsaxlabel)
 		plt.setp(ax.get_xticklabels(),fontsize=fsaxlabel)
 		#---added the following for flush plots
-		if p > 0: ax.set_yticklabels([])
-		if p == 0: ax.set_ylabel(r'$y\:(\mathrm{nm})$',fontsize=fsaxlabel)
+		if nrows == 1:
+			if p > 0: ax.set_yticklabels([])
+			if p == 0: ax.set_ylabel(r'$y\:(\mathrm{nm})$',fontsize=fsaxlabel)
+			else: ax.set_ylabel('')
+		else:
+			if poslist[p][1] > 0: 
+				ax.set_ylabel('')
+				ax.set_yticklabels([])
+			if poslist[p][0] < ncols-1: 
+				ax.set_xlabel('')
+				ax.set_xticklabels([])
 		if 0: ax.set_title(labels[p],fontsize=fsaxtitle)
 	if sidebar:
 		axins = inset_axes(ax,width="5%",height="100%",loc=3,
@@ -173,7 +128,7 @@ if 'msets' not in globals():
 	nnprots = []
 	for a in analysis_names:
 		for i in analysis_descriptors[a]: vars()[i] = (analysis_descriptors[a])[i]
-		msets.append(unpickle(pickles+'pkl.structures.'+specname_guess(sysname,trajsel)+'.pkl'))
+		msets.append(unpickle(pickles+'pkl.structures.'+spacetag+specname_guess(sysname,trajsel)+'.pkl'))
 		nnprots.append(nprots)
 
 #---make cool videos of the height
@@ -184,16 +139,18 @@ if 'video_height' in routine:
 		max([abs(array(i.surf).min()) for i in msets]))/10.
 	#---test the plotting function
 	gridprop_panel_plot([array(msets[i].surf[0])/10. for i in range(len(msets))],
-		plt.figure(),vmin=-extremum,vmax=extremum,fr=0,altdat=msets,nine=True)
+		plt.figure(),vmin=-extremum,vmax=extremum,fr=0,altdat=msets,nine=True,nrows=panel_nrows)
 	plt.show()
 	#---prepare the data set
 	vidpanels = [[array(msets[i].surf[j])/10. 
 		for j in range(len(msets[0].surf))] 
 		for i in range(len(msets))]
 	#---generate the video
+	#---previously used figsize 12,6 with nrows = 1 for a 1x4 panel plot
+	#---previously used figsize 12,6 with nrows = 2 for a 2x2 panel plot, with a slight gap between rows
 	plotmov(vidpanels,'heightmap-'+bigname,altdat=msets,panels=len(msets),
 		plotfunc='gridprop_panel_plot',whitezero=True,lims=[-extremum,extremum],
-		args=[['nine',True]],slowdown=2,figsize=(12,6),lowres=True)
+		args=[['nine',True]],slowdown=2,figsize=(10,10),lowres=True,nrows=panel_nrows)
 
 #---compute curvatures
 if 'extrema_dynamics' in routine:

@@ -3,6 +3,8 @@
 #---header file containing dictionaries for most CGMD analysis
 #---RPB 2014.04.15
 
+if 'analysis_descriptors_extra' not in globals(): analysis_descriptors_extra = {}
+
 #---selections
 sel_cgmd_surfacer = ['name PO4 or name POG','name C2A']
 director_cgmd = ['name PO4','name C4A','name C4B']
@@ -85,3 +87,16 @@ analysis_descriptors = {
 		'nprots':8,
 		},
 	}
+	
+#---choose default midplane resolution
+gridspacing = 1.0
+spacetag = 'space'+str(int(round(gridspacing*10,0)))+'A.'
+	
+#---coallate two dictionaries
+master_dict = dict()
+for key in analysis_descriptors.keys():
+	if key in analysis_descriptors_extra.keys():
+		master_dict.update({key:dict(analysis_descriptors[key],
+			**analysis_descriptors_extra[key])})
+	else: master_dict.update({key:analysis_descriptors[key]})
+analysis_descriptors = master_dict
