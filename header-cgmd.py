@@ -86,6 +86,14 @@ analysis_descriptors = {
 		'label_text':'8xENTH(close)',
 		'nprots':8,
 		},
+	'v616-110000-209900-200': {
+		'sysname':'membrane-v616','sysname_lookup':None,
+		'director':director_cgmd,'selector':selector_cgmd,'protein_select':cgmd_protein,
+		'trajsel':'u6-trestles/md.part0004.110000-209900-200.xtc',
+		'label':r'$\mathrm{{ENTH}\ensuremath{\times}8}$',
+		'label_text':'8xENTH(close)',
+		'nprots':8,
+		},
 	}
 	
 #---choose default midplane resolution

@@ -434,6 +434,7 @@ def plotmov(dat,basename,altdat=None,panels=1,plotfunc=None,figsize=None,keep_sn
 		dat = [array(dat)]
 	#if panels == 1 and plotfunc != None:
 	#	dat = [dat]
+	print panels
 	if lims != None: vmin,vmax = lims
 	else:
 		vmax = array(dat).max()

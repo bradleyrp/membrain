@@ -12,24 +12,27 @@ execfile('header-cgmd.py')
 	
 #---analysis menu
 analysis_names = [
-	'v616-210000-310000-200',
 	'v614-120000-220000-200',
 	'v612-75000-175000-200',
 	'v550-400000-500000-160',
 	'v614-40000-140000-200',
 	'v612-10000-80000-200',
-	'v550-300000-400000-200'
-	][:4]
+	'v550-300000-400000-200',
+	'v616-110000-209900-200',
+	'v616-210000-310000-200',
+	][-2:]
 plot_reord = analysis_names
 routine = [
 	'plot',
 	'plot_mean_z',
 	'plot_gaussian',
 	'video_height',
+	'video_height_cat',
 	'extrema_dynamics',
 	][-2:-1]
 bigname = 'v616-v614-v612-v550'
-panel_nrows = [1,2][-1]
+bigname = 'v616-combine'
+panel_nrows = [1,2][0]
 
 #---FUNCTIONS
 #-------------------------------------------------------------------------------------------------------------
@@ -149,6 +152,31 @@ if 'video_height' in routine:
 	#---previously used figsize 12,6 with nrows = 1 for a 1x4 panel plot
 	#---previously used figsize 12,6 with nrows = 2 for a 2x2 panel plot, with a slight gap between rows
 	plotmov(vidpanels,'heightmap-'+bigname,altdat=msets,panels=len(msets),
+		plotfunc='gridprop_panel_plot',whitezero=True,lims=[-extremum,extremum],
+		args=[['nine',True]],slowdown=2,figsize=(10,10),lowres=True,nrows=panel_nrows)
+		
+#---make cool videos of the height
+if 'video_height_cat' in routine:
+	#---standard video routine modified from the stressmap code
+	#---find extrema to normalize the color scale between panels
+	extremum = max(max([array(i.surf).max() for i in msets]),
+		max([abs(array(i.surf).min()) for i in msets]))/10.
+	#---test the plotting function
+	msetcat = msets[0]
+	msetcat.surf = msetcat.surf + msets[1].surf
+	msetcat.protein = msetcat.protein + msets[1].protein
+	msetcat.vecs = msetcat.vecs + msets[1].vecs
+	msetcat.vecs_index = list(array(msets[1].vecs_index)+len(msetcat.vecs))
+	gridprop_panel_plot([array(msetcat.surf[0])/10.],
+		plt.figure(),vmin=-extremum,vmax=extremum,fr=0,altdat=msets,nine=True,nrows=panel_nrows)
+	plt.show()
+	#---prepare the data set
+	vidpanels = [[array(msetcat.surf[j])/10. 
+		for j in range(len(msets[0].surf))]]
+	#---generate the video
+	#---previously used figsize 12,6 with nrows = 1 for a 1x4 panel plot
+	#---previously used figsize 12,6 with nrows = 2 for a 2x2 panel plot, with a slight gap between rows
+	plotmov(vidpanels,'heightmap-'+bigname,altdat=[msetcat],panels=1,
 		plotfunc='gridprop_panel_plot',whitezero=True,lims=[-extremum,extremum],
 		args=[['nine',True]],slowdown=2,figsize=(10,10),lowres=True,nrows=panel_nrows)
 

@@ -43,8 +43,8 @@ routine = [
 	'plot_radar',
 	'compute_topog',
 	'plot_topog',
-	][-1:]
-bigname = 'v616-v614-v612-v550-ver2-test'
+	][1:2]
+bigname = 'v616-v614-v612-v550-ver2'
 
 #---available dimple plots
 dimple_plot_type = [
@@ -60,6 +60,8 @@ radar_plot_type = ['radar_proteins','radar_extrema'][-1]
 topog_plot_type = [
 	'extrema',
 	][0]
+	
+show_plots = False
 	
 #---DOWNSTREAM
 #-------------------------------------------------------------------------------------------------------------
@@ -594,7 +596,7 @@ if 'plot_dimple' in routine:
 						for i in target_zones[j]])) for j in range(len(target_zones))]
 				#---alternate filtering 2
 				#---note that the "mod2" handle will never change
-				#---this filters for magnitudes within smallfilt and hifilt and dimples within the box
+				#---this filters for magnitudes within smallfilt and hifilt and dimples in the neighborhood
 				elif filter_type == 'mod2':
 					vecs = mean(mset.vecs,axis=0)
 					fitted_inds = array([type(test.data[i][1]) != list for i in range(len(test.data))])
@@ -605,7 +607,8 @@ if 'plot_dimple' in routine:
 						if fitted_inds[i]:
 							z0,c0,x0,y0,sx,sy,th = test.data[i][0]
 							hmaxraw.append(-1*10*curvfac*gauss2dh(test.data[i][0],x0,y0))
-							center_near_nborhood[i] = scipy.spatial.distance.cdist(target_zones[i][:,:2],[[x0,y0]]).min() < 10.
+							center_near_nborhood[i] = scipy.spatial.distance.cdist(target_zones[i][:,:2],
+								[[x0,y0]]).min() < sqrt(2)*10.
 						else: hmaxraw.append(0)
 					center_near_nborhood = array(center_near_nborhood)
 					magfilter = array([(abs(hmaxraw[i])>smallfilt and abs(hmaxraw[i])<hifilt) \
@@ -972,13 +975,18 @@ if 'plot_topog' in routine:
 	maxz = round(max([abs(min(flatten(dats))),abs(max(flatten(dats)))]),-1)+10
 	extremz = max([max([mean(mset.surf,axis=0).max(),abs(mean(mset.surf,axis=0).min())])
 		for mset in msets])
-	fig = plt.figure(figsize=((1+len(dats))*2.90,12))
+	fig = plt.figure(figsize=((1+len(dats))*3.75,12))
 	axeslist,structlist = [],[]
-	gs = gridspec.GridSpec(3,len(dats),wspace=0.0,hspace=0.0)
+	gssnap = gridspec.GridSpec(5,2*len(dats),wspace=0.2,hspace=0.2)
+	gssnap.update(left=0.0,right=1.0,top=1.0,bottom=0.7)
+	gs = gridspec.GridSpec(1,len(dats),wspace=0.0,hspace=0.0)
+	gs.update(left=0.0,right=1.0,top=0.65,bottom=0.35)
+	gs2 = gridspec.GridSpec(1,len(dats),wspace=0.0,hspace=0.0)
+	gs2.update(left=0.0,right=1.0,top=0.3,bottom=0.0)
 	nnames = [listlook(msdats[0][i].notes,'neighborhood_name') for i in range(len(params_plot[0]))]
 	maxfreq = 0
 	for pnum in range(len(params_plot)):
-		ax = plt.subplot(gs[2,pnum])
+		ax = plt.subplot(gs2[pnum])
 		axeslist.append(ax)
 		for gnum in range(len(params_plot[pnum])):
 			expt = params_plot[pnum][gnum]
@@ -988,16 +996,19 @@ if 'plot_topog' in routine:
 			for i in analysis_descriptors[aname]: vars()[i] = (analysis_descriptors[aname])[i]
 			nborhoods,nbornames = dimple_generate_neighborhood(expt)
 			dat_ind = dimple_test_lookup(expt,aname)[0]
-			hist,edges = numpy.histogram(flatten(msdats[anum][dat_ind].data),range=(-maxz,maxz),bins=topog_nbins)
+			hist,edges = numpy.histogram(flatten(msdats[anum][dat_ind].data),range=(-maxz,maxz),
+				bins=topog_nbins)
 			mids = 1./2*(edges[1:]+edges[:-1])/10.
 			color = dimple_colordict(nnames[gnum],listing=nnames,scheme=topog_plot_type)
 			ls = '--' if nnames[gnum] in ['valley (dynamic)','peak (dynamic)'] else '-'
-			axeslist[pnum].plot(mids,hist,ls,c=color)
+			axeslist[pnum].plot(mids,hist,ls,c=color,
+				label=listlook(msdats[anum][dat_ind].notes,'neighborhood_name'))
 			maxfreq = max([maxfreq,max(hist)])
+		ax.legend(loc='upper left',fontsize=fsaxlegend-4)
 		ax.set_xlabel(r'$z_{max},z_{min}\:\mathrm{(nm)}$',fontsize=fsaxlabel)
 		ax.get_xaxis().set_major_locator(mpl.ticker.MaxNLocator(prune='both'))
 		if pnum == 0: ax.set_ylabel('extrema (dynamic)',fontsize=fsaxlabel)
-		ax = plt.subplot(gs[1,pnum])
+		ax = plt.subplot(gs[pnum])
 		structlist.append(ax)
 		im = plotter2d(ax,mset,dat=mean(mset.surf,axis=0)/10.,
 			lognorm=False,cmap=mpl.cm.RdBu_r,inset=False,cmap_washout=0.65,
@@ -1017,12 +1028,27 @@ if 'plot_topog' in routine:
 			axins2.set_ylabel(r'$\left\langle z(x,y)\right\rangle \:(\mathrm{nm})$',
 				fontsize=fsaxlabel,rotation=270)
 			axins2.get_yaxis().set_major_locator(mpl.ticker.MaxNLocator(prune='both'))
+		#---top row of birdseye images
 		img = mpimg.imread(pickles+imagelist[aname])
-		ax = plt.subplot(gs[0,pnum])
-		if pnum == 0: ax.set_ylabel('snapshots',fontsize=fsaxlabel)
-		ax.set_title(label,fontsize=fsaxtitle)
+		ax = plt.subplot(gssnap[2:5,2*pnum])
 		imgplot = ax.imshow(img)
-		imgplot.set_cmap('hot')
+		ax.set_yticks([])
+		ax.set_xticks([])
+		shifter = [100,-100] if aname == 'v614-120000-220000-200' else [0,0]
+		ax.add_patch(plt.Rectangle((800-shifter[0],800-shifter[1]),
+			width=1400,height=1400,fill=False,ec='y',lw=2))
+		#---top row of birdseye images
+		img = mpimg.imread(pickles+imagelist[aname])
+		ax = plt.subplot(gssnap[2:5,2*pnum+1])
+		imgplot = ax.imshow(img[800+shifter[0]:2200+shifter[0],800+shifter[1]:2200+shifter[1]])
+		ax.set_yticks([])
+		ax.set_xticks([])
+		#---second row of birdseye images
+		img = mpimg.imread(pickles+imagelist2[aname])
+		ax = plt.subplot(gssnap[0:2,2*pnum:2*pnum+2])
+		ax.set_title(label,fontsize=fsaxtitle)
+		shifter = -150 if aname == 'v612-75000-175000-200' else 0
+		imgplot = ax.imshow(img[500+shifter:1500+shifter,700:3300])
 		ax.set_yticks([])
 		ax.set_xticks([])
 	for ax in axeslist:
@@ -1032,9 +1058,8 @@ if 'plot_topog' in routine:
 		ax.set(aspect=float(maxz*2/maxfreq/10))
 	for a in range(len(structlist)):
 		ax = structlist[a]
-		if a > 0: 
-			ax.set_ylabel('')
-			ax.set_yticklabels([])
+		if a > 0 and 0: ax.set_ylabel('')
+		if a > 0 and 0: ax.set_yticklabels([])
 	
 	#---clean and save
 	print '\nstatus: saving plot'

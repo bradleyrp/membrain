@@ -61,4 +61,11 @@ imagelist = {
 	'v612-75000-175000-200':'snap-v612-'+viewtype+'.png',
 	'v550-400000-500000-160':'snap-v550-'+viewtype+'.png'
 	}
+viewtype = 'side'
+imagelist2 = {
+	'v616-210000-310000-200':'snap-v616-'+viewtype+'.png',
+	'v614-120000-220000-200':'snap-v614-'+viewtype+'.png',
+	'v612-75000-175000-200':'snap-v612-'+viewtype+'.png',
+	'v550-400000-500000-160':'snap-v550-'+viewtype+'.png'
+	}
 

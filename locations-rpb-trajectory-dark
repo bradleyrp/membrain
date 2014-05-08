@@ -4,6 +4,7 @@
 name=membrane-v616
 struct=/home/rpb/compbio/membrane-v616-octamer-close/u6-trestles/system-input.resnr.gro
 /home/rpb/compbio/membrane-v616-octamer-close/u6-trestles/md.part0004.61100-117100-1000.xtc
+/home/rpb/compbio/membrane-v616-octamer-close/u6-trestles/md.part0004.110000-209900-200.xtc
 /home/rpb/compbio/membrane-v616-octamer-close/u6-trestles/md.part0005.210000-310000-200.xtc
 
 name=membrane-v614
