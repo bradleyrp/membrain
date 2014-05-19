@@ -1,24 +1,31 @@
 #!/usr/bin/python
 
-if 0:
-	from mayavi import mlab
-	meshplot(collect_c0s[0][0],show='surf')
-	meshplot(collect_c0s[1][0],show='surf')
-if 0:
-	print array(mscs[0].c0s).max()
-	print array(mscs[1].c0s).max()
+from membrainrunner import *
+execfile('locations.py')
+execfile('header-meso.py')
 
-	maxim = max([array(mscs[0].c0s).max(),array(mscs[1].c0s).max()])
+meso_avail = [
+	'v2004',
+	'v2005',
+	'v2006',
+	]
+cgmd_avail = [
+	'v614-120000-220000-200',
+	'v616-210000-310000-200',
+	]
 
-	ax = plt.subplot(121)
-	ax.imshow(mscs[0].c0s[0],vmin=0,vmax=maxim)
-	ax = plt.subplot(122)
-	ax.imshow(mscs[1].c0s[0],vmin=0,vmax=maxim)
-	plt.show()
+#---prepare list of collected residuals for a sweep over available simulations
+collected_residuals = [[[],[],[]] for i in range(len(cgmd_avail))]
 
-if 0:
+#---this script will perform the script-coupling.py analysis for a parameter sweep
+for batch_cgmd in cgmd_avail:
+	for batch_meso in meso_avail:
+		for c0ask in (meso_expt_toc[batch_meso])['parameter_sweep']: 
+			execfile('script-coupling.py')
+			del msets,mscs,collect_c0s
+
 #---plot the summary
-#if collected_residuals != []:
+if collected_residuals != []:
 	annotate = False
 	spec_colors = clrs[1:4]
 	spec_labels = [r'$\left\langle h_{\mathbf{q}}h_{\mathbf{-q}}\right\rangle$',
@@ -40,7 +47,7 @@ if 0:
 				label=(spec_labels[spec_query] if cri == 0 else None))
 			if cri == 0 and spec_query == 2:
 				ax2.legend(bbox_to_anchor=(1.05,1),loc=2,borderaxespad=0.)
-		leftcut = 0.1
+		leftcut = 0.02
 		ax.set_xlim(0,leftcut)
 		label_offsets = [list(data[:,1]).index(i) for i in sort(data[:,1])]
 		ax2.set_xlim(
@@ -85,86 +92,3 @@ if 0:
 		ax.set_ylabel((analysis_descriptors[cgmd_avail[cri]])['label'],fontsize=fsaxlabel)
 	plt.savefig(pickles+'fig-bilayer-couple-meta-'+bigname_nometa+'.png',bbox_inches='tight')
 	plt.show()
-	
-'''
->>> a0
-0.40690525690439677
->>> array([0.008,0.01,0.015,0.02,0.025,0.030,0.035,0.04,0.045,0.05])/a0
-array([ 0.0196606 ,  0.02457575,  0.03686362,  0.04915149,  0.06143936,
-        0.07372724,  0.08601511,  0.09830298,  0.11059085,  0.12287873])
-'''
-
-def collapse_spectrum_prev(subj):
-	cen = array([i/2 for i in shape(subj)])
-	return [mean([
-		subj[cen[0]][cen[1]+cy],
-		subj[cen[0]][cen[1]-cy],
-		subj[cen[0]+cx][cen[1]],
-		subj[cen[0]-cx][cen[1]],
-		]) for cy in range(1,cen[1])
-		for cx in range(1,cen[0])]
-
-
-#---debug
-if 0:
-	subj = mscs[1].qmagst
-	cen = array([i/2 for i in shape(subj)])
-	answq = [[
-		subj[cen[0]][cen[1]+cy],
-		subj[cen[0]][cen[1]-cy],
-		subj[cen[0]+cx][cen[1]],
-		subj[cen[0]-cx][cen[1]],
-		] for cx in range(1,cen[0])
-		for cy in range(1,cen[1])]
-	subj = mscs[1].t2d[0]
-	answh = [[
-		subj[cen[0]][cen[1]+cy],
-		subj[cen[0]][cen[1]-cy],
-		subj[cen[0]+cx][cen[1]],
-		subj[cen[0]-cx][cen[1]],
-		] for cx in range(1,cen[0])
-		for cy in range(1,cen[1])]
-if 0:
-	print answq[1]
-	print answh[1]
-	#print collapse_spectrum(mscs[1].qmagst)[0]
-	#print collapse_spectrum(mscs[1].t2d[0])[0]
-	
-#---reformulate
-
-def collapse_spectrum(subj):
-	cen = array([i/2 for i in shape(subj)])
-	return [mean([
-		subj[cen[0]][cen[1]+cy],
-		subj[cen[0]][cen[1]-cy],
-		subj[cen[0]+cx][cen[1]],
-		subj[cen[0]-cx][cen[1]],
-		]) for cy in range(1,cen[1])
-		for cx in range(1,cen[0])]
-		
-if 1:
-	discgrid = [[cen[0]+cy+i[0],cen[1]+cx+i[1]] for i in [[0,1],[0,-1],[1,0],[-1,0]] for cy in range(1,cen[1]) for cx in range(1,cen[0])]
-	discgrid = [[sqrt(sum(array([cx,cy])**2)) for cy in range(-cen[1]+1,cen[1]+1)] for cx in range(-cen[0]+1,cen[0]+1)]
-	plt.imshow(array(discgrid).T,interpolation='nearest',origin='lower')
-	plt.show()
-	tmp = unique(discgrid,return_inverse=True)[1]
-
-
-#---demonstrate
-if 0:
-	qtmp = mscs[1].t1d[0][:,0]
-	htmp = mscs[1].t1d[0][:,1]
-	tmp = unique(qtmp,return_inverse=True)[1]
-	htmp_reduce = [mean(htmp[where(tmp==i)]) for i in range(tmp.max())]
-	qtmp_reduce = [mean(qtmp[where(tmp==i)]) for i in range(tmp.max())]
-	ax = plt.subplot(111)
-	ax.plot(qtmp,htmp,'bo')
-	if 0: ax.plot(qtmp_reduce,htmp_reduce,'rx')
-	ax.plot(collapse_spectrum(mscs[1].qmagst),collapse_spectrum(mscs[1].t2d[0]),'m+')
-	ax.set_xscale('log')
-	ax.set_yscale('log')
-	plt.show()
-
-
-
-

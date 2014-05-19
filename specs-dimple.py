@@ -232,3 +232,29 @@ params_plot_master.append(
 #---PLOT PARAMETERS, META-SUMMARY
 #-------------------------------------------------------------------------------------------------------------
 
+#---plot parameter set "extrema_meta"
+params_plot_master_names.append('extrema_meta')
+params_plot_master.append(
+	[[(aname,
+		dict({
+			'decay_z0' : 'zero',
+			'cutoff' : cutoff,
+			'fit_dynamics_type' : 'dynamic',
+			'z_filter' : 'inclusive',
+			'framecounts' : 500, 
+			'geography' : geog,
+			},))
+		for geog in ['max_dynamic','min_dynamic','max','min']
+		for cutoff in [100,150,200]]
+			for aname in analysis_names])
+			
+#---for the extrema_meta summary, you need multiple dictionaries in params_plot_settings
+if dimple_plot_type == 'extrema_meta':
+	params_plot_settings = [{
+		'hifilt' : 0.06,
+		'smallfilt' : 0.001,
+		'hist_step' : 0.005,
+		'extent_range' : 32,
+		'filter_type' : i,
+		} for i in ['std','mod1','mod2']]
+		

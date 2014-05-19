@@ -4,126 +4,44 @@ from membrainrunner import *
 execfile('locations.py')
 
 import scipy.ndimage
-from scipy.signal import hilbert
 
 #---SETTINGS
 #-------------------------------------------------------------------------------------------------------------
 
-#---possible analyses
-analysis_descriptors = {
-	'v2002-t3':
-		{'simtype':'meso_precomp',
-		'shortname':r'meso(iso)',
-		'testname':'v2002-t3',
-		'locate':'pkl.structures.meso.v2002-t3.pkl',
-		'start':1500,
-		'end':2000,
-		'nbase':22,
-		'hascurv':True,
-		'hypo':None,
-		'plot_ener_err':True,
-		'plotqe':True,
-		'removeavg':False,
-		'fitlims':[16,4],
-		'forcekappa':True},
-	'v2002-t4':
-		{'simtype':'meso_precomp',
-		'shortname':'meso(bare)',
-		'testname':'v2002-t4',
-		'locate':'pkl.structures.meso.v2002-t4.pkl',
-		'start':1500,
-		'end':2000,
-		'nbase':22,
-		'hascurv':False,
-		'hypo':None,
-		'plot_ener_err':True,
-		'plotqe':True,
-		'removeavg':False,
-		'fitlims':[16,4],
-		'forcekappa':True},
-	'v2002-t2':
-		{'simtype':'meso_precomp',
-		'shortname':r'meso(aniso)',
-		'testname':'v2002-t2',
-		'locate':'pkl.structures.meso.v2002-t2.pkl',
-		'start':1500,
-		'end':2000,
-		'nbase':22,
-		'hascurv':True,
-		'hypo':None,
-		'plot_ener_err':True,
-		'plotqe':True,
-		'removeavg':False,
-		'fitlims':[16,4],
-		'forcekappa':True},
-	'v2002-t1':
-		{'simtype':'meso_precomp',
-		'shortname':'meso(bare)',
-		'testname':'v2002-t1',
-		'locate':'pkl.structures.meso.v2002-t1.pkl',
-		'start':1500,
-		'end':2000,
-		'nbase':22,
-		'hascurv':False,
-		'hypo':None,
-		'plot_ener_err':True,
-		'plotqe':True,
-		'removeavg':False,
-		'fitlims':[16,4],
-		'forcekappa':True},
-	'v614':
-		{'simtype':'md',
-		'shortname':r'$4\times$ENTH(MD)',
-		'testname':'v614',
-		'locate':'pkl.structures.membrane-v614.s9-lonestar.md.part0004.120000-220000-200.pkl',
-		'start':None,
-		'end':None,
-		'nbase':None,
-		'hascurv':True,
-		'hypo':[0.005,1./2,1./2,5,5,0],
-		'plot_ener_err':True,
-		'plotqe':True,
-		'removeavg':False,
-		'fitlims':None,
-		'forcekappa':True}}
+#---if script is run in standalone mode
+if 'c0ask' not in globals(): 
+	c0ask = 0.038
+	execfile('header-meso.py')
 
-#---analyses
-dotest = 'v2002.t3.t4.v614'
-if dotest == 'v2002.t3.t4.v614':
-	analyses_names = ['v614','v2002-t3']
-	#---Nb I think 'v2002-t3' is missing c0s in the mset or they are zeros everywhere
-	#---reverse order of importance for the 1D spectrum plot
-	plot_reord = ['v2002-t3','v614']
-	match_scales = ['v614','v2002-t3']
-	analysis_name = 'v2002.t3.v614'
-	#---load colors in the same order as analyses_names
-	#---previous v614 hypo [0.005,2./5,2./5,10,10,0]
-	clist = [(brewer2mpl.get_map('Set1', 'qualitative', 8).mpl_colors)[i] for i in [0,2,1,3,4,5,6,7,]]
-	routine = ['load','calc','checkplot','plot1d','plot2d','plotphase','hyposweep'][1:3]
-	index_md = 0
-	if 'hyposweep' in routine:
-		hypo_list = [[i,1./2,1./2,10,10,0] for i in arange(0.1,1.0,0.05)]
-		hypo_list = [[0.6,1./2,1./2,i,i,0] for i in range(20)+list(arange(30,100,10))]
-		hypo_list = [[0.6,i,j,14,14,0] for i in arange(0,1,0.05) for j in arange(0,1,0.05)]
-		hypo_list = [[0.6,i,j,14,14,0] for i in arange(0,1,0.05) for j in arange(0,1,0.05)]
-		hypo_list = [[0.6,1./2,1./2,i*j,i,pi/4] for j in [1,2,4,8,10] for i in list(arange(2,20,2))]
-		hypo_list = [[i,cx,cy,sig1,sig2,0] 
-			for cx in [0.5] 
-			for cy in [0.5] 
-			for sig1 in range(1,10+1,2) 
-			for sig2 in range(1,10+1,2)
-			for i in arange(0.01,0.04,0.05)]
-elif dotest == 'v2002.t2.t1':
-	analyses_names = ['v2002-t2','v2002-t1']
-	plot_reord = ['v2002-t1','v2002-t2']
-	match_scales = None
-	analysis_name = 'v2002.t2.t1'
-	#---load colors in the same order as analyses_names
-	clist = [(brewer2mpl.get_map('Set1', 'qualitative', 8).mpl_colors)[i] for i in [0,1,2,3,4,5,6,7,]]
+#---inputs
+cgmd_avail = [
+	'v614-120000-220000-200',
+	'v616-210000-310000-200',
+	]
+cgmd_reference = batch_cgmd if 'batch_cgmd' in globals() else cgmd_avail[-1]
+meso_reference = batch_meso if 'batch_meso' in globals() else 'v2005'
+routine = ['load','calc','masterplot','checkplot','plot2d','plotphase'][1:3]
 
-if 'msets' not in globals(): msets = []; plt.ion()
+#---set curvature extent from fixed parameter in the toc, assuming isotropic
+r_2 = (meso_expt_toc[meso_reference])['R_2']
+
+#---bookkeeping
+p_interest = (meso_expt_toc[key])['parameter_name']
+analysis_names = [cgmd_reference,meso_reference+'-'+p_interest+'-'+str(c0ask)]
+plot_reord = analysis_names
+match_scales = [cgmd_reference,meso_reference+'-'+p_interest+'-'+str(c0ask)]
+bigname = '-'.join(analysis_names)
+
+#---allocate if empty
+if 'msets' not in globals(): msets = []; 
+if showplots and 'msets' not in globals(): plt.ion()
 if 'mscs' not in globals(): mscs = []
 if 'collect_c0s' not in globals(): collect_c0s = []
+
+#---plot settings
+clist = [(brewer2mpl.get_map('Set1', 'qualitative', 8).mpl_colors)[i] for i in [1,2,0,3,4,5,6,7,]]
+
+showplots = False
 
 #---FUNCTIONS
 #-------------------------------------------------------------------------------------------------------------
@@ -244,18 +162,21 @@ class ModeCouple():
 		#---store c0s in nm units
 		self.c0s = [mset.lenscale*array(c0s[i]) for i in range(len(c0s))]
 
-def spectrum_summary(hypotext=False):
+def spectrum_summary(fig=None,gs=None,lowlim=10**-14,titletext='undulations'):
 	'''Plots the 1D spectrum from global variables.'''
 	#---prepare figure
-	fig = plt.figure(figsize=(18,8))
-	gs3 = gridspec.GridSpec(1,2,wspace=0.0,hspace=0.0)
+	savefig = False if fig != None else True
+	if fig == None: fig = plt.figure(figsize=(18,8))
+	if gs == None: gs3 = gridspec.GridSpec(1,2,wspace=0.0,hspace=0.0)
+	else: gs3 = gs
 	axl = plt.subplot(gs3[0])
 	axr = plt.subplot(gs3[1])
 	axl_range = [[10**-10,10**10],[10**-10,10**10]]
 	#---plot undulations
-	for m in [analyses_names.index(aname) for aname	in plot_reord]:
-		a = analyses_names[m]
-		for i in analysis_descriptors[a]: vars()[i] = (analysis_descriptors[a])[i]
+	extra_legend = []
+	for m in [analysis_names.index(aname) for aname	in plot_reord]:
+		a = analysis_names[m]
+		shortname = (analysis_descriptors[a])['detail_name']
 		colord = clist[m]
 		mset = msets[m]
 		#---calculate fitted line
@@ -270,29 +191,38 @@ def spectrum_summary(hypotext=False):
 		kappa_enforced = 1./exp(az_enforced)/area
 		axl.plot([10**-3,10**3],[exp(az_enforced)*(i**-4) for i in [10**-3,10**3]],c='k',lw=2,alpha=0.5)
 		#---plot the undulations
-		axl.scatter(mscs[m].t1d[0][:,0],mscs[m].t1d[0][:,1],color=colord,marker='o',s=40,
+		plotobj = axl.scatter(mscs[m].t1d[0][:,0],mscs[m].t1d[0][:,1],color=colord,marker='o',s=30,
 			label=r'$\left\langle h_{q}h_{-q}\right\rangle$'+', '+shortname+
 			'\n'+r'$\boldsymbol{\kappa} = '+str('%3.1f'%(kappa_enforced))+'\:k_BT$')
+		if m == 0: extra_legend.append(plotobj)
 		if axl_range[0][0] > min(mscs[m].t1d[0][:,0]): axl_range[0][0] = min(mscs[m].t1d[0][:,0])
 		if axl_range[0][1] < max(mscs[m].t1d[0][:,0]): axl_range[0][1] = max(mscs[m].t1d[0][:,0])
 		if axl_range[1][0] > min(mscs[m].t1d[0][:,1]): axl_range[1][0] = min(mscs[m].t1d[0][:,1])
 		if axl_range[1][1] < max(mscs[m].t1d[0][:,1]): axl_range[1][0] = max(mscs[m].t1d[0][:,1])
 		#---plotting extra terms
 		if hascurv:
-			axl.scatter(mscs[m].t1d[1][:,0],mscs[m].t1d[1][:,1],color=colord,marker='+',alpha=0.65)
-			label = r'$\left\langle C_{0,q}h_{-q}\right\rangle$'+','+shortname  if 0 else ''
-			axl.scatter(mscs[m].t1d[2][:,0],mscs[m].t1d[2][:,1],color=colord,marker='x',
-				label=label,alpha=0.65)
-			label = r'$\left\langle C_{0,q}C_{0,-q}\right\rangle$'+','+shortname if 0 else ''
-			axl.scatter(mscs[m].t1d[3][:,0],mscs[m].t1d[3][:,1],color=colord,marker='.',s=20,
-				label=label,alpha=0.65)
+			plotobj = axl.scatter(mscs[m].t1d[1][:,0],mscs[m].t1d[1][:,1],facecolor=colord,marker='o',s=40,
+				edgecolor='k',lw=0.5,	alpha=0.65)
+			if m == 0: extra_legend.append(plotobj)
+			axl.scatter(mscs[m].t1d[2][:,0],mscs[m].t1d[2][:,1],facecolor=colord,marker='o',s=40,
+				edgecolor='k',lw=0.5,label='',alpha=0.65)
+			plotobj = axl.scatter(mscs[m].t1d[3][:,0],mscs[m].t1d[3][:,1],color=colord,marker='x',s=20,
+				label='',alpha=0.65)
+			if m == 0: extra_legend.append(plotobj)
+		#---extra legend
+		legend2 = axl.legend(extra_legend,
+			[r'$\left\langle h_{\mathbf{q}}h_{\mathbf{-q}}\right\rangle$',
+			r'$\left\langle C_{0,\mathbf{q}} h_{-\mathbf{q}} \right\rangle $',
+			r'$\left\langle C_{0,\mathbf{q}} C_{0,-\mathbf{q}} \right\rangle $'],
+			loc='upper right')
 		#---plot details
 		axl.set_xlabel(r'$\left|\mathbf{q}\right|(\mathrm{nm}^{-1})$',fontsize=fsaxlabel)
 		h,l = axl.get_legend_handles_labels()
 		h = [h[i] for i in range(len(l)) if l[i] != '']
 		l = [l[i] for i in range(len(l)) if l[i] != '']
-		axl.set_title('undulations')
+		axl.set_title(titletext,fontsize=fsaxtitle)
 		axl.legend(h[::-1],l[::-1],loc='lower left')
+		plt.gca().add_artist(legend2)
 		axl.tick_params(labelsize=fsaxticks)	
 		axl.set_xscale('log')
 		axl.set_yscale('log')
@@ -300,107 +230,86 @@ def spectrum_summary(hypotext=False):
 		axl.set_ylabel(\
 			r'$\left\langle h_{\mathbf{q}}h_{\mathbf{-q}}\right\rangle \left(\mathrm{nm}^{2}\right)$',
 			fontsize=fsaxlabel)
-	#---plot energy errors
-	for m in [analyses_names.index(aname) for aname	in plot_reord]:
-		a = analyses_names[m]
-		for i in analysis_descriptors[a]: vars()[i] = (analysis_descriptors[a])[i]
-		colord = clist[m]
-		mset = msets[m]
-		reord0 = np.lexsort((mscs[m].tsum1d[:,1],mscs[m].tsum1d[:,0]))
-		if plot_ener_err:
-			if 0:
-				axr.fill_between(mscs[m].tsum1d[reord0,0],
-					mscs[m].tsum1d[reord0,1]-mscs[m].tsum1de[reord0,1],
-					mscs[m].tsum1d[reord0,1]+mscs[m].tsum1de[reord0,1],color=colord,alpha=0.2)
-			if 1:
-				#---use hilbert to get the analytical signal to plot error bars more intelligently
-				axr.fill_between(mscs[m].tsum1d[reord0[::1],0],
-					real(hilbert(mscs[m].tsum1d[reord0[::-1],1]-mscs[m].tsum1de[reord0[::-1],1])),
-					real(hilbert(mscs[m].tsum1d[reord0[::1],1]+mscs[m].tsum1de[reord0[::1],1])),
-					color=colord,alpha=0.2)
-			if 0:
-				axr.fill_between(mscs[m].tsum1d[reord0[::1],0],
-					-1*real(hilbert(-1*(mscs[m].tsum1d[reord0[::1],1]-mscs[m].tsum1de[reord0[::1],1])))[::1],
-					real(hilbert(1*(mscs[m].tsum1d[reord0[::1],1]+mscs[m].tsum1de[reord0[::1],1]))),
-					color=colord,alpha=0.2)
-	for m in [analyses_names.index(aname) for aname	in plot_reord]:
-		a = analyses_names[m]
-		for i in analysis_descriptors[a]: vars()[i] = (analysis_descriptors[a])[i]
+	for m in [analysis_names.index(aname) for aname	in plot_reord]:
+		a = analysis_names[m]
+		shortname = (analysis_descriptors[a])['detail_name']
 		colord = clist[m]
 		mset = msets[m]
 		reord0 = np.lexsort((mscs[m].tsum1d[:,1],mscs[m].tsum1d[:,0]))
 		if plotqe:
 			reord0b = np.lexsort((mscs[m].t1denergy[0][:,1],mscs[m].t1denergy[0][:,0]))
-			if 0:
-				axr.plot(mscs[m].t1denergy[0][reord0b,0],mscs[m].t1denergy[0][reord0b,1],'--',
-					color=colord,lw=2,alpha=1.)
 			axr.scatter(mscs[m].t1denergy[0][reord0b,0],mscs[m].t1denergy[0][reord0b,1],
-				marker='o',color=colord,s=40)
+				marker='o',color=colord,s=20)
 		#---plot the data
-		if 0:
-			axr.plot(mscs[m].tsum1d[reord0,0],mscs[m].tsum1d[reord0,1],'-',color=colord,lw=2,alpha=0.5)
 		axr.scatter(mscs[m].tsum1d[reord0,0],mscs[m].tsum1d[reord0,1],
-			marker='o',color=colord,s=40,label=shortname)
+			marker='o',color=colord,s=20,label=shortname)
+		#---plot a single line
+		inds = unique(mscs[m].tsum1d[:,0],return_inverse=True)[1]
+		dat = mscs[m].tsum1d[:,0]
+		xdat = [mean(dat[where(inds==i)[0]]) for i in range(max(inds))]
+		dat = mscs[m].tsum1d[:,1]
+		ydat = [mean(dat[where(inds==i)[0]]) for i in range(max(inds))]
+		axr.plot(xdat,ydat,'o-',color=colord,label='')
 		#---plot details
 		axr.set_xscale('log')
 		axr.set_yscale('log')
 		axr.yaxis.tick_right()
 		axr.set_ylabel(\
 			r'$\left\langle \mathscr{H}_{el}\right\rangle \left(\frac{k_{B}T}{2}\right)^{-1}$',
-			fontsize=fsaxlabel)
+			fontsize=fsaxlabel,rotation=270)
 		axr.set_xlabel(r'$\left|\mathbf{q}\right|(\mathrm{nm}^{-1})$',fontsize=fsaxlabel)
 		axr.yaxis.set_label_position("right")
 		h,l = axr.get_legend_handles_labels()
+		h = [h[i] for i in range(len(l)) if l[i] != '']
+		l = [l[i] for i in range(len(l)) if l[i] != '']
 		plt.legend(h[::-1],l[::-1],loc='lower right')
 		axr.grid(True,which='both')
-		axr.set_title('energy',fontsize=fsaxlabel)
+		axr.set_title('energy',fontsize=fsaxtitle)
 		plt.tick_params(labelsize=fsaxticks)
 	#---set final plots limits for the undulations
-	xlims = (1./2*min([min([min([i for i in mscs[analyses_names.index(k)].t1d[t][:,0] if i != 0.]) 
-		for t in ([0,1,2,3] if (analysis_descriptors[k])['hascurv'] else [0])]) for k in analyses_names]),
-		2*max([max([max([i for i in mscs[analyses_names.index(k)].t1d[t][:,0] if i != 0.]) for t in ([0,1,2,3] 
-		if (analysis_descriptors[k])['hascurv'] else [0])]) for k in analyses_names]))
+	xlims = (1./2*min([min([min([i for i in mscs[analysis_names.index(k)].t1d[t][:,0] if i != 0.]) 
+		for t in ([0,1,2,3] if (analysis_descriptors[k])['hascurv'] else [0])]) for k in analysis_names]),
+		2*max([max([max([i for i in mscs[analysis_names.index(k)].t1d[t][:,0] if i != 0.]) 
+			for t in ([0,1,2,3] 
+		if (analysis_descriptors[k])['hascurv'] else [0])]) for k in analysis_names]))
 	axl.set_xlim(xlims)
 	axr.set_xlim(xlims)
 	axr.set_ylim((1./2*10**-1,2*10**1))
+	axr.axhline(y=1,xmin=0.,xmax=1,lw=2,color='k')
 	axl.set_ylim((
-		1./2*min([min([min([i for i in mscs[analyses_names.index(k)].t1d[t][:,1] if i != 0.]) 
+		1./2*min([min([min([i for i in mscs[analysis_names.index(k)].t1d[t][:,1] if i != 0.]) 
 			for t in ([0,1,2,3] 
-			if (analysis_descriptors[k])['hascurv'] else [0])]) for k in analyses_names]),
-		2*max([max([max([i for i in mscs[analyses_names.index(k)].t1d[t][:,1] if i != 0.]) 
+			if (analysis_descriptors[k])['hascurv'] else [0])]) for k in analysis_names]),
+		2*max([max([max([i for i in mscs[analysis_names.index(k)].t1d[t][:,1] if i != 0.]) 
 			for t in ([0,1,2,3] 
-			if (analysis_descriptors[k])['hascurv'] else [0])]) for k in analyses_names])))
-	#---fix the limits for now
-	if 1: axl.set_ylim((10**-11,10**0))
-	hypo_suffix = '' if not hypo else '-hypo-'+str(hypo[0])+'-'+str(hypo[1])+'-'+str(hypo[2])+'-'+\
-		str(hypo[3])+'-'+str(hypo[4])+'-'+str(hypo[5])
-	if hypotext:
-		axl.text(0.95,0.95,
-			r'$C_0='+str(hypo[0])+'\:\mathrm{{nm}^{-1}}$\n'+\
-			r'$(\sigma_{a},\sigma_{b})=('+str(hypo[3])+','+str(hypo[4])+')\:\mathrm{nm}$\n'+\
-			r'$(\frac{x_0}{L_x},\frac{y_0}{L_y})=('+str(hypo[1])+','+str(hypo[2])+')$',
-			horizontalalignment='right',
-			verticalalignment='top',
-			transform=axl.transAxes)
-	plt.savefig(pickles+'fig-bilayer-couple-'+analysis_name+'-'+'spectrum1d'+hypo_suffix+'.png',
-		dpi=200,bbox_inches='tight')
-	plt.show()
-
+			if (analysis_descriptors[k])['hascurv'] else [0])]) for k in analysis_names])))
+	#---fix the plot limits
+	if 1: axl.set_ylim((lowlim,10**0))
+	if savefig: plt.savefig(pickles+'fig-bilayer-couple-spectrum-'+bigname+'.png',
+		dpi=300,bbox_inches='tight')
+	if showplots: plt.show()
+	
 #---MAIN
 #-------------------------------------------------------------------------------------------------------------
 
 #---load and interpolate
 if 'load' in routine or msets == []:
 	lenscale = 1.0
-	for a in analyses_names:
+	for a in analysis_names:
 		for i in analysis_descriptors[a]: vars()[i] = (analysis_descriptors[a])[i]
 		if 'mset' in globals(): del mset
 		mset = MembraneSet()
 		if simtype == 'meso':
-			c0sraw = array(mset.load_points_vtu(locate,extra_props='induced_cur',
-				start=start,end=end,nbase=nbase,lenscale=lenscale))[:,0]
-			mset.surfacer()
-			c0s = mset.surfacer_general(c0sraw)
+			#strucstring = 'pkl.structures.meso.'+(analysis_descriptors[a])['testname']+'.pkl'
+			#c0sraw = array(mset.load_points_vtu(locate,extra_props='induced_cur',start=start,
+			#	end=end,nbase=nbase,lenscale=lenscale,
+			#	prefix='EQUIB-conf-'))[:,0]
+			#mset.surfacer()
+			#c0s = mset.surfacer_general(c0sraw)
+			#collect_c0s.append(c0s)
+			#msets.append(mset)
+			mset = unpickle(pickles+'pkl.structures.meso.'+(analysis_descriptors[a])['testname']+'.pkl')
+			c0s = mset.getdata('c0map').data
 			collect_c0s.append(c0s)
 			msets.append(mset)
 		elif simtype == 'md':
@@ -408,6 +317,8 @@ if 'load' in routine or msets == []:
 			if 'mset' in globals(): del mset
 			mset = unpickle(pickles+locate)
 			msets.append(mset)
+			#---here we set the hypothetical curvature equal to the induced curvature at the mesoscale
+			hypo[0] = c0ask
 			#---compute hypothetical curvature field for the MD simulation
 			if hypo != None:
 				vecs = mean(mset.vecs,axis=0)
@@ -418,9 +329,12 @@ if 'load' in routine or msets == []:
 				#---convert everything to nm
 				#---recall z0,c0,x0,y0,sx,sy,th = params
 				#---params sets C0 in native units, x0,y0 in proportional units, and sx,sy in nm
-				params = [0,hypo[0],vecs[0]*hypo[1]/mset.lenscale,vecs[1]*hypo[2]/mset.lenscale,
-					hypo[3],hypo[4],hypo[5]]
-				c0hypo = array([[gauss2d(params,getgrid[i,j,0],getgrid[i,j,1]) for j in range(n)] 
+				params = [0,hypo[0],
+					vecs[0]*hypo[1]/mset.lenscale,
+					vecs[1]*hypo[2]/mset.lenscale,
+					hypo[3],hypo[4],
+					hypo[5]]
+				c0hypo = array([[gauss2d(params,getgrid[i,j,0],getgrid[i,j,1]) for j in range(n)]
 					for i in range(m)])
 				collect_c0s.append([c0hypo for i in range(len(mset.surf))])
 			else:
@@ -436,81 +350,80 @@ if 'load' in routine or msets == []:
 if 'calc' in routine:
 	#---match mesoscale length scales to an MD simulation
 	if match_scales != None:
-		ref_ind = analyses_names.index(match_scales[0])
-		move_ind = analyses_names.index(match_scales[1])
-		lenscale = max(mean(msets[move_ind].vecs,axis=0))/\
-			(max(mean(msets[ref_ind].vecs,axis=0))/msets[ref_ind].lenscale)
-		for a in analyses_names:
+		ref_ind = analysis_names.index(match_scales[0])
+		move_ind = analysis_names.index(match_scales[1])
+		#lenscale = max(mean(msets[move_ind].vecs,axis=0))/(max(mean(msets[ref_ind].vecs,axis=0))/msets[ref_ind].lenscale)
+		#---matching the average box vectors here ...........................
+		lenscale = mean(mean(msets[move_ind].vecs,axis=0)[:2])/(mean(mean(msets[ref_ind].vecs,axis=0)[:2])/msets[ref_ind].lenscale)
+		for a in analysis_names:
 			for i in analysis_descriptors[a]: vars()[i] = (analysis_descriptors[a])[i]
 			if (analysis_descriptors[a])['simtype'] == 'meso' or \
 				(analysis_descriptors[a])['simtype'] == 'meso_precomp':
-				msets[analyses_names.index(a)].lenscale = lenscale
+				msets[analysis_names.index(a)].lenscale = lenscale
+		#---here we set the hypothetical curvature equal to the induced curvature at the mesoscale
+		hypo[0] = c0ask
 		#---reset the hypothetical C0 field according to the new scaling (replaces the calculation above)
-		for a in analyses_names:
+		for a in analysis_names:
 			for i in analysis_descriptors[a]: vars()[i] = (analysis_descriptors[a])[i]
 			if analysis_descriptors[a]['simtype'] == 'md':
-				anum = analyses_names.index(a)
+				anum = analysis_names.index(a)
 				mset = msets[anum]
 				vecs = mean(mset.vecs,axis=0)
 				m,n = mset.griddims
-				params = [0,0.5*hypo[0]*msets[1].lenscale,vecs[0]*hypo[1]/mset.lenscale,vecs[1]*hypo[2]/mset.lenscale,hypo[3]/msets[1].lenscale,hypo[4]/msets[1].lenscale,hypo[5]]
-				c0hypo = array([[gauss2d(params,getgrid[i,j,0],getgrid[i,j,1]) for j in range(n)] for i in range(m)])
+				#---getgrid is xyz points in nm
+				getgrid = array([[[i,j] for j in linspace(0,3*vecs[1]/mset.lenscale,3*n)] 
+					for i in linspace(0,3*vecs[0]/mset.lenscale,3*m)])
+				############ key step which used to have a 0.5*hypo[0] here possible due to pre-deserno convention
+				params = [0,
+					hypo[0]*msets[1].lenscale/mset.lenscale,
+					vecs[0]*(1+hypo[1])/mset.lenscale,
+					vecs[1]*(1+hypo[2])/mset.lenscale,
+					sqrt(r_2)/msets[1].lenscale/sqrt(2),
+					sqrt(r_2)/msets[1].lenscale/sqrt(2),
+					hypo[5]]
+				######## PBCCCCssss
+				c0hypo_nopbc = array([[gauss2d(params,getgrid[i,j,0],getgrid[i,j,1]) for j in range(3*n)] for i in range(3*m)])
+				c0hypo = [[max([c0hypo_nopbc[i+sh[0]*m,j+sh[1]*n] for sh in [[k,l] for k in range(3) for l in range(3)]]) for j in range(n)] for i in range(m)]
 				collect_c0s[anum] = [c0hypo for i in range(len(mset.surf))]
 	#---calculate coupled modes
-	for a in analyses_names:
+	for a in analysis_names:
 		for i in analysis_descriptors[a]: vars()[i] = (analysis_descriptors[a])[i]
-		m = analyses_names.index(a)
+		m = analysis_names.index(a)
 		if 'msc' in globals(): del msc
 		msc = ModeCouple()
 		msc.calculate_mode_coupling(msets[m],collect_c0s[m])
 		mscs.append(msc)
-	hypo = (analysis_descriptors['v614'])['hypo']
-	spectrum_summary(hypotext=True)
-	#execfile('script-coupling-dev2.py')
+	hypo = (analysis_descriptors[cgmd_reference])['hypo']
+	hypo[0] = c0ask
+	if 'masterplot' not in routine and 'simple_summary' in routine: spectrum_summary()
+	#---calculate residuals
+	spec_query = [0,1,3]
+	for s in range(len(spec_query)):
+		a0 = msets[1].lenscale
+		thresh = 0.4
+		dat0 =array([i for i in mscs[0].t1d[spec_query[s]] if i[0] != 0 and i[0] < thresh])
+		dat1 = array([i for i in mscs[1].t1d[spec_query[s]] if i[0] != 0 and i[0] < thresh])
+		dat0log = log10(dat0)
+		dat1log = log10(dat1)
+		cd = scipy.spatial.distance.cdist(dat0log,dat1log)
+		cd[cd.argmin(axis=argmax(shape(cd)))]
+		resid = mean([cd[i,argmax(shape(cd))] for i in cd.argmin(axis=argmax(shape(cd)))])
+		print 'result: C_0 = '+('{0:.3f}'.format(c0ask*msets[1].lenscale)).rjust(5)+' (nm^-1)   '+\
+			'resid = '+('{0:.3f}'.format(resid)).rjust(10)+'  status: npts = ('+str(len(dat0))+\
+			','+str(len(dat1))+')'
+		if 'collected_residuals' in globals(): 
+			collected_residuals[cgmd_avail.index(cgmd_reference)][s].append([c0ask,resid])
 		
-#---calculate mode couplings according to testable hypotheses
-if 'hyposweep' in routine:
-	#---match mesoscale length scales to an MD simulation
-	if match_scales != None:
-		ref_ind = analyses_names.index(match_scales[0])
-		move_ind = analyses_names.index(match_scales[1])
-		lenscale = max(mean(msets[move_ind].vecs,axis=0))/\
-			(max(mean(msets[ref_ind].vecs,axis=0))/msets[ref_ind].lenscale)
-		for a in analyses_names:
-			if (analysis_descriptors[a])['simtype'] == 'meso' or \
-				(analysis_descriptors[a])['simtype'] == 'meso_precomp':
-				msets[analyses_names.index(a)].lenscale = lenscale
-	#---calculate coupled modes
-	for a in analyses_names:
-		m = analyses_names.index(a)
-		if 'msc' in globals(): del msc
-		msc = ModeCouple()
-		msc.calculate_mode_coupling(msets[m],collect_c0s[m])
-		mscs.append(msc)
-	#---loop over testable hypotheses
-	mset = msets[index_md]
-	for hypo in hypo_list:
-		print 'status: testing hypothesis: '+str(hypo)
-		vecs = mean(mset.vecs,axis=0)
-		m,n = mset.griddims
-		getgrid = array([[[i,j] for j in linspace(0,vecs[1]/mset.lenscale,n)] for i in linspace(0,vecs[0]/mset.lenscale,m)])
-		#---convert everything to nm
-		#---recall z0,c0,x0,y0,sx,sy,th = params
-		params = [0,hypo[0],vecs[0]*hypo[1]/mset.lenscale,vecs[1]*hypo[2]/mset.lenscale,hypo[3],hypo[4],hypo[5]]
-		c0hypo = array([[gauss2d(params,getgrid[i,j,0],getgrid[i,j,1]) for j in range(n)] for i in range(m)])
-		mscs[index_md].calculate_mode_coupling(msets[index_md],[c0hypo for i in range(len(mset.surf))])
-		spectrum_summary(hypotext=True)		
-
 #---plots, compare 2D undulation spectra between bare and protein systems alone, or scaled by q4
 if 'plot2d' in routine:
 	insets = True
 	i2wid = 1
 	#---plot these for both the <h_{q}h_{-q}> and <h_{q}h_{-q}>q4
 	for d in ['helastic','hq2','helerr','hq2q4']:
-		fig = plt.figure(figsize=(4*len(analyses_names),6))
-		gs = gridspec.GridSpec(1,len(analyses_names),hspace=0.5,wspace=0.5)
-		for m in [analyses_names.index(aname) for aname in plot_reord[::-1]]:
-			a = analyses_names[m]
+		fig = plt.figure(figsize=(4*len(analysis_names),6))
+		gs = gridspec.GridSpec(1,len(analysis_names),hspace=0.5,wspace=0.5)
+		for m in [analysis_names.index(aname) for aname in plot_reord[::-1]]:
+			a = analysis_names[m]
 			mset = msets[m]
 			#---note that you can also plot the errors by using mscs[m].tsum2de
 			if d == 'helastic':
@@ -518,13 +431,13 @@ if 'plot2d' in routine:
 				if (analysis_descriptors[a])['simtype'] == 'md':
 					cm,cn = [int(i/2)-1 for i in shape(mset.undulate_hqhq2d)]
 					data[cm,cn] = 1.0
-				title = str((analysis_descriptors[a])['shortname'])+'\n'+\
+				title = str((analysis_descriptors[a])['detail_name'])+'\n'+\
 					r'$\left\langle \mathscr{H}_{el}\right\rangle \left(\frac{k_{B}T}{2}\right)^{-1}$'
 				lims = [1*10**-1,1*10**1]
 				cmap = mpl.cm.RdBu_r
 			elif d == 'hq2': 
 				data = mscs[m].t2d[0]
-				title = str((analysis_descriptors[a])['shortname'])+'\n'+\
+				title = str((analysis_descriptors[a])['detail_name'])+'\n'+\
 					r'$\mathbf{\left\langle h_{q}h_{-q}\right\rangle}$'
 				lims = None
 				cmap = mpl.cm.jet
@@ -533,7 +446,7 @@ if 'plot2d' in routine:
 				if (analysis_descriptors[a])['simtype'] == 'md':
 					cm,cn = [int(i/2)-1 for i in shape(mset.undulate_hqhq2d)]
 					data[cm,cn] = mean(data)
-				title = str((analysis_descriptors[a])['shortname'])+'\n'+\
+				title = str((analysis_descriptors[a])['detail_name'])+'\n'+\
 					r'$\mathbf{\delta}(\mathbf{\left\langle h_{\mathbf{q}}'+\
 					r'h_{\mathbf{\mathbf{-q}}}\right\rangle q}^{4})$'
 				lims = None
@@ -541,7 +454,7 @@ if 'plot2d' in routine:
 			elif d == 'hq2q4':
 				data = mscs[m].t1denergy[0]
 				data = mscs[m].scalefac*(mscs[m].t2d[0]*mscs[m].qmagst**4)
-				title = str((analysis_descriptors[a])['shortname'])+'\n'+\
+				title = str((analysis_descriptors[a])['detail_name'])+'\n'+\
 					r'$\mathbf{\left\langle h_{q}h_{-q}\right\rangle {\left|\mathbf{q_y}\right|}^{4}}$'
 				lims = None
 				lims = [1*10**-1,1*10**1]
@@ -557,7 +470,7 @@ if 'plot2d' in routine:
 					tickshow=False,cmap=cmap,lims=[array([i for i in flatten(data) 
 						if i != 0.]).min(),data.max()])
 			#ax.set_title(title,fontsize=fsaxlabel)
-		plt.savefig(pickles+'fig-bilayer-couple-'+analysis_name+'-'+d+'.png',
+		plt.savefig(pickles+'fig-bilayer-couple-'+bigname+'-'+d+'.png',
 			dpi=500,bbox_inches='tight')
 		plt.close(fig)
 	
@@ -578,7 +491,7 @@ if 'plotphase' in routine:
 				cmap=mpl.cm.jet,vmax=pi,vmin=10**-10)
 			ax.imshow(-1*anglesfilt.T,interpolation='nearest',origin='lower',norm=mpl.colors.LogNorm(),
 				cmap=mpl.cm.jet_r,vmax=pi,vmin=10**-10)
-		plt.show()
+		if showplots: plt.show()
 	#---plot phase angle on XY for different wavelengths, or different groups of wavelengths
 	#---Nb this just shows that the DTMC model isn't dynamic, obviously
 	if 0:
@@ -586,53 +499,52 @@ if 'plotphase' in routine:
 		fig = plt.figure()
 		ax = plt.subplot(111,aspect='equal')
 		wid = 5
-		clrs = [(brewer2mpl.get_map('Set1', 'qualitative', 8).mpl_colors)[i] for i in [0,1,2,3]] #---RBG
+		clrs = [(brewer2mpl.get_map('Set1', 'qualitative', 8).mpl_colors)[i] for i in [0,1,2,3]]
 		for m in range(4):
 			ms = [msetmd,msetmd2,mset,mset2][m]
 			dat = array([[mean(angle(ms.undulate_raw[i])[cm:cm+wid,cn]),
 				mean(angle(ms.undulate_raw[i])[cm,cn:cn+wid])]
 				for i in range(len(ms.undulate_raw))])
 			plt.scatter(dat[:,0],dat[:,1],c=clrs[m])
-		plt.show()
+		if showplots: plt.show()
 
-#-------------------!!!!!!!!!!!!@@@@@@@@@@@@#########################
+#---comparison of curvature between MESO and CGMD methods
+#---plots height-curvature correlation alongsize structure and variations
 if 'checkplot' in routine:		
+	#---fixed limits for making smooth gifs
+	extremz_checkplot_global = -2.5,2.5
+	extrems_checkplot_global = 2.0
+	extremc0_checkplot_global = 0.02
 	#---calculations
 	mset = msets[0]
 	vecs = mean(mset.vecs,axis=0)
 	m,n = mset.griddims
-	#---getgrid is xyz points in nm
-	if 0:
-		getgrid = array([[[i,j] for j in linspace(0,vecs[1]/mset.lenscale,n)] for i in linspace(0,vecs[0]/mset.lenscale,m)])
-		if 'tmp' not in globals(): tmp = array(msets[0].surf)
-		msets[0].surf = []
-		for i in range(len(tmp)):
-			msets[index_md].surf.append(1*tmp[i])
-		maxpos = unravel_index((mean(msets[0].surf,axis=0)/msets[0].lenscale).argmax(),msets[0].griddims)
-		maxposgrid = [maxpos[i]/vecs[i]*msets[0].griddims[i] for i in range(2)]
-		#---hypothesis has C0 in native units
-		#hypo = [0.005,0.5,0.5,5/msets[1].lenscale,5/msets[1].lenscale,0]
-		#params = [0,hypo[0],vecs[0]*hypo[1]/mset.lenscale,vecs[1]*hypo[2]/mset.lenscale,hypo[3],hypo[4],hypo[5]]
-		#c0hypo = array([[gauss2d(params,getgrid[i,j,0],getgrid[i,j,1]) for j in range(n)] for i in range(m)])
-		#mscs[index_md].calculate_mode_coupling(msets[index_md],[c0hypo for i in range(len(mset.surf))])
 	#---figure
-	fig = plt.figure()
-	gs = gridspec.GridSpec(3,4,wspace=0.0,hspace=0.0)
+	fig = plt.figure(figsize=(12,12))
+	gs = gridspec.GridSpec(5,2,hspace=0.3)
+	gs.update(left=0.0,right=0.45)
+	gs2 = gridspec.GridSpec(5,3)
+	gs2.update(left=0.5,right=1.0)
+	axeslist = []
 	#---plot curvature field
 	extrem = max([max([j.max() for j in mscs[i].c0s]) for i in range(2)])
+	if extremc0_checkplot_global != None: extrem = extremc0_checkplot_global
 	ax = plt.subplot(gs[0,0])
-	ax.imshow(mean(mscs[0].c0s,axis=0),vmax=extrem,vmin=0.,cmap=mpl.cm.binary)
+	ax.imshow(mean(mscs[0].c0s,axis=0).T,vmax=extrem,vmin=0.,cmap=mpl.cm.binary,
+		interpolation='nearest',origin='lower')
+	axeslist.append(ax)
 	ax.set_title('CGMD')
 	ax = plt.subplot(gs[0,1])
+	axeslist.append(ax)
 	ax.set_title('MESO')
-	im = ax.imshow(mean(mscs[1].c0s,axis=0),vmax=extrem,vmin=0.,cmap=mpl.cm.binary)
+	im = ax.imshow(mean(mscs[1].c0s,axis=0).T,vmax=extrem,vmin=0.,cmap=mpl.cm.binary,
+		interpolation='nearest',origin='lower')
 	axins = inset_axes(ax,width="5%",height="100%",loc=3,
 		bbox_to_anchor=(1.,0.,1.,1.),
 		bbox_transform=ax.transAxes,
 		borderpad=0)
+	axeslist.append(axins)
 	cbar = plt.colorbar(im,cax=axins,orientation="vertical")
-	plt.setp(axins.get_yticklabels())
-	plt.setp(axins.get_xticklabels())
 	axins.set_ylabel(r'$\left\langle C_0 \right\rangle (\mathrm{{nm}^{-1}})$',
 		rotation=270)
 	#---plot average structure
@@ -640,43 +552,99 @@ if 'checkplot' in routine:
 	vmin = min([mean(msets[i].surf,axis=0).min()/msets[i].lenscale for i in range(2)])
 	extrem = max(abs(vmax),abs(vmin))
 	vmax,vmin = extrem,-extrem
+	if extremz_checkplot_global != None: vmin,vmax = extremz_checkplot_global
 	ax = plt.subplot(gs[1,0])
-	ax.imshow(mean(msets[0].surf,axis=0)/msets[0].lenscale,vmin=vmin,vmax=vmax,cmap=mpl.cm.RdBu_r)
+	axeslist.append(ax)
+	im = ax.imshow(mean(msets[0].surf,axis=0).T/msets[0].lenscale,vmin=vmin,vmax=vmax,cmap=mpl.cm.RdBu_r,
+		interpolation='nearest',origin='lower')
 	ax = plt.subplot(gs[1,1])
-	im = ax.imshow(mean(msets[1].surf,axis=0)/msets[1].lenscale,vmin=vmin,vmax=vmax,cmap=mpl.cm.RdBu_r)
-	axins = inset_axes(ax,width="5%",height="100%",loc=3,
-		bbox_to_anchor=(1.,0.,1.,1.),
-		bbox_transform=ax.transAxes,
-		borderpad=0)
+	axeslist.append(ax)
+	im = ax.imshow(mean(msets[1].surf,axis=0).T/msets[1].lenscale,vmin=vmin,vmax=vmax,cmap=mpl.cm.RdBu_r,
+		interpolation='nearest',origin='lower')
+	axins = inset_axes(ax,width="5%",height="100%",loc=3,bbox_to_anchor=(1.,0.,1.,1.),
+		bbox_transform=ax.transAxes,borderpad=0)
+	axeslist.append(axins)
 	cbar = plt.colorbar(im,cax=axins,orientation="vertical")
-	plt.setp(axins.get_yticklabels())
-	plt.setp(axins.get_xticklabels())
 	axins.set_ylabel(r'$\left\langle z(x,y)\right\rangle (\mathrm{nm})$',rotation=270)
+	#axins.get_yaxis().set_major_locator(mpl.ticker.MaxNLocator(nbins=6))
 	#---plot standard deviations
 	extrem = max([std(msets[i].surf,axis=0).max()/msets[i].lenscale for i in range(2)])
+	if extrems_checkplot_global != None: extrem = extrems_checkplot_global
 	ax = plt.subplot(gs[2,0])
-	ax.imshow(std(msets[0].surf,axis=0)/msets[0].lenscale,vmin=0.,vmax=extrem,cmap=mpl.cm.jet)
+	axeslist.append(ax)
+	ax.imshow((std(msets[0].surf,axis=0)/msets[0].lenscale).T,vmin=0.,vmax=extrem,cmap=mpl.cm.RdBu_r,
+		interpolation='nearest',origin='lower')
 	ax = plt.subplot(gs[2,1])
-	im = ax.imshow(std(msets[1].surf,axis=0)/msets[1].lenscale,vmin=0.,vmax=extrem,cmap=mpl.cm.jet)
+	axeslist.append(ax)
+	im = ax.imshow((std(msets[1].surf,axis=0)/msets[1].lenscale).T,vmin=0.,vmax=extrem,cmap=mpl.cm.RdBu_r,
+		interpolation='nearest',origin='lower')
 	axins = inset_axes(ax,width="5%",height="100%",loc=3,
 		bbox_to_anchor=(1.,0.,1.,1.),
 		bbox_transform=ax.transAxes,
 		borderpad=0)
+	axeslist.append(axins)
 	cbar = plt.colorbar(im,cax=axins,orientation="vertical")
-	plt.setp(axins.get_yticklabels())
-	plt.setp(axins.get_xticklabels())
 	axins.set_ylabel(r'$\left\langle \left(z-\overline{z}\right)^{2} \right\rangle (\mathrm{{nm}^2})$',
 		rotation=270)
+	#---compare 2D energy spectra
+	for m in [analysis_names.index(aname) for aname	in plot_reord]:
+		mset = msets[m]
+		axr2 = plt.subplot(gs[3,m])
+		cm,cn = [int(i/2) for i in shape(mscs[m].tsum2d)]
+		wid = 3
+		dat = mscs[m].tsum2d[cm-wid:cm+wid+1,cn-wid:cn+wid+1]
+		dat[shape(dat)[0]/2,shape(dat)[1]/2] = (vmin+vmax)/2.
+		im = plotter2d(axr2,mset,dat=dat,
+			cmap=mpl.cm.RdBu_r,inset=False,cmap_washout=1.0,
+			ticklabel_show=[1,1],tickshow=[1,1],centertick=False,
+			fs=10,label_style='q',lims=[0.1,10],
+			tickskip=int(round(mset.griddims[0]/6,-1)))
+	axins = inset_axes(axr2,width="5%",height="100%",loc=3,
+		bbox_to_anchor=(1.,0.,1.,1.),
+		bbox_transform=axr2.transAxes,
+		borderpad=0)
+	axeslist.append(axins)
+	cbar = plt.colorbar(im,cax=axins,orientation="vertical")
+	axins.set_ylabel(
+		r'$\left\langle \mathscr{H}_{el}\right\rangle \left(\frac{k_{B}T}{2}\right)^{-1}$',
+		fontsize=fsaxlabel,rotation=270)
+	#---compare height-curvature correlation in 2D
+	for m in [analysis_names.index(aname) for aname	in plot_reord]:
+		mset = msets[m]
+		axr3 = plt.subplot(gs[4,m])
+		cm,cn = [int(i/2) for i in shape(mscs[m].t2d[1])]
+		wid = 3
+		dat = mscs[m].t2d[1][cm-wid:cm+wid+1,cn-wid:cn+wid+1]
+		dat[shape(dat)[0]/2,shape(dat)[1]/2] = (vmin+vmax)/2.
+		im = plotter2d(axr3,mset,dat=dat,
+			cmap=mpl.cm.RdBu_r,inset=False,cmap_washout=1.0,
+			ticklabel_show=[1,1],tickshow=[1,1],centertick=False,
+			fs=10,label_style='q',lims=[10**-5,10**-2],
+			tickskip=int(round(mset.griddims[0]/6,-1)))
+	axins = inset_axes(axr3,width="5%",height="100%",loc=3,
+		bbox_to_anchor=(1.,0.,1.,1.),
+		bbox_transform=axr3.transAxes,
+		borderpad=0)
+	axeslist.append(axins)
+	cbar = plt.colorbar(im,cax=axins,orientation="vertical")
+	axins.set_ylabel(
+		r'$\left\langle C_{0,q} h_{-q} \right\rangle $',
+		fontsize=fsaxlabel,rotation=270)
+	axeslist.append(axins)
+	for ax in axeslist:
+		plt.setp(ax.get_yticklabels(),fontsize=10)
+		plt.setp(ax.get_xticklabels(),fontsize=10)	
 	#---spectrum plot
-	axl = plt.subplot(gs[0,3])
-	m = 1
-	axl = plt.subplot(133)
-	axl.set_title(r'$\left\langle C_{0,q} h_{-q} \right\rangle $')
-	axl.scatter(mscs[m].t1d[1][:,0],mscs[m].t1d[1][:,1],marker='.',color='r',s=40,label='MESO')
-	#axl.scatter(mscs[m].t1d[0][:,0],mscs[m].t1d[0][:,1]/msets[m].lenscale,marker='.',color='r',s=40,label='MESO')
-	m = 0
-	axl.scatter(mscs[m].t1d[1][:,0],mscs[m].t1d[1][:,1],marker='.',color='b',s=40,label='CGMD')
-	#axl.scatter(mscs[m].t1d[0][:,0],mscs[m].t1d[0][:,1]/msets[m].lenscale,marker='.',color='b',s=40,label='CGMD')
+	axl = plt.subplot(gs2[1:4,:])
+	axl.set_ylabel(r'$\left\langle C_{0,q} h_{-q} \right\rangle $',fontsize=fsaxlabel)
+	axl.set_title(r'$\mathrm{C_{0,hypo}}='+('{0:.3f}'.format(c0ask))+'a_0^{-1}'+\
+		'='+('{0:.3f}'.format(c0ask*msets[1].lenscale))+'\:\mathrm{({nm}^{-1})}$')
+	#---hard-coded requirement that the CGMD simulation is first on the list
+	index_md = 0
+	for m in range(1,len(analysis_names)):
+		axl.scatter(mscs[m].t1d[1][:,0],mscs[m].t1d[1][:,1],marker='o',color=clist[m],s=40,label='MESO')
+	m = index_md
+	axl.scatter(mscs[m].t1d[1][:,0],mscs[m].t1d[1][:,1],marker='o',color=clist[m],s=40,label='CGMD')
 	axl.set_ylim((10**-11,10**-1))
 	axl.set_xlim((0.06,1.5))
 	axl.set_yscale('log')
@@ -684,7 +652,149 @@ if 'checkplot' in routine:
 	axl.grid(True)
 	axl.yaxis.set_ticks_position("right")
 	axl.legend(loc='lower left')
-	gs.tight_layout(fig,h_pad=0.,w_pad=1.0)
-	plt.savefig(pickles+'fig-bilayer-couple-c0qhq-compare.png',bbox_inches='tight')
-	plt.show()
+	#---save
+	plt.savefig(pickles+'fig-bilayer-couple-compare-'+bigname+'.png',bbox_inches='tight')
+	if showplots: plt.show()
+	plt.close(fig)
+
+#---comparison of curvature between MESO and CGMD methods
+#---plots height-curvature correlation alongsize structure and variations
+if 'masterplot' in routine:		
+	#---fixed limits for making smooth gifs
+	extremz_checkplot_global = -2.5,2.5
+	extrems_checkplot_global = 2.0
+	extremc0_checkplot_global = 0.02
+	#---calculations
+	mset = msets[0]
+	vecs = mean(mset.vecs,axis=0)
+	m,n = mset.griddims
+	#---figure
+	fig = plt.figure(figsize=(18,12))
+	gs = gridspec.GridSpec(5,2,hspace=0.15)
+	gs.update(left=0.0,right=0.3)
+	gs2 = gridspec.GridSpec(1,2)
+	gs2.update(left=0.4,right=1.0)
+	axeslist = []
+	#---plot curvature field
+	extrem = max([max([j.max() for j in mscs[i].c0s]) for i in range(2)])
+	if extremc0_checkplot_global != None: extrem = extremc0_checkplot_global
+	ax = plt.subplot(gs[0,0])
+	ax.imshow(mean(mscs[0].c0s,axis=0).T,vmax=extrem,vmin=0.,cmap=mpl.cm.binary,
+		interpolation='nearest',origin='lower')
+	axeslist.append(ax)
+	ax.set_title('CGMD')
+	ax = plt.subplot(gs[0,1])
+	axeslist.append(ax)
+	ax.set_title('MESO')
+	im = ax.imshow(mean(mscs[1].c0s,axis=0).T,vmax=extrem,vmin=0.,cmap=mpl.cm.binary,
+		interpolation='nearest',origin='lower')
+	axins = inset_axes(ax,width="5%",height="100%",loc=3,
+		bbox_to_anchor=(1.,0.,1.,1.),
+		bbox_transform=ax.transAxes,
+		borderpad=0)
+	axeslist.append(axins)
+	cbar = plt.colorbar(im,cax=axins,orientation="vertical")
+	axins.set_ylabel(r'$\left\langle C_0 \right\rangle (\mathrm{{nm}^{-1}})$',
+		rotation=270)
+	#---plot average structure
+	vmax = max([mean(msets[i].surf,axis=0).max()/msets[i].lenscale for i in range(2)])
+	vmin = min([mean(msets[i].surf,axis=0).min()/msets[i].lenscale for i in range(2)])
+	extrem = max(abs(vmax),abs(vmin))
+	vmax,vmin = extrem,-extrem
+	if extremz_checkplot_global != None: vmin,vmax = extremz_checkplot_global
+	ax = plt.subplot(gs[1,0])
+	axeslist.append(ax)
+	im = ax.imshow(mean(msets[0].surf,axis=0).T/msets[0].lenscale,vmin=vmin,vmax=vmax,cmap=mpl.cm.RdBu_r,
+		interpolation='nearest',origin='lower')
+	ax = plt.subplot(gs[1,1])
+	axeslist.append(ax)
+	im = ax.imshow(mean(msets[1].surf,axis=0).T/msets[1].lenscale,vmin=vmin,vmax=vmax,cmap=mpl.cm.RdBu_r,
+		interpolation='nearest',origin='lower')
+	axins = inset_axes(ax,width="5%",height="100%",loc=3,bbox_to_anchor=(1.,0.,1.,1.),
+		bbox_transform=ax.transAxes,borderpad=0)
+	axeslist.append(axins)
+	cbar = plt.colorbar(im,cax=axins,orientation="vertical")
+	axins.set_ylabel(r'$\left\langle z(x,y)\right\rangle (\mathrm{nm})$',rotation=270)
+	#axins.get_yaxis().set_major_locator(mpl.ticker.MaxNLocator(nbins=6))
+	#---plot standard deviations
+	extrem = max([std(msets[i].surf,axis=0).max()/msets[i].lenscale for i in range(2)])
+	if extrems_checkplot_global != None: extrem = extrems_checkplot_global
+	ax = plt.subplot(gs[2,0])
+	axeslist.append(ax)
+	ax.imshow((std(msets[0].surf,axis=0)/msets[0].lenscale).T,vmin=0.,vmax=extrem,cmap=mpl.cm.jet,
+		interpolation='nearest',origin='lower')
+	ax = plt.subplot(gs[2,1])
+	axeslist.append(ax)
+	im = ax.imshow((std(msets[1].surf,axis=0)/msets[1].lenscale).T,vmin=0.,vmax=extrem,cmap=mpl.cm.jet,
+		interpolation='nearest',origin='lower')
+	axins = inset_axes(ax,width="5%",height="100%",loc=3,
+		bbox_to_anchor=(1.,0.,1.,1.),
+		bbox_transform=ax.transAxes,
+		borderpad=0)
+	axeslist.append(axins)
+	cbar = plt.colorbar(im,cax=axins,orientation="vertical")
+	axins.set_ylabel(r'$\left\langle \left(z-\overline{z}\right)^{2} \right\rangle (\mathrm{{nm}^2})$',
+		rotation=270)
+	#---compare 2D energy spectra
+	for m in [analysis_names.index(aname) for aname	in plot_reord]:
+		mset = msets[m]
+		axr2 = plt.subplot(gs[3,m])
+		cm,cn = [int(i/2) for i in shape(mscs[m].tsum2d)]
+		wid = 3
+		dat = mscs[m].tsum2d[cm-wid:cm+wid+1,cn-wid:cn+wid+1]
+		dat[shape(dat)[0]/2,shape(dat)[1]/2] = (vmin+vmax)/2.
+		im = plotter2d(axr2,mset,dat=dat,
+			cmap=mpl.cm.RdBu_r,inset=False,cmap_washout=1.0,
+			ticklabel_show=[1,1],tickshow=[1,1],centertick=False,
+			fs=10,label_style='q',lims=[0.1,10],
+			tickskip=int(round(mset.griddims[0]/6,-1)))
+	axins = inset_axes(axr2,width="5%",height="100%",loc=3,
+		bbox_to_anchor=(1.,0.,1.,1.),
+		bbox_transform=axr2.transAxes,
+		borderpad=0)
+	axeslist.append(axins)
+	cbar = plt.colorbar(im,cax=axins,orientation="vertical")
+	axins.set_ylabel(
+		r'$\left\langle \mathscr{H}_{el}\right\rangle \left(\frac{k_{B}T}{2}\right)^{-1}$',
+		fontsize=fsaxlabel,rotation=270)
+	#---compare height-curvature correlation in 2D
+	for m in [analysis_names.index(aname) for aname	in plot_reord]:
+		mset = msets[m]
+		axr3 = plt.subplot(gs[4,m])
+		cm,cn = [int(i/2) for i in shape(mscs[m].t2d[1])]
+		wid = 3
+		dat = mscs[m].t2d[1][cm-wid:cm+wid+1,cn-wid:cn+wid+1]
+		dat[shape(dat)[0]/2,shape(dat)[1]/2] = (vmin+vmax)/2.
+		im = plotter2d(axr3,mset,dat=dat,
+			cmap=mpl.cm.RdBu_r,inset=False,cmap_washout=1.0,
+			ticklabel_show=[1,1],tickshow=[1,1],centertick=False,
+			fs=10,label_style='q',lims=[10**-5,10**-2],
+			tickskip=int(round(mset.griddims[0]/6,-1)))
+	axins = inset_axes(axr3,width="5%",height="100%",loc=3,
+		bbox_to_anchor=(1.,0.,1.,1.),
+		bbox_transform=axr3.transAxes,
+		borderpad=0)
+	axeslist.append(axins)
+	cbar = plt.colorbar(im,cax=axins,orientation="vertical")
+	axins.set_ylabel(
+		r'$\left\langle C_{0,q} h_{-q} \right\rangle $',
+		fontsize=fsaxlabel,rotation=270)
+	axeslist.append(axins)
+	for ax in axeslist:
+		plt.setp(ax.get_yticklabels(),fontsize=10)
+		plt.setp(ax.get_xticklabels(),fontsize=10)	
+	#---spectrum plot
+	spectrum_summary(fig=fig,gs=gs2,
+		titletext=r'$\mathrm{C_{0,hypo}}='+('{0:.3f}'.format(c0ask))+'a_0^{-1}'+\
+		'='+('{0:.3f}'.format(c0ask*msets[1].lenscale))+'\:\mathrm{({nm}^{-1})}$')
+	#---save
+	plt.savefig(pickles+'fig-bilayer-couple-'+bigname+'.png',bbox_inches='tight')
+	if showplots: plt.show()
+	plt.close(fig)
+	
+	'''
+	Note: make cool gifs with the following commands on light.site
+	gifmake ~/fig-bilayer-couple-compare-v614-120000-220000-200-v2005.gif $(filefield fig-bilayer-couple-compare-v614-120000-220000-200-v2005-C_0-\*png C_0)
+	gifmake ~/fig-bilayer-couple-v614-120000-220000-200-v2005.gif $(filefield fig-bilayer-couple-v614-120000-220000-200-v2005-C_0-\*png C_0)		
+	'''
 

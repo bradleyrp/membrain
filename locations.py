@@ -62,6 +62,7 @@ elif location == 'dark':
 	fsaxlegend_small = 12
 	#---distinct from plot_suppress rpb added this for remote plotting on a specific set of scripts
 	plotviewflag = True
+	showplots = False
 #---Set data locations according to system: DS
 elif location == 'ds':
 	#---Nb: put system-specific commands here. 

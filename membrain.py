@@ -392,7 +392,7 @@ class MembraneSet:
 	def surfacer(self,skip=1,interp='best',lenscale=None):
 		'''Interpolate the mesoscale bilayers.'''
 		for fr in range(0,len(self.xyzs),skip):
-			print 'status: interpolating splines, '+str(fr)
+			status('status: interpolating splines, '+str(fr)+'/'+str(len(range(0,len(self.xyzs),skip))))
 			#---Nb currently set for VTU files from RWT simulations. Needs explained.
 			vecs = self.vecs[fr]
 			grid = self.griddims[0],self.griddims[1]
@@ -402,15 +402,17 @@ class MembraneSet:
 			rezip = self.rezipgrid(res1,diff=1)
 			self.surf.append(rezip-mean(rezip))
 			self.surf_index.append(fr)
-		#---scale box vectors by the correct length scale
-		#self.vecs = [[j*self.lenscale for j in i] for i in self.vecs]
-		#self.surf_index = range(0,len(self.xyzs),skip)
+		print '\n'
+		#---scale box vectors by the correct length scale, deprecated
+		if 0:
+			self.vecs = [[j*self.lenscale for j in i] for i in self.vecs]
+			self.surf_index = range(0,len(self.xyzs),skip)
 			
 	def surfacer_general(self,surfdata,skip=1,interp='best'):
 		'''Interpolate any quantity, as long as you supply it in the order of the xyz positions.'''
 		interpdata = []
 		for fr in range(0,len(self.xyzs),skip):
-			print 'status: interpolating splines, '+str(fr)
+			status('status: interpolating splines, '+str(fr)+'/'+str(len(range(0,len(self.xyzs),skip))))
 			#---Nb currently set for VTU files from RWT simulations. Needs explained.
 			vecs = self.vecs[fr]
 			grid = self.griddims[0],self.griddims[1]
@@ -420,6 +422,7 @@ class MembraneSet:
 			res1 = self.makemesh(res0,vecs,grid,method=interp)
 			rezip = self.rezipgrid(res1,diff=1)
 			interpdata.append(rezip)
+		print '\n'
 		return interpdata
 			
 	def midplaner(self,selector,rounder=4.0,framecount=None,start=None,end=None,
