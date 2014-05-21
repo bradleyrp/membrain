@@ -80,6 +80,9 @@ class MembraneData:
 			self.struct_opts = {'type': {'mastermsd_zones':0,'distsxy':1,'distsz':2}}
 		elif self.calctype == 'spanangle':
 			self.struct = {'frame':0,'resid':1,'headspan':2,'headangle':3}
+		elif self.calctype == 'spanangle2':
+			self.struct = {'frame':0,'resid':1,'type':2}
+			self.struct_opts = {'type': {'headspan':0,'headangle':1,'time':2,'resid':3}}
 		#---type: updated/advanced dimple fitting (dimple2 pkl objects)
 		elif self.calctype == 'dimple2':
 			self.struct = {'frame':0,'type':1}

@@ -38,7 +38,7 @@ analysis_descriptors = {
 		'ionname':'Mg',
 		'name': 'PtdIns(4,5)P$_2$ with Mg$^{2+}$'},
 	'v511-40000-88000-100':
-		{'sysname':'membrane-v511',
+		{'sysname':'membrane-v511', 
 		'sysname_lookup':'membrane-v511-spanangle',
 		'trajsel':'s8-kraken-md.part0021.40000-88000-100.spanangle.xtc',
 		'resname':'PI2P',

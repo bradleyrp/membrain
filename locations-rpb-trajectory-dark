@@ -71,7 +71,6 @@ name=membrane-v511-atomP
 struct=/home/rpb/compbio/membrane-v511/a2-surfacer/system.atomP.gro
 /home/rpb/compbio/membrane-v511/a2-surfacer/s6-kraken-md.part0009.30000-80000-100.atomP.xtc
 
-
 name=membrane-v530-ions
 struct=/home/rpb/compbio/membrane-v530/a3-ions/system.ions.gro
 /home/rpb/compbio/membrane-v530/a3-ions/u5-sim-trestles-md.part0006.30000-100000-100.ions.xtc
@@ -96,4 +95,36 @@ struct=/home/rpb/compbio/membrane-v531/a5-ions/system.ions.gro
 name=membrane-v531-atomP
 struct=/home/rpb/compbio/membrane-v531/a6-surfacer/system.atomP.gro
 /home/rpb/compbio/membrane-v531/a6-surfacer/s4-sim-trestles-md.part0007.20000-62000-100.atomP.xtc
+
+name=membrane-v530-keys
+struct=/home/rpb/compbio/membrane-v530/a7-structure/system.keylipidatoms.gro
+/home/rpb/compbio/membrane-v530/a7-structure/u5-sim-trestles-md.part0007.40000-90000-50.keylipidatoms.xtc
+
+name=membrane-v531-keys
+struct=/home/rpb/compbio/membrane-v531/a9-structure/system.keylipidatoms.gro
+/home/rpb/compbio/membrane-v531/a9-structure/s5-sim-kraken-md.part0016.40000-90000-50.keylipidatoms.xtc
+
+name=membrane-v532-keys
+struct=/home/rpb/compbio/membrane-v532/a6-structure/system.keylipidatoms.gro
+/home/rpb/compbio/membrane-v532/a6-structure/s5-sim-kraken-md.part0015.40000-90000-50.keylipidatoms.xtc
+
+name=membrane-v509-keys
+struct=/home/rpb/compbio/membrane-v509/a6-structure/system.keylipidatoms.gro
+/home/rpb/compbio/membrane-v509/a6-structure/s6-kraken-md.part0018.40000-90000-50.keylipidatoms.xtc
+
+name=membrane-v510-keys
+struct=/home/rpb/compbio/membrane-v510/a6-structure/system.keylipidatoms.gro
+/home/rpb/compbio/membrane-v510/a6-structure/s8-kraken-md.part0021.40000-90000-50.keylipidatoms.xtc
+
+name=membrane-v511-keys
+struct=/home/rpb/compbio/membrane-v511/a6-structure/system.keylipidatoms.gro
+/home/rpb/compbio/membrane-v511/a6-structure/s8-kraken-md.part0021.40000-90000-50.keylipidatoms.xtc
+
+name=membrane-v533-keys
+struct=/home/rpb/compbio/membrane-v533/a3-structure/system.keylipidatoms.gro
+/home/rpb/compbio/membrane-v533/a3-structure/s4-sim-kraken-md.part0015.40000-90000-50.keylipidatoms.xtc
+
+name=membrane-v534-keys
+struct=/home/rpb/compbio/membrane-v534/a2-structure/system.keylipidatoms.gro
+/home/rpb/compbio/membrane-v534/a2-structure/s4-sim-kraken-md.part0013.40000-90000-50.keylipidatoms.xtc
 

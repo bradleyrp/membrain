@@ -15,7 +15,12 @@ cgmd_avail = [
 	]
 
 #---prepare list of collected residuals for a sweep over available simulations
-collected_residuals = [[[],[],[]] for i in range(len(cgmd_avail))]
+#collected_residuals = [[[],[],[]] for i in range(len(cgmd_avail))]
+#collected_residuals_sigs = [[[],[],[]] for i in range(len(cgmd_avail))]
+#thresh = 0.3
+
+#---empty dictionary for cross-simulation comparisons
+master_spectrum_dict = {}
 
 #---this script will perform the script-coupling.py analysis for a parameter sweep
 for batch_cgmd in cgmd_avail:
@@ -25,7 +30,7 @@ for batch_cgmd in cgmd_avail:
 			del msets,mscs,collect_c0s
 
 #---plot the summary
-if collected_residuals != []:
+if collected_residuals != [] and 0:
 	annotate = False
 	spec_colors = clrs[1:4]
 	spec_labels = [r'$\left\langle h_{\mathbf{q}}h_{\mathbf{-q}}\right\rangle$',

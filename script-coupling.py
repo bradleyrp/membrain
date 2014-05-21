@@ -10,7 +10,7 @@ import scipy.ndimage
 
 #---if script is run in standalone mode
 if 'c0ask' not in globals(): 
-	c0ask = 0.038
+	c0ask = 0.028
 	execfile('header-meso.py')
 
 #---inputs
@@ -191,7 +191,11 @@ def spectrum_summary(fig=None,gs=None,lowlim=10**-14,titletext='undulations'):
 		kappa_enforced = 1./exp(az_enforced)/area
 		axl.plot([10**-3,10**3],[exp(az_enforced)*(i**-4) for i in [10**-3,10**3]],c='k',lw=2,alpha=0.5)
 		#---plot the undulations
-		plotobj = axl.scatter(mscs[m].t1d[0][:,0],mscs[m].t1d[0][:,1],color=colord,marker='o',s=30,
+		if 0: xdat,ydat = mscs[m].t1d[0][:,0],mscs[m].t1d[0][:,1]
+		#---new method
+		xdat = collapse_spectrum(mscs[m].qmagst,mscs[m].qmagst)
+		ydat = collapse_spectrum(mscs[m].qmagst,mscs[m].t2d[0])
+		plotobj = axl.scatter(xdat,ydat,color=colord,marker='o',s=30,
 			label=r'$\left\langle h_{q}h_{-q}\right\rangle$'+', '+shortname+
 			'\n'+r'$\boldsymbol{\kappa} = '+str('%3.1f'%(kappa_enforced))+'\:k_BT$')
 		if m == 0: extra_legend.append(plotobj)
@@ -201,12 +205,27 @@ def spectrum_summary(fig=None,gs=None,lowlim=10**-14,titletext='undulations'):
 		if axl_range[1][1] < max(mscs[m].t1d[0][:,1]): axl_range[1][0] = max(mscs[m].t1d[0][:,1])
 		#---plotting extra terms
 		if hascurv:
-			plotobj = axl.scatter(mscs[m].t1d[1][:,0],mscs[m].t1d[1][:,1],facecolor=colord,marker='o',s=40,
-				edgecolor='k',lw=0.5,	alpha=0.65)
+
+			if 0: xdat,ydat = mscs[m].t1d[1][:,0],mscs[m].t1d[1][:,1]
+			xdat = collapse_spectrum(mscs[m].qmagst,mscs[m].qmagst)
+			ydat = collapse_spectrum(mscs[m].qmagst,mscs[m].t2d[1])
+
+			plotobj = axl.scatter(xdat,ydat,facecolor=colord,marker='o',s=40,
+				edgecolor='k',lw=0.5,alpha=0.65)
 			if m == 0: extra_legend.append(plotobj)
-			axl.scatter(mscs[m].t1d[2][:,0],mscs[m].t1d[2][:,1],facecolor=colord,marker='o',s=40,
+
+			if 0: xdat,ydat = mscs[m].t1d[2][:,0],mscs[m].t1d[2][:,1]
+			xdat = collapse_spectrum(mscs[m].qmagst,mscs[m].qmagst)
+			ydat = collapse_spectrum(mscs[m].qmagst,mscs[m].t2d[2])
+
+			axl.scatter(xdat,ydat,facecolor=colord,marker='o',s=40,
 				edgecolor='k',lw=0.5,label='',alpha=0.65)
-			plotobj = axl.scatter(mscs[m].t1d[3][:,0],mscs[m].t1d[3][:,1],color=colord,marker='x',s=20,
+
+			if 0: xdat,ydat = mscs[m].t1d[3][:,0],mscs[m].t1d[3][:,1]
+			xdat = collapse_spectrum(mscs[m].qmagst,mscs[m].qmagst)
+			ydat = collapse_spectrum(mscs[m].qmagst,mscs[m].t2d[3])
+
+			plotobj = axl.scatter(xdat,ydat,color=colord,marker='x',s=20,
 				label='',alpha=0.65)
 			if m == 0: extra_legend.append(plotobj)
 		#---extra legend
@@ -217,7 +236,7 @@ def spectrum_summary(fig=None,gs=None,lowlim=10**-14,titletext='undulations'):
 			loc='upper right')
 		#---plot details
 		axl.set_xlabel(r'$\left|\mathbf{q}\right|(\mathrm{nm}^{-1})$',fontsize=fsaxlabel)
-		h,l = axl.get_legend_handles_labels()
+		h,l = axl.get_legend_handles_labels() 
 		h = [h[i] for i in range(len(l)) if l[i] != '']
 		l = [l[i] for i in range(len(l)) if l[i] != '']
 		axl.set_title(titletext,fontsize=fsaxtitle)
@@ -236,20 +255,28 @@ def spectrum_summary(fig=None,gs=None,lowlim=10**-14,titletext='undulations'):
 		colord = clist[m]
 		mset = msets[m]
 		reord0 = np.lexsort((mscs[m].tsum1d[:,1],mscs[m].tsum1d[:,0]))
-		if plotqe:
+		if plotqe and 0:
 			reord0b = np.lexsort((mscs[m].t1denergy[0][:,1],mscs[m].t1denergy[0][:,0]))
 			axr.scatter(mscs[m].t1denergy[0][reord0b,0],mscs[m].t1denergy[0][reord0b,1],
 				marker='o',color=colord,s=20)
 		#---plot the data
-		axr.scatter(mscs[m].tsum1d[reord0,0],mscs[m].tsum1d[reord0,1],
+
+		if 0: xdat,ydat = mscs[m].tsum1d[reord0,0],mscs[m].tsum1d[reord0,1]
+		xdat = collapse_spectrum(mscs[m].qmagst,mscs[m].qmagst)
+		ydat = collapse_spectrum(mscs[m].qmagst,mscs[m].tsum2d)
+
+		if 0: axr.scatter(xdat,ydat,
 			marker='o',color=colord,s=20,label=shortname)
+		axr.plot(xdat,ydat,'o-',color=colord,label=shortname)
+		
 		#---plot a single line
-		inds = unique(mscs[m].tsum1d[:,0],return_inverse=True)[1]
-		dat = mscs[m].tsum1d[:,0]
-		xdat = [mean(dat[where(inds==i)[0]]) for i in range(max(inds))]
-		dat = mscs[m].tsum1d[:,1]
-		ydat = [mean(dat[where(inds==i)[0]]) for i in range(max(inds))]
-		axr.plot(xdat,ydat,'o-',color=colord,label='')
+		if 0:
+			inds = unique(mscs[m].tsum1d[:,0],return_inverse=True)[1]
+			dat = mscs[m].tsum1d[:,0]
+			xdat = [mean(dat[where(inds==i)[0]]) for i in range(max(inds))]
+			dat = mscs[m].tsum1d[:,1]
+			ydat = [mean(dat[where(inds==i)[0]]) for i in range(max(inds))]
+			axr.plot(xdat,ydat,'o-',color=colord,label='')
 		#---plot details
 		axr.set_xscale('log')
 		axr.set_yscale('log')
@@ -289,6 +316,16 @@ def spectrum_summary(fig=None,gs=None,lowlim=10**-14,titletext='undulations'):
 		dpi=300,bbox_inches='tight')
 	if showplots: plt.show()
 	
+def collapse_spectrum(qs,hs):
+	'''For rectangular systems, treat lateral dimensions as equivalent and take their average.'''
+	cen = array([i/2 for i in shape(qs)])
+	discdists = [[sum(array([i-cen[0],j-cen[1]])**2) 
+		for j in range(shape(qs)[1])] for i in range(shape(qs)[0])]
+	uniqs = unique(flatten(discdists),return_inverse=True)[1]
+	collapsed = [mean(ravel(hs)[where(uniqs==i)]) for i in range(uniqs.max()) 
+		if mean(ravel(qs)[where(uniqs==i)]) != 0]
+	return collapsed
+	
 #---MAIN
 #-------------------------------------------------------------------------------------------------------------
 
@@ -300,14 +337,6 @@ if 'load' in routine or msets == []:
 		if 'mset' in globals(): del mset
 		mset = MembraneSet()
 		if simtype == 'meso':
-			#strucstring = 'pkl.structures.meso.'+(analysis_descriptors[a])['testname']+'.pkl'
-			#c0sraw = array(mset.load_points_vtu(locate,extra_props='induced_cur',start=start,
-			#	end=end,nbase=nbase,lenscale=lenscale,
-			#	prefix='EQUIB-conf-'))[:,0]
-			#mset.surfacer()
-			#c0s = mset.surfacer_general(c0sraw)
-			#collect_c0s.append(c0s)
-			#msets.append(mset)
 			mset = unpickle(pickles+'pkl.structures.meso.'+(analysis_descriptors[a])['testname']+'.pkl')
 			c0s = mset.getdata('c0map').data
 			collect_c0s.append(c0s)
@@ -397,22 +426,47 @@ if 'calc' in routine:
 	hypo[0] = c0ask
 	if 'masterplot' not in routine and 'simple_summary' in routine: spectrum_summary()
 	#---calculate residuals
-	spec_query = [0,1,3]
-	for s in range(len(spec_query)):
-		a0 = msets[1].lenscale
-		thresh = 0.4
-		dat0 =array([i for i in mscs[0].t1d[spec_query[s]] if i[0] != 0 and i[0] < thresh])
-		dat1 = array([i for i in mscs[1].t1d[spec_query[s]] if i[0] != 0 and i[0] < thresh])
-		dat0log = log10(dat0)
-		dat1log = log10(dat1)
-		cd = scipy.spatial.distance.cdist(dat0log,dat1log)
-		cd[cd.argmin(axis=argmax(shape(cd)))]
-		resid = mean([cd[i,argmax(shape(cd))] for i in cd.argmin(axis=argmax(shape(cd)))])
-		print 'result: C_0 = '+('{0:.3f}'.format(c0ask*msets[1].lenscale)).rjust(5)+' (nm^-1)   '+\
-			'resid = '+('{0:.3f}'.format(resid)).rjust(10)+'  status: npts = ('+str(len(dat0))+\
-			','+str(len(dat1))+')'
-		if 'collected_residuals' in globals(): 
-			collected_residuals[cgmd_avail.index(cgmd_reference)][s].append([c0ask,resid])
+	if 0:
+		#---method 1
+		spec_query = [0,1,3]
+		for s in range(len(spec_query)):
+			a0 = msets[1].lenscale
+			thresh = 0.4
+			dat0 =array([i for i in mscs[0].t1d[spec_query[s]] if i[0] != 0 and i[0] < thresh])
+			dat1 = array([i for i in mscs[1].t1d[spec_query[s]] if i[0] != 0 and i[0] < thresh])
+			dat0log = log10(dat0)
+			dat1log = log10(dat1)
+			cd = scipy.spatial.distance.cdist(dat0log,dat1log)
+			cd[cd.argmin(axis=argmax(shape(cd)))]
+			resid = mean([cd[i,argmax(shape(cd))] for i in cd.argmin(axis=argmax(shape(cd)))])
+			print 'result: C_0 = '+('{0:.3f}'.format(c0ask*msets[1].lenscale)).rjust(5)+' (nm^-1)   '+\
+				'resid = '+('{0:.3f}'.format(resid)).rjust(10)+'  status: npts = ('+str(len(dat0))+\
+				','+str(len(dat1))+')'
+			if 'collected_residuals' in globals(): 
+				collected_residuals[cgmd_avail.index(cgmd_reference)][s].append([c0ask,resid])
+		#---method 2
+		spec_query = [0,1,2]
+		for s in range(len(spec_query)):
+			#---new residual signature curves
+			datlogs = []
+			for m in range(len(mscs)):
+				xdat0 = collapse_spectrum(mscs[m].qmagst,mscs[m].qmagst)
+				ydat0 = collapse_spectrum(mscs[m].qmagst,mscs[m].t2d[0])
+				datlogs.append([xdat0,ydat0])
+			#---save and report
+			#print 'result: C_0 = '+('{0:.3f}'.format(c0ask*msets[1].lenscale)).rjust(5)+' (nm^-1)   '+\
+			#	'resid = '+('{0:.3f}'.format(resid)).rjust(10)+'  status: npts = ('+str(len(dat0))+\
+			#	','+str(len(dat1))+')'
+			if 'collected_residuals' in globals(): 
+				#collected_residuals[cgmd_avail.index(cgmd_reference)][s].append([c0ask,resid])
+				collected_residuals_sigs[cgmd_avail.index(cgmd_reference)][s].append([c0ask,datlogs])
+	master_spectrum_dict[(cgmd_reference,meso_reference)] = {\
+		'c0ask':c0ask,
+		'cgmd_qs':mscs[0].qmagst,
+		'meso_qs':mscs[1].qmagst,
+		'cgmd_t2d':mscs[0].t2d,
+		'meso_t2d':mscs[1].t2d,
+		}
 		
 #---plots, compare 2D undulation spectra between bare and protein systems alone, or scaled by q4
 if 'plot2d' in routine:
@@ -715,7 +769,6 @@ if 'masterplot' in routine:
 	axeslist.append(axins)
 	cbar = plt.colorbar(im,cax=axins,orientation="vertical")
 	axins.set_ylabel(r'$\left\langle z(x,y)\right\rangle (\mathrm{nm})$',rotation=270)
-	#axins.get_yaxis().set_major_locator(mpl.ticker.MaxNLocator(nbins=6))
 	#---plot standard deviations
 	extrem = max([std(msets[i].surf,axis=0).max()/msets[i].lenscale for i in range(2)])
 	if extrems_checkplot_global != None: extrem = extrems_checkplot_global

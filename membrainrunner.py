@@ -219,7 +219,7 @@ global_start_time = time.time()
 
 #---report the current time
 def checktime():
-	print 'status: time = '+str(1./60*(time.time()-global_start_time))+' minutes'
+	print '\nstatus: time = '+str(1./60*(time.time()-global_start_time))+' minutes'
 
 #---pass arguments and call a function
 if __name__ == "__main__" and args.operation != None:
