@@ -139,7 +139,7 @@ class MembraneSet:
 			self.time_list = [self.universe.trajectory[i].time 
 				for i in range(len(self.universe.trajectory)) 
 				if hasattr(self.universe.trajectory[i],'time')]
-		print 'status: the trajectory file has '+str(self.nframes)+' frames'
+		status('status: the trajectory file has '+str(self.nframes)+' frames'+'\n')
 
 	def load_points(self,xyzdir,nbase=0,start=None,end=None,
 		prefix='conf-',suffix='.xyz',xyzform='',rounder=1.0,lenscale=None,skip=1,regular=False,shifter=None):
@@ -155,13 +155,13 @@ class MembraneSet:
 		self.lenscale = lenscale if lenscale != None else 1.0
 		suffix = suffix.replace('\\','')
 		dirlistall = os.listdir(xyzdir)
-		dirlist = [int(i[len(prefix):-len(suffix)]) \
-			for i in dirlistall if i[:len(prefix)] == prefix and i[-len(suffix):] == suffix]
+		dirlist = [int(i[len(prefix):-len(suffix)]) for i in dirlistall 
+			if i[:len(prefix)] == prefix and i[-len(suffix):] == suffix]
 		dirlist.sort()
 		if start == None and end == None: 
 			whichframes = dirlist[::skip]
 		else:
-			whichframes = dirlist[start:end:skip]
+			whichframes = dirlist[dirlist.index(start):dirlist.index(end):skip]
 		print 'status: trajectory directory has '+str(len(whichframes))+' frames'
 		dataset = []
 		if regular == True:
@@ -241,13 +241,13 @@ class MembraneSet:
 		self.lenscale = lenscale if lenscale != None else 1.0
 		suffix = suffix.replace('\\','')
 		dirlistall = os.listdir(vtudir)
-		dirlist = [int(i[len(prefix):-len(suffix)]) \
-			for i in dirlistall if i[:len(prefix)] == prefix and i[-len(suffix):] == suffix]
+		dirlist = [int(i[len(prefix):-len(suffix)]) for i in dirlistall 
+			if i[:len(prefix)] == prefix and i[-len(suffix):] == suffix]
 		dirlist.sort()
 		if start == None and end == None: 
 			whichframes = dirlist[::skip]
 		else:
-			whichframes = dirlist[start:end:skip]
+			whichframes = dirlist[dirlist.index(start):dirlist.index(end):skip]
 		print 'status: trajectory directory has '+str(len(whichframes))+' frames'
 		extradat = []
 		boundary_pts = []
@@ -320,8 +320,8 @@ class MembraneSet:
 
 	def identify_monolayers(self,atomdirectors,startframeno=0):
 		'''General monolayer identifier function. Needs: names of outer, inner atoms on lipids.'''
-		print 'status: identifying monolayers'
-		print 'status: moving to frame '+str(startframeno)
+		status('status: identifying monolayers'+'\n')
+		status('status: moving to frame '+str(startframeno)+'\n')
 		self.gotoframe(startframeno)
 		pointouts = self.universe.selectAtoms(atomdirectors[0])
 		pointins = [self.universe.selectAtoms(atomdirectors[j]).coordinates() 
@@ -1176,13 +1176,13 @@ def pickledump(obj,filename,directory=''):
 
 def unpickle(filename):
 	'''Un-pickles an object from a text file.'''
-	print 'status: seeking/loading '+filename
+	status('status: seeking/loading '+filename+'\n')
 	if os.path.isfile(filename):
 		fp = open(filename, 'r')
 		x = pickle.load(fp)
-		if hasattr(x,'picklename') == False and type(x) != list:
+		if hasattr(x,'picklename') == False and type(x) != list and type(x) != dict:
 			x.picklename = filename.strip('pkl.').strip('.pkl')
-		elif type(x) != list:
+		elif type(x) != list and type(x) != dict:
 			if x.picklename == '': 
 				x.picklename = filename.strip('pkl.').strip('.pkl')
 		fp.close()

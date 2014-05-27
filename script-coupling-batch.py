@@ -8,7 +8,8 @@ meso_avail = [
 	'v2004',
 	'v2005',
 	'v2006',
-	]
+	'v2008',
+	][-2:]
 cgmd_avail = [
 	'v614-120000-220000-200',
 	'v616-210000-310000-200',
@@ -19,18 +20,23 @@ cgmd_avail = [
 #collected_residuals_sigs = [[[],[],[]] for i in range(len(cgmd_avail))]
 #thresh = 0.3
 
-#---empty dictionary for cross-simulation comparisons
-master_spectrum_dict = {}
 
-#---this script will perform the script-coupling.py analysis for a parameter sweep
-for batch_cgmd in cgmd_avail:
-	for batch_meso in meso_avail:
-		for c0ask in (meso_expt_toc[batch_meso])['parameter_sweep']: 
-			execfile('script-coupling.py')
-			del msets,mscs,collect_c0s
+master_spectrum_dict = unpickle(
+	pickles+'pkl.bilayer-coupling-sweep.'+'-'.join(meso_avail)+'-'.join(cgmd_avail)+'.pkl')
 
-#---plot the summary
-if collected_residuals != [] and 0:
+if master_spectrum_dict == None:
+	#---empty dictionary for cross-simulation comparisons
+	master_spectrum_dict = {}
+	#---this script will perform the script-coupling.py analysis for a parameter sweep
+	for batch_cgmd in cgmd_avail:
+		for batch_meso in meso_avail:
+			for c0ask in (meso_expt_toc[batch_meso])['parameter_sweep']: 
+				if c0ask != 0:
+					execfile('script-coupling.py')
+					del msets,mscs,collect_c0s
+
+#---plot the summary, see jot.py for current development
+if 0:
 	annotate = False
 	spec_colors = clrs[1:4]
 	spec_labels = [r'$\left\langle h_{\mathbf{q}}h_{\mathbf{-q}}\right\rangle$',

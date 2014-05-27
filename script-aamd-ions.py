@@ -1,75 +1,56 @@
 #!/usr/bin/python
 
-if 'mset' not in globals():
-	interact = True
-	from membrainrunner import *
-	execfile('locations.py')
+logfile,interact,debugmode = [None,False,None]
+from membrainrunner import *
+execfile('locations.py')
+execfile('header-aamd.py')
 
-from scipy import stats
-from mpl_toolkits.axes_grid1 import make_axes_locatable
-
-#---Settings
+#---DEFAULTS
 #-------------------------------------------------------------------------------------------------------------
 
-director_aamd_symmetric = ['name P and not resname CHL1','name C218','name C318']
-director_aamd_asymmetric = ['(name P and not resname CHL1) or (name C3 and resname CHL1)',
-	'(name C218 and not resname CHL1) or (name C25 and resname CHL1)']
-selector = 'name P'
+if 'batch_override' not in globals():
 
-analysis_descriptors = {
-	'v514-10000-29000-100':
-		{'sysname':'membrane-v514',
-		'sysname_lookup':'membrane-v514-ions',
-		'trajsel':'s3-sim-compbio-md.part0004.10000-29000-100.ions.xtc',
-		'structure_pkl':
-			'pkl.structures.membrane-v514.a2-surfacer.s3-sim-compbio-md.part0004.10000-29000-100.pkl',
-		'ionname':'NA'},
-	'v532-20000-58000-100':
-		{'sysname':'membrane-v532',
-		'sysname_lookup':'membrane-v532-ions',
-		'trajsel':'s4-sim-trestles-md.part0007.20000-58000-100.ions.xtc',
-		'structure_pkl':
-			'pkl.structures.membrane-v532.a5-surfacer.s4-sim-trestles-md.part0007.20000-58000-100.pkl',
-		'ionname':'Cal'},
-	'v531-20000-62000-100':
-		{'sysname':'membrane-v531',
-		'sysname_lookup':'membrane-v531-ions',
-		'trajsel':'s4-sim-trestles-md.part0007.20000-62000-100.ions.xtc',
-		'structure_pkl':
-			'pkl.structures.membrane-v531.a6-surfacer.s4-sim-trestles-md.part0007.20000-62000-100.pkl',
-		'ionname':'MG',
-		'sysname_lookup_struct':'membrane-v531-atomP',
-		'trajsel_struct':'s4-sim-trestles-md.part0007.20000-62000-100.atomP.xtc',
-		'director':director_aamd_asymmetric},
-	'v530-30000-100000-100':
-		{'sysname':'membrane-v530',
-		'sysname_lookup':'membrane-v530-ions',
-		'trajsel':'u5-sim-trestles-md.part0006.30000-100000-100.ions.xtc',
-		'structure_pkl':
-			'pkl.structures.membrane-v530.a4-surfacer.u5-sim-trestles-md.part0006.30000-100000-100.pkl',
-		'ionname':'NA'},
-	'v511-30000-80000-100':
-		{'sysname':'membrane-v511',
-		'sysname_lookup':'membrane-v511-ions',
-		'trajsel':'s6-kraken-md.part0009.30000-80000-100.ions.xtc',
-		'structure_pkl':
-			'pkl.structures.membrane-v511.a2-surfacer.s6-kraken-md.part0009.30000-80000-100.pkl',
-		'ionname':'Cal'},
-	'v509-40000-90000-10':
-		{'sysname':'membrane-v509',
-		'sysname_lookup':'membrane-v509-binding',
-		'trajsel':'s4-kraken-md.part0007.20000-90000-10.binding.xtc',
-		'sysname_lookup_struct':'membrane-v509-binding',
-		'trajsel_struct':'s4-kraken-md.part0007.20000-90000-10.binding.xtc',
-		'ionname':'NA',
-		'director':director_aamd_symmetric}}
-analysis_names = [
-	'v532-20000-58000-100',
-	'v530-30000-100000-100',
-	'v531-20000-62000-100',
-	'v509-40000-90000-10'
-	][-1:]
-routine = ['load','compute_z','compute_radial_binary'][-1:]
+	#---parameters
+	rounder = 4
+
+	#---settings
+	compare_phosphate_position = False
+
+	#---standard selection
+	analysis_names = [
+		'v530-40000-90000-50',
+		'v531-40000-90000-50',
+		'v532-40000-90000-50',
+		'v509-40000-90000-50',
+		'v510-40000-90000-50',
+		'v511-40000-90000-50',
+		'v533-40000-90000-50',
+		'v534-40000-90000-50',
+		'v514-22000-32000-10',
+		'v515-20000-30000-10',
+		][:1]
+	
+	#---alternate tests
+	if compare_phosphate_position:
+		analysis_names = [
+			'v531-40000-90000-50',
+			'v532-40000-90000-50',
+			'v533-40000-90000-50',
+			'v534-40000-90000-50',
+			]
+	
+	#---routine
+	routine = [
+		'load',
+		'compute',
+		'plot',
+		][:1]
+	
+	#---settings
+	showplots = False
+	
+	#---interpolation size 
+	rounder = 4
 
 #---FUNCTIONS
 #-------------------------------------------------------------------------------------------------------------
@@ -78,9 +59,10 @@ def bilayer_shift(ionspos=None,midz=None,mset=None,vecs=None):
 	'''Function to change coordinate systems so the midplane is at zero.'''
 	#---ionspos holds absolute ion positions
 	#---midz holds the average midplane z-position for each frame
-	if ionspos == None: ionspos = globals()['ionspos']
-	if mset == None: mset = globals()['mset']
-	if midz == None: midz = globals()['midz']
+	#---disabled the following to ensure arguments and not global variables
+	if 0 and ionspos == None: ionspos = globals()['ionspos']
+	if 0 and mset == None: mset = globals()['mset']
+	if 0 and midz == None: midz = globals()['midz']
 	vecs = array([mset.vec(i) for i in range(mset.nframes)])
 	deltaz = array(ionspos)[...,2]-tile(midz,(shape(ionspos)[1],1)).T
 	abovez = (deltaz>tile(vecs[:,2]/2.,(shape(deltaz)[1],1)).T)
@@ -91,8 +73,8 @@ def bilayer_shift(ionspos=None,midz=None,mset=None,vecs=None):
 
 def binlister(method,monoz=None,mset=None,binw=5,custom_posts=None):
 	'''This function generates a list of bin limits for a particular system. Feed this to discretizer_z.'''
-	if mset == None: mset = globals()['mset']
-	if monoz == None: monoz = globals()['monoz']	
+	if 0 and mset == None: mset = globals()['mset']
+	if 0 and monoz == None: monoz = globals()['monoz']	
 	if method == 'outside-inside':
 		#---this method uses a set of bins inside the bilayer and outside, so the monolayer definitions are 
 		#---...hard-coded as bin edges. bins are determined frame-wise
@@ -180,7 +162,7 @@ def binlister(method,monoz=None,mset=None,binw=5,custom_posts=None):
 
 #---discretize the trajectory
 
-def discretizer_z(binedges,relpos=None):
+def discretizer_z(binedges,relpos):
 	'''Discretizes an ion trajectory in the z-dimension given a set of positions and a list of bins.'''
 	if relpos == None: relpos = globals()['relpos']
 	disctraj  = array([[where(relpos[j,i]<binedges[j][1:])[0][0] for i in range(len(relpos[j]))] 
@@ -218,7 +200,7 @@ def define_zones(zonetype):
 		
 #---plotting and analysis functions for the discrete trajectories
 
-def plot_ion_distribution(disctraj,binedges,fig=None,thisax=None,text=True,colors=True,mset=None):
+def plot_ion_distribution_deprecated(disctraj,binedges,fig=None,thisax=None,text=True,colors=True,mset=None):
 	'''Generic plotting function for ion distributions by height from midplane according to binedges.'''
 	#---Nb only works with discretizer_z
 	if fig == None: fig = plt.figure()
@@ -233,6 +215,9 @@ def plot_ion_distribution(disctraj,binedges,fig=None,thisax=None,text=True,color
 	lefts = meanedges[:-1]	
 	mids = [int(round(i)) for i in 1./2*(meanedges[1:]+meanedges[:-1])]
 	halfvec = mean(vecs,axis=0)[2]/2
+	print mids
+	print halfvec
+	print abs(mids[n]/halfvec)
 	for n in range(len(mids)):
 		if mids[n] == 0: color = 'k'
 		elif mids[n] > 0: color = 'r'
@@ -251,6 +236,99 @@ def plot_ion_distribution(disctraj,binedges,fig=None,thisax=None,text=True,color
 		ax.set_yticklabels([])
 	plt.show()
 	return counts,edges
+	
+def plot_ion_distribution(disctraj_prime,binedges,fig=None,thisax=None,text=True,
+	colors=True,mset=None,barplot=False,bintype=None,ionlist=None,ionname=None,ls=None,label=None,
+	bulk_relative=True):
+	'''Generic plotting function for ion distributions by height from midplane according to binedges.'''
+	peakval = 0.
+	#---Nb only works with discretizer_z
+	if fig == None: fig = plt.figure()
+	if mset == None: mset = globals()['mset']
+	gs = gridspec.GridSpec(1,1,wspace=0.0,hspace=0.0)
+	if thisax == None: ax = fig.add_subplot(gs[0])
+	else: ax = thisax
+	counts,edges = histogram(disctraj.flatten(),range=(0,len(binedges[0])-1),
+		bins=len(binedges[0])-1,normed=bulk_relative)
+	meanedges = mean(array(binedges),axis=0)
+	vecs = array([mset.vec(i) for i in range(mset.nframes)])
+	lefts = meanedges[:-1]	
+	mids = [int(round(i)) for i in 1./2*(meanedges[1:]+meanedges[:-1])]
+	mids = [round(i) for i in 1./2*(meanedges[1:]+meanedges[:-1])]
+	halfvec = mean(vecs,axis=0)[2]/2
+	if bintype == 'fixed': zslice = slice(1,-1)
+	else: zslice = slice(None,None)
+	if bulk_relative:
+		#---buffer in Angstroms at maximum distance from bilayer to compute bulk
+		buffer_size = 20
+		meanbins = mean(binedges,axis=0)
+		topbin = where(meanbins>(meanbins.max()-buffer_size))[0][0]
+		botbin = where(meanbins<(-meanbins.max()+buffer_size))[0][-1]
+		bulkconc = mean([mean(counts[1:botbin]),mean(counts[topbin:-1])])
+		print 'status: bulk concentration = '+str(bulkconc)
+	else: 
+		#bulkconc = \
+		#	(((binwidth*mean(vecs,axis=0)[0]*mean(vecs,axis=0)[1])*(10**-10)**3)*10**3*6.0221413*10**23)
+		bulkconc = 1.
+	if barplot:
+		for n in (range(len(mids))[slice(1,len(mids-1))] if bintype == 'fixed' else range(len(mids))):
+			if mids[n] == 0: color = 'k'
+			elif mids[n] > 0: color = 'r'
+			elif mids[n] < 0: color = 'b'
+			alpha = 1-abs(mids[n]/max([halfvec,max(mids)]))
+			ax.bar(lefts[n],counts[n],color=color,width=list(meanedges[1:]-meanedges[:-1])[n],
+				alpha=1)
+	else:
+		#---color selection section
+		if resname_group == 'phosphate_position':
+			color = color_dictionary_aamd(ionname=ion_name,lipid_resname=ptdins_resname,
+				comparison='ions_phospate_position')
+		elif resname_group == 'protonation':
+			color = color_dictionary_aamd(ionname=ion_name,
+				lipid_resname=ptdins_resname,comparison='protonation')
+		else:
+			color = color_dictionary_aamd(ionname=ion_name,comparison='ions')
+		#---label definitions
+		if resname_group == 'phosphate_position':
+			label = proper_ion_labels[ionlist[ionnum]]+' with '+\
+				(proper_ion_labels[ionlist[0]]+' and ' if ionnum>0 else '')+\
+				extra_label_list[anum]
+		elif resname_group == 'protonation':
+			label = proper_ion_labels[ionlist[ionnum]]+' with '+extra_label_list[anum]
+		else:
+			label=label
+		#---plot
+		ax.plot(1./2*(meanedges[1:]+meanedges[:-1])[zslice],
+			#---disabled true concentration
+			#counts[zslice]/bul kconc/mset.nframes*100,ls,
+			counts[zslice]/bulkconc/mset.nframes,ls,
+			color=color,
+			alpha=1,lw=2.5,label=label)
+		if peakval < array(counts[zslice]/bulkconc).max(): peakval = array(counts[zslice]/bulkconc).max()
+	ax.grid(True)
+	plt.setp(ax.get_xticklabels(),fontsize=fsaxlabel)
+	plt.setp(ax.get_yticklabels(),fontsize=fsaxlabel)
+	ax.set_xlabel(r'$\mathrm{z(x,y)\,\mathrm{(\AA)}}$',fontsize=fsaxlabel)
+	#---disabled true concentration
+	#ax.set_ylabel(('relative concentration' if bulk_relative == True else 'concentration (mM)'),
+	#	fontsize=fsaxlabel)
+	ax.set_ylabel(('relative concentration' if bulk_relative == True else 'count'),
+		fontsize=fsaxlabel)
+	if norm_z_concentration == True:
+		ax.set_xlim((min(1./2*(meanedges[1:]+meanedges[:-1])),max(1./2*(meanedges[1:]+meanedges[:-1]))))
+		ax.set_yticks(list(arange(0,1.1*peakval,1))[:-1])
+		ax.set_yticklabels(list(arange(0,1.1*peakval,1))[:-1])
+		if len(list(arange(0,1.1*peakval,1))[:-1]) > 10:
+			ax.set_yticks([1]+list(arange(4,1.1*peakval,4)))
+			ax.set_yticklabels([1]+list(arange(4,1.1*peakval,4)))
+		ax.set_ylim((0,1.1*peakval))
+	if text == False:
+		ax.set_ylabel('')
+		ax.set_xlabel('')
+		ax.set_xticklabels([])
+		ax.set_yticklabels([])
+	if fig == None: plt.show()
+	return array(counts[zslice]/bulkconc),edges
 	
 def plot_ion_transition_matrix(disctraj,binedges,fig=None):
 	'''Plot the transition matrix for the discrete ion trajectories.'''
@@ -658,7 +736,7 @@ def plot_ion_residence_radial_binary_dev(disctraj,zonetype,fig=None,
 #-------------------------------------------------------------------------------------------------------------
 
 #---generic load routine for analyzing ions relative to the bilayer position
-if 'load' in routine or 'ionspos' not in globals():
+if 'load_deprecated' in routine:
 	for aname in analysis_names:
 		for i in analysis_descriptors[aname]: vars()[i] = (analysis_descriptors[aname])[i]
 		#---load
@@ -692,8 +770,61 @@ if 'load' in routine or 'ionspos' not in globals():
 		monoz = array(monoz)
 		midz = mean(monoz,axis=1)
 		
+if 'load' in routine or 'ionspos' not in globals():
+	
+	master_ionspos = [[] for aname in analysis_names]
+	master_clock = [[] for aname in analysis_names]
+	master_ionlist = [[] for aname in analysis_names]
+	master_monoz = [[] for aname in analysis_names]
+	master_midz = [[] for aname in analysis_names]
+	master_ionlist = [[] for aname in analysis_names]
+	msets_surf = []
+	msets = []
+	for aname in analysis_names:
+		for i in analysis_descriptors[aname]: vars()[i] = (analysis_descriptors[aname])[i]
+		anum = analysis_names.index(aname)
+		if get_ion_alt: ionlist = [ion_name,ion_name_alt]
+		else: ionlist = [ion_name]
+		master_ionlist.append(ionlist)
+		mset_surf = MembraneSet()
+		grofile,trajfile = trajectory_lookup(analysis_descriptors,aname,globals())		
+		mset_surf.load_trajectory((basedir+'/'+grofile,basedir+'/'+trajfile[0]),resolution='aamd')
+		#---load
+		mset = MembraneSet()
+		grofile,trajfile = trajectory_lookup(analysis_descriptors,aname,globals(),
+			keysysname='ions_sysname',keytrajsel='ions_trajsel')
+		mset.load_trajectory((basedir+'/'+grofile,basedir+'/'+trajfile[0]),resolution='aamd')
+		msets.append(mset)
+		msets_surf.append(mset_surf)
+		for this_ion_name in ionlist:
+			#---collect ion positions
+			clock = []
+			ionspos = []
+			ion_select = mset.universe.selectAtoms('name '+this_ion_name)
+			whichframes = range(len(mset.universe.trajectory))
+			for fr in whichframes:
+				mset.gotoframe(fr)
+				ionspos.append(ion_select.coordinates())
+				clock.append(mset.universe.trajectory[fr].time)
+			master_ionspos[anum].append(ionspos)
+			master_clock[anum] = clock
+		#---collect monolayer positions
+		mset_surf.identify_monolayers(director)
+		surf_select = mset_surf.universe.selectAtoms(selector)
+		monoz = []
+		for fr in whichframes:
+			mset_surf.gotoframe(fr)
+			surfpts = surf_select.coordinates()
+			monoz.append([mean(surfpts[mset_surf.monolayer_residues[m],2],axis=0) for m in range(2)])
+		#---midz and monoz provide the average midplane and average monolayer positions for each frame
+		monoz = array(monoz)
+		master_monoz[anum] = monoz
+		midz = mean(monoz,axis=1)
+		master_midz[anum] = midz
+		master_ionlist[anum] = ionlist
+
 #---example for doing the coordinate shift and the binning in the z-dimension
-if 'compute_z' in routine:
+if 'compute_z_deprecated' in routine:
 	aname = analysis_names[0]
 	#---shift coordinate systems so the frame-wise midplane is at zero
 	relpos = bilayer_shift()
@@ -718,7 +849,73 @@ if 'compute_z' in routine:
 		plot_ion_residence(disctraj,binedges,ignorezero=True,mset=mset_surf)
 		plot_ion_residence(disctraj,binedges,ignorezero=True,mset=mset_surf,cumulative=False)
 		plot_ion_time_correlations(disctraj,binedges,mset=mset_surf)
+		
+#---example for doing the coordinate shift and the binning in the z-dimension
+if 'compute_z' in routine:
+	binwidth = 1
+	fig = plt.figure(figsize=(10,6))
+	gs = gridspec.GridSpec(2,1,wspace=0.0,hspace=0.0)
+	ax = fig.add_subplot(gs[0])
+	ax2 = fig.add_subplot(gs[1])
+	axes = [ax,ax2]
+	lslist = ['-','-']
+	peakval = [0,0]
+	for aname in analysis_names:
+		for i in analysis_descriptors[aname]: vars()[i] = (analysis_descriptors[aname])[i]
+		anum = analysis_names.index(aname)
+		mset = msets[anum]
+		mset_surf = msets_surf[anum]
+		ionlist = master_ionlist[anum]
+		binedges,monobins = binlister('fixed',mset=mset_surf,binw=binwidth,monoz=master_monoz[anum])
+		valid_inds = where([len(i)==int(round(mean([len(i) 
+			for i in binedges]))) for i in binedges])[0]
+		binedges = list(array(binedges)[valid_inds])
+		for ionnum in range(len(ionlist)):
+			relpos = bilayer_shift(mset=mset,vecs=array([mset.vec(i) for i in range(mset.nframes)]),
+				ionspos=master_ionspos[anum][ionnum],midz=master_midz[anum])
+			disctraj = discretizer_z(binedges,array(relpos)[valid_inds])
+			counts,edges = plot_ion_distribution(disctraj,binedges,
+				ionname=ionlist[0],ionlist=ionlist,
+				label=proper_ion_labels[ionlist[ionnum]]+\
+					(' with '+proper_ion_labels[ionlist[0]] if ionnum>0 else ''),
+				bintype='fixed',fig=fig,thisax=axes[ionnum],ls=lslist[ionnum],
+				bulk_relative=norm_z_concentration)
+			if peakval[ionnum] < counts.max():
+				peakval[ionnum] = counts.max()
+	ax.legend(loc='upper left',fontsize=fsaxlegend)
+	ax2.legend(loc=('lower left' if 
+		(resname_group == 'protonation' and norm_z_concentration == False) else 'upper left'),
+		fontsize=fsaxlegend)
 
+	#---note that the following plot specs were originally in the function, but I moved them here
+	if norm_z_concentration == True:
+		if peakval[1] < 3: peakval[1] = 3
+		ax.set_yticks(list(arange(0,1.1*peakval[0],1))[:-1])
+		ax.set_yticklabels([str(int(i)) for i in list(arange(0,1.1*peakval[0],1))[:-1]])
+		if len(list(arange(0,1.1*peakval[0],1))[:-1]) > 10:
+			ax.set_yticks([1]+list(arange(4,1.1*peakval[0],4)))
+			ax.set_yticklabels([1]+list([str(int(i)) for i in  arange(4,1.1*peakval[0],4)]))
+		ax.set_ylim((0,1.1*peakval[0]))
+		ax2.set_yticks(list(arange(0,1.1*peakval[1],1))[:-1])
+		ax2.set_yticklabels([str(int(i)) for i in list(arange(0,1.1*peakval[1],1))[:-1]])
+		if len(list(arange(0,1.1*peakval[1],1))[:-1]) > 10:
+			ax2.set_yticks([1]+list(arange(4,1.1*peakval[1],4)))
+			ax2.set_yticklabels([1]+list([str(int(i)) for i in  arange(4,1.1*peakval[1],4)]))
+		ax2.set_ylim((0,1.1*peakval[1]))
+	else:
+		ax.get_yaxis().set_major_locator(mpl.ticker.MaxNLocator(prune='upper',nbins=6))
+		ax2.get_yaxis().set_major_locator(mpl.ticker.MaxNLocator(prune='upper',nbins=6))
+
+	ax.set_xlabel('')
+	ax.set_xticklabels([])
+	ax.set_title(composition_name+' bilayer',fontsize=fsaxtitle)
+	#---save
+	plt.savefig(pickles+'/PREPARE-FIGURES/'+'fig-ion_equilibrium_z-'+\
+		('not_normalized-' if norm_z_concentration == False else '')+\
+		'-'.join(analysis_names)+'.png',dpi=300)
+	if showplots: plt.show()
+	plt.close(fig)
+		
 #---example for doing the coordinate shift and the binning relative to key phospholipids
 if 'compute_radial_binary' in routine:
 	aname = analysis_names[0]
@@ -743,3 +940,4 @@ if 'compute_radial_binary' in routine:
 		plot_ion_residence_radial_binary(disctraj,'radial_binary',scale_by_time=False)
 		plot_ion_residence_radial_binary(disctraj,'radial_binary',scale_by_time=False,cumulative=True)
 		plot_ion_residence_radial_binary_dev(disctraj,'radial_binary',normed=False,residence_exact=True)
+

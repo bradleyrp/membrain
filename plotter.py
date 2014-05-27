@@ -288,7 +288,8 @@ def plotter2d(ax,mset,dat=None,nlabels=None,tickshow=False,cmap=None,lims=None,
 #---undulation plots
 
 def plotter_undulate(mset,qmagfilter=None,inset2d=True,inset2d2=True,ax=None,
-	peri=False,showkappa=True,label=None,colorspec=None):
+	peri=False,showkappa=True,label=None,colorspec=None,
+	intrinsic=None,lims_override=None):
 	'''Standard function for plotting 1D undulation spectra, with inset options.'''
 	if qmagfilter == None: qmagfilter = mset.undulate_qmagfilter
 	if not peri:
@@ -304,34 +305,61 @@ def plotter_undulate(mset,qmagfilter=None,inset2d=True,inset2d2=True,ax=None,
 	else:
 		specfilter = array(filter(lambda x: x[0] >= qmagfilter[0] and x[0] <= qmagfilter[1],
 			mset.undulate_peri_spec1d))
+	#---section to plot a line through intrinsic curvature
+	if intrinsic != None:
+		specfilter_int = array(filter(lambda x: x[0] >= intrinsic[0] and x[0] <= intrinsic[1],
+			mset.undulate_spec1d))
+		[bz_intrinsic,az_intrinsic] = numpy.polyfit(log(specfilter_int[:,0]),log(specfilter_int[:,1]),1)
+		leftcom = [mean(log(specfilter_int[:,0])),mean(log(specfilter_int[:,1]))]
+		az_intrinsic_force = leftcom[1]+2.*leftcom[0]
+	#---fit kappa	
 	[bz,az] = numpy.polyfit(log(specfilter[:,0]),log(specfilter[:,1]),1)
-	print bz
+	print 'status: exponent = '+str(bz)
 	area = double(mean([mset.vec(i)[0]*mset.vec(i)[1] for i in mset.surf_index])/mset.lenscale**2)
 	#---calculate kappa assuming correct q4 scaling
 	leftcom = [mean(log(specfilter[:,0])),mean(log(specfilter[:,1]))]
 	az_enforced = leftcom[1]+4.*leftcom[0]
 	kappa = 1./exp(az_enforced)/area
-	print 'kappa = '+str(kappa)
-	#---plot
+	print 'status: kappa = '+str(kappa)
+	if colorspec == None: color = 'b'
+	else: color = colorspec
 	if ax == None:
 		fig = plt.figure(figsize=(6,6))
 		gs = gridspec.GridSpec(1,1,wspace=0.0,hspace=0.0)
 		ax = plt.subplot(gs[0])
-	ax.scatter(spec1d[:,0],spec1d[:,1],marker='o',
-		s=(20 if colorspec == None else 10),
-		c=('k' if colorspec == None else colorspec))
-	if colorspec == None: color = 'b'
-	else: color = colorspec
+	#---plot lines
 	if not peri:
-		ax.plot(arange(spec1d[:,0].min()/2,spec1d[:,0].max()*4),[exp(az)*(i**bz) 
-			for i in arange(spec1d[:,0].min()/2,spec1d[:,0].max()*4)],linestyle='dotted',c=color,lw=2)
-		ax.plot(specfilter[:,0],[exp(az)*(i**bz) for i in specfilter[:,0]],c=color,lw=2,
+		ax.plot(arange(spec1d[:,0].min()/2,spec1d[:,0].max()*4),[exp(az_enforced)*(i**-4) 
+			for i in arange(spec1d[:,0].min()/2,spec1d[:,0].max()*4)],linestyle='dotted',c=color,lw=1.5)
+		ax.plot(specfilter[:,0],[exp(az_enforced)*(i**-4) for i in specfilter[:,0]],c=color,lw=1.5,
 			label=(None if label == None else label+'\n'+\
 			r'$\boldsymbol{\kappa} = '+str('%3.1f'%kappa)+'\:k_BT$'))
+	#---scatter plot
+	ax.scatter(spec1d[:,0],spec1d[:,1],marker='o',s=20,
+		c=('k' if colorspec == None else colorspec),
+		facecolor=('k' if colorspec == None else colorspec),
+		alpha=(1 if colorspec == None else 0.2),
+		lw=0)
+	ax.scatter(spec1d[array(spec1d[:,0])<qmagfilter[1],0],
+		spec1d[array(spec1d[:,0])<qmagfilter[1],1],
+		marker='o',s=20,
+		c=('k' if colorspec == None else colorspec),
+		facecolor=('k' if colorspec == None else colorspec),
+		alpha=1,
+		lw=0)
+	#---intrinsic curvature plot
+	if intrinsic != None:
+		ax.plot(arange(spec1d[:,0].min()/2,spec1d[:,0].max()*4),[exp(az_intrinsic_force)*(i**-2) 
+			for i in arange(spec1d[:,0].min()/2,spec1d[:,0].max()*4)],linestyle='dotted',c=color,lw=0.5)
+		ax.plot(specfilter_int[:,0],[exp(az_intrinsic_force)*(i**-2) for i in specfilter_int[:,0]],c=color,lw=1.5)
 	ax.set_xscale('log')
 	ax.set_yscale('log')
-	ax.set_xlim((spec1d[:,0].min()/2,spec1d[:,0].max()*4))
-	ax.set_ylim((spec1d[:,1].min()/10,spec1d[:,1].max()*10))
+	if lims_override == None:
+		ax.set_xlim((spec1d[:,0].min()/2,spec1d[:,0].max()*4))
+		ax.set_ylim((spec1d[:,1].min()/10,spec1d[:,1].max()*10))
+	else:
+		ax.set_xlim(lims_override[0])
+		ax.set_ylim(lims_override[1])
 	if not peri:
 		ax.set_ylabel(r'$\left\langle h_{q}h_{-q}\right\rangle \left(\mathrm{nm}^{2}\right)$',
 			fontsize=fsaxlabel)

@@ -10,7 +10,7 @@ execfile('locations.py')
 #---load the standard header defintions
 execfile('header-meso.py')
 
-simcode = 'v2006'
+simcode = 'v2008'
 analyses_names = [simcode+'-'+(meso_expt_toc[simcode])['parameter_name']+'-'+str(i) 
 	for i in (meso_expt_toc[simcode])['parameter_sweep']]
 

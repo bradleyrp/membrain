@@ -381,9 +381,9 @@ if 'calc' in routine:
 	if match_scales != None:
 		ref_ind = analysis_names.index(match_scales[0])
 		move_ind = analysis_names.index(match_scales[1])
-		#lenscale = max(mean(msets[move_ind].vecs,axis=0))/(max(mean(msets[ref_ind].vecs,axis=0))/msets[ref_ind].lenscale)
-		#---matching the average box vectors here ...........................
-		lenscale = mean(mean(msets[move_ind].vecs,axis=0)[:2])/(mean(mean(msets[ref_ind].vecs,axis=0)[:2])/msets[ref_ind].lenscale)
+		#---matching the average box vectors here by average and not maximum
+		lenscale = mean(mean(msets[move_ind].vecs,axis=0)[:2])/\
+			(mean(mean(msets[ref_ind].vecs,axis=0)[:2])/msets[ref_ind].lenscale)
 		for a in analysis_names:
 			for i in analysis_descriptors[a]: vars()[i] = (analysis_descriptors[a])[i]
 			if (analysis_descriptors[a])['simtype'] == 'meso' or \
@@ -402,7 +402,7 @@ if 'calc' in routine:
 				#---getgrid is xyz points in nm
 				getgrid = array([[[i,j] for j in linspace(0,3*vecs[1]/mset.lenscale,3*n)] 
 					for i in linspace(0,3*vecs[0]/mset.lenscale,3*m)])
-				############ key step which used to have a 0.5*hypo[0] here possible due to pre-deserno convention
+				#---needs checked, "key step used to have a 0.5*hypo[0] here possible due to convention"
 				params = [0,
 					hypo[0]*msets[1].lenscale/mset.lenscale,
 					vecs[0]*(1+hypo[1])/mset.lenscale,
@@ -410,9 +410,11 @@ if 'calc' in routine:
 					sqrt(r_2)/msets[1].lenscale/sqrt(2),
 					sqrt(r_2)/msets[1].lenscale/sqrt(2),
 					hypo[5]]
-				######## PBCCCCssss
-				c0hypo_nopbc = array([[gauss2d(params,getgrid[i,j,0],getgrid[i,j,1]) for j in range(3*n)] for i in range(3*m)])
-				c0hypo = [[max([c0hypo_nopbc[i+sh[0]*m,j+sh[1]*n] for sh in [[k,l] for k in range(3) for l in range(3)]]) for j in range(n)] for i in range(m)]
+				#---handle curvature fields at the mesoscale which cross the PBC boundary
+				c0hypo_nopbc = array([[gauss2d(params,getgrid[i,j,0],getgrid[i,j,1]) 
+					for j in range(3*n)] for i in range(3*m)])
+				c0hypo = [[max([c0hypo_nopbc[i+sh[0]*m,j+sh[1]*n] for sh in [[k,l] 
+					for k in range(3) for l in range(3)]]) for j in range(n)] for i in range(m)]
 				collect_c0s[anum] = [c0hypo for i in range(len(mset.surf))]
 	#---calculate coupled modes
 	for a in analysis_names:
@@ -460,7 +462,7 @@ if 'calc' in routine:
 			if 'collected_residuals' in globals(): 
 				#collected_residuals[cgmd_avail.index(cgmd_reference)][s].append([c0ask,resid])
 				collected_residuals_sigs[cgmd_avail.index(cgmd_reference)][s].append([c0ask,datlogs])
-	master_spectrum_dict[(cgmd_reference,meso_reference)] = {\
+	master_spectrum_dict[tuple(analysis_names)] = {\
 		'c0ask':c0ask,
 		'cgmd_qs':mscs[0].qmagst,
 		'meso_qs':mscs[1].qmagst,

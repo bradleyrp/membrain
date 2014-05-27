@@ -57,6 +57,12 @@ meso_expt_toc = {
 		'start':1500,
 		'end':3500,
 		},
+	'v2008' : {
+		'basedir':'/home/rpb/compbio/mesomembrane-v2008/',
+		'R_2':25,
+		'start':1500,
+		'end':3500,
+		},
 	}
 
 #---load the results of a parameter sweep into the dictionary
@@ -68,20 +74,24 @@ for key in meso_expt_toc.keys():
 		shell=True).split('\"')[1]
 	paramstring = subprocess.check_output(\
 		'grep \"param_list=\" '+basedir+'/mesomania.sh | tail -1',shell=True)
+	param_precision = len(paramstring.strip().replace('\'','').split(' ')[1:-1][0].split('.')[-1])
 	params = [float(i) for i in paramstring.strip().replace('\'','').split(' ')[1:-1]]
 	(meso_expt_toc[key])['parameter_name'] = pname
 	(meso_expt_toc[key])['parameter_sweep'] = params
 	(meso_expt_toc[key])['basedir'] = basedir
+	(meso_expt_toc[key])['param_precision'] = param_precision
 	for param in params:
 		analysis_descriptors[key+'-'+pname+'-'+str(param)] = {
 			'simtype':'meso',
 			'label':r'$\mathrm{meso}$',
-			'detail_name':r'$\mathrm{meso,}\:C_0='+('{0:.3f}'.format(param))+'a_0^{-1}$',
-			'testname':key+'-'+pname+'-'+('{0:.3f}'.format(param)),
-			'locate':basedir+'exec/'+pname+'-'+('{0:.3f}'.format(param))+'/rep-0/',
+			'detail_name':r'$\mathrm{meso,}\:C_0='+\
+				(('{0:.'+str(param_precision)+'f}').format(param))+'a_0^{-1}$',
+			'testname':key+'-'+pname+'-'+\
+				(('{0:.'+str(param_precision)+'f}').format(param)),
+			'locate':basedir+'exec/'+pname+'-'+\
+				(('{0:.'+str(param_precision)+'f}').format(param))+'/rep-0/',
 			'start':start,
 			'end':end,
 			'nbase':22,
 			'hascurv':True,
 			}
-

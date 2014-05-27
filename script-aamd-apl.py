@@ -2,67 +2,74 @@
 
 from membrainrunner import *
 execfile('locations.py')
-
 execfile('header-aamd.py')
 
-#---settings
-compare_phosphate_position = False
+#---DEFAULTS
+#-------------------------------------------------------------------------------------------------------------
 
-#---standard selection
-analysis_names = [
-	'v530-40000-90000-50',
-	'v531-40000-90000-50',
-	'v532-40000-90000-50',
-	'v509-40000-90000-50',
-	'v510-40000-90000-50',
-	'v511-40000-90000-50',
-	'v533-40000-90000-50',
-	'v534-40000-90000-50',
-	][:]
-	
-#---alternate tests
-if compare_phosphate_position:
+if 'batch_override' not in globals():
+
+	#---settings
+	compare_phosphate_position = False
+
+	#---standard selection
 	analysis_names = [
+		'v530-40000-90000-50',
 		'v531-40000-90000-50',
 		'v532-40000-90000-50',
+		'v509-40000-90000-50',
+		'v510-40000-90000-50',
+		'v511-40000-90000-50',
 		'v533-40000-90000-50',
 		'v534-40000-90000-50',
-		]
-
-routine = [
-	'calc_apl',
-	'plot_apl',
-	'calc_span',
-	'plot_span',
-	][-2:-1]
+		'v530-pbcmol-40000-90000-50',
+		'v514-22000-32000-10',
+		'v515-20000-30000-10',
+		][-2:]
 	
-#---selector overrides
-selector_override = [
-	'no_chl',
-	None,
-	][0]
-	
-#---which types of plots to generate
-resname_group = [
-	'all',
-	'phosphate_position',
-	][0]
-	
-if compare_phosphate_position: resname_group = 'phosphate_position'
+	#---alternate tests
+	if compare_phosphate_position:
+		analysis_names = [
+			'v531-40000-90000-50',
+			'v532-40000-90000-50',
+			'v533-40000-90000-50',
+			'v534-40000-90000-50',
+			]
 
-#---custom settings
-flaglist = []
-if selector_override == 'no_chl':
-	for aname in analysis_names:
-		(analysis_descriptors[aname])['residues'] = residues_aamd_asymmetric_no_chl	
-		(analysis_descriptors[aname])['director'] = director_aamd_asymmetric_no_chl
-		(analysis_descriptors[aname])['selector'] = selector_aamd_asymmetric_no_chl
-	flaglist.append('no_chl')
+	routine = [
+		'calc_apl',
+		'plot_apl',
+		'calc_span',
+		'plot_span',
+		][2]
+	
+	#---selector overrides
+	selector_override = [
+		'no_chl',
+		None,
+		][1]
+	
+	#---which types of plots to generate
+	resname_group = [
+		'all',
+		'phosphate_position',
+		][0]
+	
+	if compare_phosphate_position: resname_group = 'phosphate_position'
 
-#---plot settings
-nbins = 40
-showplots = False
-hist_area_max = 140
+	#---custom settings
+	flaglist = []
+	if selector_override == 'no_chl':
+		for aname in analysis_names:
+			(analysis_descriptors[aname])['residues'] = residues_aamd_asymmetric_no_chl	
+			(analysis_descriptors[aname])['director'] = director_aamd_asymmetric_no_chl
+			(analysis_descriptors[aname])['selector'] = selector_aamd_asymmetric_no_chl
+		flaglist.append('no_chl')
+
+	#---plot settings
+	nbins = 40
+	showplots = False
+	hist_area_max = 140
 
 #---CALCULATE
 #-------------------------------------------------------------------------------------------------------------
@@ -192,7 +199,17 @@ if 'calc_span' in routine:
 #---LOADS
 #-------------------------------------------------------------------------------------------------------------
 
-if 'calc_apl' not in routine and 'plot_apl' in routine and 'msets' not in globals():
+span_calcs = [
+	'plot_span',
+	'plot_span_angle',
+	'plot_span_angle_summary',
+	]
+apl_calcs = [
+	'plot_apl',
+	'plot_apl_all_lipids',
+	]
+
+if routine in apl_calcs and 'msets' not in globals():
 	msets = []
 	#---loop over analysis questions
 	for aname in analysis_names:
@@ -203,25 +220,30 @@ if 'calc_apl' not in routine and 'plot_apl' in routine and 'msets' not in global
 			specname_pickle(sysname,trajfile[0])+'.pkl')
 		msets.append(mset)
 		
-if 'calc_span' not in routine and 'plot_span' in routine and 'msets' not in globals():
+if routine in span_calcs and 'msets' not in globals():
+
 	msets = []
 	#---loop over analysis questions
 	for aname in analysis_names:
 		for i in analysis_descriptors[aname]: vars()[i] = (analysis_descriptors[aname])[i]
 		grofile,trajfile = trajectory_lookup(analysis_descriptors,aname,globals())
-		mset = unpickle(pickles+'pkl.headspan-headangle2.'+aname+'.pkl')
+		mset = unpickle(pickles+'pkl.headspan-headangle2.'+specname_pickle(sysname,trajfile[0])+'.pkl')
 		msets.append(mset)
 
 #---PLOT
 #-------------------------------------------------------------------------------------------------------------
 
-if 'plot_apl' in routine:
+if 'plot_apl' in routine and routine != 'plot_apl_all_lipids':
 
 	#---two-dimensional list of which residues to compare across simulations
 	if resname_group == 'all':
 		plot_resnames = list(set([j for k in [i.resnames for i in msets] for j in k]))
 	elif resname_group == 'phosphate_position':
 		plot_resnames = ['ptdins']
+	elif resname_group == 'protonation':
+		plot_resnames = list(set([j for k in [i.resnames for i in msets] for j in k]))
+		plot_resnames = [i for i in plot_resnames if i not in ['PI2P','PIPP','PIPU']]+\
+			(['ptdins'] if 'PI2P' in plot_resnames else [])
 
 	#---plot on a single panel
 	largest_area = max([
@@ -233,6 +255,7 @@ if 'plot_apl' in routine:
 
 	#---loop over residue comparisons
 	for resname in plot_resnames:
+		cycle_through_ptdins = True if resname == 'ptdins' else False
 		lims = (0,largest_area)
 		fig = plt.figure()
 		ax = plt.subplot(111)
@@ -240,7 +263,10 @@ if 'plot_apl' in routine:
 		for aname in analysis_names:
 			for i in analysis_descriptors[aname]: vars()[i] = (analysis_descriptors[aname])[i]
 			mset = msets[analysis_names.index(aname)]
-			if plot_resnames == ['ptdins']: resname = ptdins_resname
+			print resname
+			if plot_resnames == ['ptdins'] or resname == 'ptdins' or cycle_through_ptdins: 
+				resname = ptdins_resname
+			print resname
 			if resname in mset.resnames:
 				data = []
 				for mono in range(2):
@@ -251,6 +277,8 @@ if 'plot_apl' in routine:
 							[array(i)[inds] for i in \
 							mset.getdata('cells').get(['monolayer',mono,'type','areas'])]
 							)
+				#---got some weird high numbers due to PBC maybe
+				data = [i for i in flatten(data) if i < hist_area_max]
 				hist,binedges = histogram(data,bins=nbins,normed=True,range=lims)
 				mids = (binedges[1:]+binedges[:-1])/2
 				peakval = max(hist) if max(hist) > peakval else peakval
@@ -259,6 +287,9 @@ if 'plot_apl' in routine:
 				if resname_group == 'phosphate_position':
 					color = color_dictionary_aamd(ionname=ion_name,lipid_resname=resname,
 						comparison='ions_phospate_position')
+				elif resname_group == 'protonation':
+					color = color_dictionary_aamd(ionname=ion_name,
+						lipid_resname=ptdins_resname,comparison='protonation')
 				else:
 					color = color_dictionary_aamd(ionname=ion_name,comparison='ions')
 				#---plot commands
@@ -267,28 +298,110 @@ if 'plot_apl' in routine:
 				fill_between(mids,[0 for i in range(len(hist))],hist,
 					facecolor=color,
 					alpha=0.35,
-					label=label+', '+ion_label,
+					label=label+', '+ion_label+\
+					('\nwith '+proper_residue_names[ptdins_resname] 
+						if resname_group == 'protonation' else '')+\
+					' ('+'{0:.1f}'.format(mean(data))+r'$\:\mathrm{\AA^2}$'+')',
 					ax=ax)
 		#---plot settings
 		ax.set_title(composition_name+' bilayer',fontsize=fsaxtitle)
 		ax.grid(True)
-		ax.legend()
+		ax.legend(loc='upper right',prop={'size':fsaxlegend-2})
 		ax.set_ylim((0,peakval*1.2))
 		plt.setp(ax.get_xticklabels(),fontsize=fsaxticks)
-		ax.set_ylabel('relative frequency',fontsize=fsaxlabel)
-		ax.set_xlabel(r'area per molecule $(\mathrm{\AA^2})$',fontsize=fsaxlabel)
+		ax.set_ylabel('Relative frequency',fontsize=fsaxlabel)
+		ax.set_xlabel(r'Area per molecule $(\mathrm{\AA^2})$',fontsize=fsaxlabel)
 		#---save
-		plt.savefig(pickles+'/PREPARE-FIGURES/'+'fig-apl-'+resname+'-'+\
+		plt.savefig(pickles+'/PREPARE-FIGURES/'+'fig-apl-'+\
+			('PTDINS' if cycle_through_ptdins else resname)+'-'+\
 			('no_chl-' if selector_override == 'no_chl' else '')+\
 			'-'.join(analysis_names)+'.png',\
 			dpi=300,bbox_inches='tight')
 		if showplots: plt.show()
 		plt.close(fig)
+		
+if 'plot_apl_all_lipids' in routine:
 
-if 'plot_span' in routine:
-
+	plot_resnames = list(set([j for k in [i.resnames for i in msets] for j in k]))
 	largest_area = hist_area_max
+
+	#---loop over residue comparisons
 	lims = (0,largest_area)
+	fig = plt.figure()
+	ax = plt.subplot(111)
+	peakval = 0
+	aname = analysis_names[0]
+	for i in analysis_descriptors[aname]: vars()[i] = (analysis_descriptors[aname])[i]
+	mset = msets[analysis_names.index(aname)]
+	for resname in plot_resnames:
+		if resname in mset.resnames:
+			data = []
+			for mono in range(2):
+				inds = array([mset.monolayer_residues[mono].index(i) 
+					for i in mset.monolayer_by_resid[mono][mset.resnames.index(resname)]])
+				if len(inds) > 0:
+					data.extend(\
+						[array(i)[inds] for i in \
+						mset.getdata('cells').get(['monolayer',mono,'type','areas'])]
+						)
+			#---got some weird high numbers due to PBC maybe
+			data = [i for i in flatten(data) if i < hist_area_max]
+			hist,binedges = histogram(data,bins=nbins,normed=True,range=lims)
+			mids = (binedges[1:]+binedges[:-1])/2
+			peakval = max(hist) if max(hist) > peakval else peakval
+			color = color_dictionary_aamd(lipid_resname=resname,comparison='lipids')
+			labelname = proper_residue_names[resname]
+			#---plot commands
+			ax.plot(mids,hist,'-',lw=2,
+				color=color,
+				label=labelname+\
+				' ('+'{0:.1f}'.format(mean(data))+r'$\:\mathrm{\AA^2}$'+')')
+	#---plot all residues
+	data = []
+	for mono in range(2):
+		inds = array([mset.monolayer_residues[mono].index(i) 
+			for i in mset.monolayer_by_resid[mono][mset.resnames.index(resname)]])
+		if len(inds) > 0:
+			data.extend(\
+				[array(i) for i in \
+				mset.getdata('cells').get(['monolayer',mono,'type','areas'])]
+				)
+	#---got some weird high numbers due to PBC maybe
+	data = [i for i in flatten(data) if i < hist_area_max]
+	hist,binedges = histogram(data,bins=nbins,normed=True,range=lims)
+	mids = (binedges[1:]+binedges[:-1])/2
+	peakval = max(hist) if max(hist) > peakval else peakval
+	#---plot commands
+	ax.plot(mids,hist,'-',lw=2,color='k')
+	fill_between(mids,[0 for i in range(len(hist))],hist,
+		facecolor='k',
+		alpha=0.35,
+		label='combined'+\
+		' ('+'{0:.1f}'.format(mean(data))+r'$\:\mathrm{\AA^2}$'+')',
+		ax=ax)
+	#---plot settings
+	ax.set_title(composition_name+' bilayer, '+ion_label,fontsize=fsaxtitle)
+	ax.grid(True)
+	ax.legend(loc='upper right',prop={'size':fsaxlegend-2})
+	ax.set_ylim((0,peakval*1.2))
+	plt.setp(ax.get_xticklabels(),fontsize=fsaxticks)
+	ax.set_ylabel('Relative frequency',fontsize=fsaxlabel)
+	ax.set_xlabel(r'Area per molecule $(\mathrm{\AA^2})$',fontsize=fsaxlabel)
+	#---save
+	plt.savefig(pickles+'/PREPARE-FIGURES/'+'fig-apl-summary-'+\
+		('no_chl-' if selector_override == 'no_chl' else '')+\
+		'-'.join(analysis_names)+'.png',\
+		dpi=300,bbox_inches='tight')
+	if showplots: plt.show()
+	plt.close(fig)
+
+if 'plot_span' == routine:
+	
+	status('status: running plot_span'+'\n')
+
+	nbins = 200
+	largest_area = hist_area_max
+	lims = (30,110)
 	fig = plt.figure()
 	ax = plt.subplot(111)
 	peakval = 0
@@ -299,31 +412,37 @@ if 'plot_span' in routine:
 		tmp2 = tmp.get(['type','headspan'])
 		#---note due to a slight issue with the membraindata get function, this returns array of strings
 		data = [float(i) for j in tmp2 for i in j]
+		#---got some weird high numbers due to PBC maybe
+		data = [i for i in data if i < hist_area_max]
 		hist,binedges = histogram(data,bins=nbins,normed=True,range=lims)
 		mids = (binedges[1:]+binedges[:-1])/2
 		peakval = max(hist) if max(hist) > peakval else peakval
 		if resname_group == 'phosphate_position':
 			color = color_dictionary_aamd(ionname=ion_name,lipid_resname=ptdins_resname,
 				comparison='ions_phospate_position')
+		elif resname_group == 'protonation':
+			color = color_dictionary_aamd(ionname=ion_name,
+				lipid_resname=ptdins_resname,comparison='protonation')
 		else:
 			color = color_dictionary_aamd(ionname=ion_name,comparison='ions')
 		#---plot commands
-		ax.plot(mids,hist,'-',lw=2,
-			color=color)
+		ax.plot(mids,hist,'-',lw=2,color=color)
 		fill_between(mids,[0 for i in range(len(hist))],hist,
 			facecolor=color,
 			alpha=0.35,
-			label=ptdins_label+', '+ion_label,
+			label=ptdins_label+', '+ion_label+\
+			' ('+'{0:.1f}'.format(mean(data))+r'$\:\mathrm{\AA^2}$'+')',
 			ax=ax)
 
 	#---plot settings
 	ax.set_title(composition_name+' bilayer',fontsize=fsaxtitle)
 	ax.grid(True)
-	ax.legend(ncol=2)
-	ax.set_ylim((0,peakval*1.3))
+	ax.legend(ncol=(2 if compare_phosphate_position else 1),
+		loc='upper right',prop={'size':fsaxlegend-2})
+	ax.set_ylim((0,peakval*1.4))
 	plt.setp(ax.get_xticklabels(),fontsize=fsaxticks)
-	ax.set_ylabel('relative frequency',fontsize=fsaxlabel)
-	ax.set_xlabel(r'area per molecule $(\mathrm{\AA^2})$',fontsize=fsaxlabel)
+	ax.set_ylabel('Relative frequency',fontsize=fsaxlabel)
+	ax.set_xlabel(r'Area per molecule $(\mathrm{\AA^2})$',fontsize=fsaxlabel)
 	#---save
 	plt.savefig(pickles+'/PREPARE-FIGURES/'+'fig-span-'+\
 		'-'.join(analysis_names)+'.png',\
@@ -331,76 +450,226 @@ if 'plot_span' in routine:
 	if showplots: plt.show()
 	plt.close(fig)
 	
-#---DEVELOPMENT
+#---SNAPSHOTS
 #-------------------------------------------------------------------------------------------------------------
 
-def cellplot(dat,fig,altdat=None,vmin=None,vmax=None,fr=None,panels=1):
-	rows,cols = shape(dat)
-	gs = gridspec.GridSpec(rows,cols,wspace=0.0,hspace=0.0)
+def cellplot(dat,fig,altdat=None,vmin=None,vmax=None,fr=None,panels=1,swapdims=False,blackdots=False,
+	axlabels=False):
+	if len(shape(dat)) == 3: 
+		rows,cols,nframes = shape(dat)
+		dat = [[dat[i][j][fr] for j in range(cols)] for i in range(rows)]
+	elif len(shape(dat)) == 2: rows,cols = shape(dat)
+	gs = gridspec.GridSpec((cols if swapdims else rows),(rows if swapdims else cols),wspace=0.0,hspace=0.0)
+	axlist = []
 	#---rows are monolayers, columns are systems
 	for row in range(rows):
 		for col in range(cols):
 			vor = dat[row][col]
-			ax = fig.add_subplot(gs[row,col],aspect='equal')
+			ax = fig.add_subplot((gs[col,row] if swapdims else gs[row,col]),aspect='equal')
+			axlist.append(ax)
 			regionlist = [vor.regions[i] for i in vor.point_region]
 			for r in range(len(regionlist)):
 				region = regionlist[r]
 				if not -1 in region:
-					polygon = [vor.vertices[i] for i in region]
-					if 0: axes.fill(*zip(*polygon),alpha=0.5)
+					polygon = [vor.vertices[i]/10. for i in region]
+					if 0: axes.fill(*zip(co*polygon),alpha=0.5)
 					p = mpl.patches.Polygon(polygon,alpha=0.65,
-						facecolor=('w' if r >= len(colorcodes[row]) else clrset[colorcodes[row][r]]),
+						facecolor=('w' if r >= len(colorcodes[row]) else colorcodes[row][r]),
 						lw=0.5,edgecolor='k')
 					ax.add_patch(p)
 			for p in range(len(vor.points)):
 				pt = vor.points[p]
-				ax.add_patch(plt.Circle((pt[0],pt[1]),radius=1.,facecolor=rand_color_list[p],
+				ax.add_patch(plt.Circle((pt[0]/10.,pt[1]/10.),radius=1./10.,facecolor=rand_color_list[p],
 					edgecolor='k',lw=0.3))
-			ax.set_xlim([[-0.1*i,1.1*i] for i in mean(mset.vecs,axis=0)[:2]][0])
-			ax.set_ylim([[-0.1*i,1.1*i] for i in mean(mset.vecs,axis=0)[:2]][1])
-			ax.set_xticklabels([])
-			ax.set_yticklabels([])
-			ax.set_xticks([])
-			ax.set_yticks([])
-	return [gs,ax]
+			ax.set_xlim([[-0.1*i,1.1*i] for i in mean(mset.vecs,axis=0)[:2]/10.][0])
+			ax.set_ylim([[-0.1*i,1.1*i] for i in mean(mset.vecs,axis=0)[:2]/10.][1])
+			if not axlabels:
+				ax.set_xticklabels([])
+				ax.set_yticklabels([])
+				ax.set_xticks([])
+				ax.set_yticks([])
+			else:
+				if (row == rows-1 and not swapdims) or (col == cols-1 and swapdims): 
+					ax.set_xlabel(r'$\mathrm{X\:(nm)}$',fontsize=fsaxlabel)
+				else: ax.set_xticklabels([])
+				if (col == 0 and not swapdims) or (row == 0 and swapdims): 
+					ax.set_ylabel(r'$\mathrm{Y\:(nm)}$',fontsize=fsaxlabel)
+				else: ax.set_yticklabels([])
+	return [gs,axlist]
+	
+if 'plot_snapshot' in routine:
 
-#---code for making grid movie, under construction
+	msets = []
+	#---loop over analysis questions
+	for aname in analysis_names:
+		for i in analysis_descriptors[aname]: vars()[i] = (analysis_descriptors[aname])[i]
+		grofile,trajfile = trajectory_lookup(analysis_descriptors,aname,globals())
+		mset = unpickle(pickles+'pkl.cells.'+\
+			'vmap-'+'-'.join(flaglist)+('-' if len(flaglist) > 0 else '')+\
+			specname_pickle(sysname,trajfile[0])+'.pkl')
+		msets.append(mset)	
+	
+	frameno = 5
+	allcells = msets[0].getdata('cells')
+	dat_vor = [[0. for cols in range(1)] for rows in range(2)]
+	dat_vor[0][0] = list(allcells.get(['monolayer',0,'type','voronoi']))
+	dat_vor[1][0] = list(allcells.get(['monolayer',1,'type','voronoi']))
+
+	#---global color settings for cellplot
+	colorcodes = [[color_dictionary_aamd(lipid_resname=mset.resnames[\
+		where([i in j for j in mset.resids])[0][0]
+		],comparison='voronoi') 
+		for i in mset.monolayer_residues[j]] for j in range(2)]
+	rand_color_list = [np.random.rand(3,1) for i in range(2*len(dat_vor[0][0][0].points))]
+	rand_color_list = ['k' for i in range(2*len(dat_vor[0][0][0].points))]
+	
+	fig = plt.figure()
+	gs,axlist = cellplot(dat_vor,fig,fr=frameno,swapdims=True,axlabels=True)
+	axlist[0].set_title('inner leaflet',fontsize=fsaxlabel)
+	axlist[1].set_title('outer leaflet',fontsize=fsaxlabel)
+	plt.savefig(pickles+'/PREPARE-FIGURES/'+'fig-snapshot-voronoi-'+\
+		'-'.join(analysis_names)+'.png',\
+		dpi=500,bbox_inches='tight')
+	if showplots: plt.show()
+	plt.close(fig)
+
+if 'plot_span_angle' == routine:
+	
+	status('status: starting plot_span_angle'+'\n')
+	colorbar = False
+	fig = plt.figure()
+	ax = plt.subplot(111)
+	peakval = 0
+	for aname in analysis_names:
+		for i in analysis_descriptors[aname]: vars()[i] = (analysis_descriptors[aname])[i]
+		mset = msets[analysis_names.index(aname)]
+
+		dat_span = ravel(array(
+			mset.getdata('spanangle2').get(['type','headspan']),
+			dtype=float))
+		dat_angle = ravel(array(
+			mset.getdata('spanangle2').get(['type','headangle'])
+			,dtype=float))
+		dat_span = dat_span[dat_span<hist_area_max]
+		dat_angle = dat_angle[dat_span<hist_area_max]
+
+		fig = plt.figure()
+		ax = plt.subplot(111)
+		H, xedges, yedges = histogram2d(dat_angle,dat_span,bins=41,
+			normed=True,range=((60,180),(45,100)))
+		im = ax.imshow(
+			array(H).T,
+			extent=(60,180,45,100),
+			interpolation='nearest',
+			aspect='auto',
+			origin='lower',
+			norm=None,
+			cmap=color_dictionary_aamd(ionname=ion_name,comparison='ion_colormap'))
+		if colorbar:
+			cbar = fig.colorbar(im) 
+			plt.setp(cbar.ax.get_yticklabels(),fontsize=fsaxlabel)
+		ax.set_title(ptdins_label+' with '+ion_label,fontsize=fsaxlabel)
+		ax.set_xlabel(r'Head-tail angle (degrees)',fontsize=fsaxlabel)
+		ax.set_ylabel(r'Molecular area ($\mathrm{\AA^2}$)',fontsize=fsaxlabel)
+		plt.setp(ax.get_xticklabels(),fontsize=fsaxlabel)
+		plt.setp(ax.get_yticklabels(),fontsize=fsaxlabel)
+		#---save
+		plt.savefig(pickles+'/PREPARE-FIGURES/'+'fig-span_angle-'+\
+			aname+'.png',\
+			dpi=300)
+		if showplots: plt.show()
+		plt.close(fig)
+		
+if 'plot_span_angle_summary' == routine:
+
+	layout = span_angle_summary_layout 		
+	nrows = len(layout)
+	ncols = max([len(i) for i in layout])	
+	flushvert = True
+	axgrid = [[[] for j in range(ncols)] for i in range(nrows)]
+	status('status: starting plot_span_angle_summary'+'\n')
+	colorbar = False
+	fig = plt.figure(figsize=(2*ncols,2.5*nrows))
+	gs = gridspec.GridSpec(nrows,ncols,wspace=(0. if flushvert else None))
+	peakval = 0
+	ranges = (60,180,45,100)
+	fslocal = 10
+	
+	#---output some text
+	fp = open(pickles+'/PREPARE-FIGURES/'+'dat-span_angle-SUMMARY-'+\
+		'-'.join([i[:4] for i in analysis_names])+'.txt','w')
+	
+	for rowi in range(nrows):
+		for coli in range(ncols):
+			if coli < len(layout[rowi]):
+				aname = layout[rowi][coli]
+				for i in analysis_descriptors[aname]: vars()[i] = (analysis_descriptors[aname])[i]
+				mset = msets[analysis_names.index(aname)]
+				dat_span = ravel(array(
+					mset.getdata('spanangle2').get(['type','headspan']),
+					dtype=float))
+				dat_angle = ravel(array(
+					mset.getdata('spanangle2').get(['type','headangle'])
+					,dtype=float))
+				dat_span = dat_span[dat_span<hist_area_max]
+				dat_angle = dat_angle[dat_span<hist_area_max]
+				ax = plt.subplot(gs[rowi,coli])
+				axgrid[rowi][coli] = ax
+				H, xedges, yedges = histogram2d(dat_angle,dat_span,bins=41,
+					normed=True,range=((ranges[0],ranges[1]),(ranges[2],ranges[3])))
+				im = ax.imshow(
+					array(H).T,
+					extent=ranges,
+					interpolation='nearest',
+					aspect='auto',
+					origin='lower',
+					norm=None,
+					vmin=0.,
+					cmap=color_dictionary_aamd(ionname=ion_name,comparison='ion_colormap'))
+				if colorbar:
+					cbar = fig.colorbar(im) 
+					plt.setp(cbar.ax.get_yticklabels(),fontsize=fslocal)
+				ax.set_xlabel(r'Head-tail angle (degrees)',fontsize=fslocal-2)
+				ax.set_ylabel(r'Molecular area ($\mathrm{\AA^2}$)',fontsize=fslocal)
+				plt.setp(ax.get_xticklabels(),fontsize=fslocal)
+				plt.setp(ax.get_yticklabels(),fontsize=fslocal)
+				if 0: ax.text(0.5,0.9,ptdins_label+' + '+ion_label,fontsize=10,
+					transform=ax.transAxes,horizontalalignment='center')
+				ax.set_title(ptdins_label+' + '+ion_label,fontsize=fslocal)
+				ax.set_aspect((ranges[1]-ranges[0])/(ranges[3]-ranges[2]))
+				area_peaks = [yedges[i[1]] for i in [unravel_index(argsort(ravel(H))[j],shape(H)) 
+					for j in [-1,-2]]]
+				fp.write('system '+str(aname).ljust(20)+ptdins_label.ljust(20)+ion_label.ljust(20)+'\n')
+				fp.write('mean angle:\t'+'{0:.3f}'.format(mean(dat_angle))+'\n')
+				fp.write('mean span:\t'+'{0:.3f}'.format(mean(dat_span))+'\n')
+				fp.write('peaks:\t'+'{0:.3f}'.format(area_peaks[0])+','+\
+					'{0:.3f}'.format(area_peaks[1])+'\n\n')
+				if flushvert: ax.set_xticks(ax.get_xticks()[:-1])
+				if flushvert and coli > 0:
+					ax.set_ylabel('')
+					ax.set_yticklabels([])
+				if 'rightlabels' in globals() and coli == len(layout[rowi])-1:
+					ax.text(1.1,0.5,rightlabels[rowi],
+						horizontalalignment='center',
+						verticalalignment='center',
+						rotation=270,
+						transform=ax.transAxes)
+					
+	#---save
+	if 0: fig.set_size_inches(fig.get_size_inches()[0]*1.5,fig.get_size_inches()[1]*1.5)
+	plt.savefig(pickles+'/PREPARE-FIGURES/'+'fig-span_angle-SUMMARY-'+\
+		'-'.join([i[:4] for i in analysis_names])+'.png',\
+		dpi=300,bbox_inches='tight')
+	if showplots: plt.show()
+	plt.close(fig)
+	fp.close()
+
 if 'plot_mov' in routine:
 
 	clrs = [brewer2mpl.get_map('Set1','qualitative',9).mpl_colors[i] for i in range(9)]
 	clrset = [clrs[i] for i in [8,7,1,0]]
 
-	def cellplot(dat,fig,altdat=None,vmin=None,vmax=None,fr=None,panels=1):
-		rows,cols = shape(dat)
-		gs = gridspec.GridSpec(rows,cols,wspace=0.0,hspace=0.0)
-		#---rows are monolayers, columns are systems
-		for row in range(rows):
-			for col in range(cols):
-				vor = dat[row][col]
-				ax = fig.add_subplot(gs[row,col],aspect='equal')
-				regionlist = [vor.regions[i] for i in vor.point_region]
-				for r in range(len(regionlist)):
-					region = regionlist[r]
-					if not -1 in region:
-						polygon = [vor.vertices[i] for i in region]
-						if 0: axes.fill(*zip(*polygon),alpha=0.5)
-						p = mpl.patches.Polygon(polygon,alpha=0.65,
-							facecolor=('w' if r >= len(colorcodes[row]) else clrset[colorcodes[row][r]]),
-							lw=0.5,edgecolor='k')
-						ax.add_patch(p)
-				for p in range(len(vor.points)):
-					pt = vor.points[p]
-					ax.add_patch(plt.Circle((pt[0],pt[1]),radius=1.,facecolor=rand_color_list[p],
-						edgecolor='k',lw=0.3))
-				ax.set_xlim([[-0.1*i,1.1*i] for i in mean(mset.vecs,axis=0)[:2]][0])
-				ax.set_ylim([[-0.1*i,1.1*i] for i in mean(mset.vecs,axis=0)[:2]][1])
-				ax.set_xticklabels([])
-				ax.set_yticklabels([])
-				ax.set_xticks([])
-				ax.set_yticks([])
-		return [gs,ax]
-
-	#---relative resids
+	#---relative residsf
 	resids = [[mset.resids_reracker.index(i) for i in j] for j in mset.resids]
 	#---color codes
 	colorcodes = [[[i for i in range(4) if j in resids[i]][0] 
@@ -412,7 +681,7 @@ if 'plot_mov' in routine:
 	dat_vor[0][0] = list(dat.get(['monolayer',0,'type','voronoi']))
 	dat_vor[1][0] = list(dat.get(['monolayer',1,'type','voronoi']))
 	rand_color_list = [np.random.rand(3,1) for i in range(2*len(dat_vor[0][0][0].points))]
-	#plotmov(dat_vor,'celltest',plotfunc='cellplot')
-
+	#---celltest was updated slightly, see the plot_snapshot section
+	plotmov(dat_vor,'celltest',plotfunc='cellplot')
 
 

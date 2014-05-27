@@ -42,7 +42,7 @@ struct=/home/rpb/compbio-alt/membrane-v550/s0-trajectory-full/md.part0007.450.gr
 /home/rpb/compbio-alt/membrane-v550/s0-trajectory-full/md.part0006.300000-400000-200.xtc
 /home/rpb/compbio/membrane-v550/v1-lonestar/md.part0010.400000-500000-160.xtc
 
-name=membrane-v509-ions
+name=membrane-v509-ions-deprecated
 struct=/home/rpb/compbio/membrane-v509/a1-ions/system.ions.gro
 /home/rpb/compbio/membrane-v509/a1-ions/s4-kraken-md.part0007.30000-90000-100.ions.xtc
 /home/rpb/compbio/membrane-v509/a1-ions/s6-kraken-md.part0018.40000-90000-10.ions.xtc
@@ -59,11 +59,11 @@ name=membrane-v510-atomP
 struct=/home/rpb/compbio/membrane-v510/a3-surfacer/system.atomP.gro
 /home/rpb/compbio/membrane-v510/a3-surfacer/s8-kraken-md.part0021.40000-90000-100.atomP.xtc
 
-name=membrane-v510-ions
+name=membrane-v510-ions-deprecated
 struct=/home/rpb/compbio/membrane-v510/a4-ions/system.ions.gro
 /home/rpb/compbio/membrane-v510/a4-ions/s8-kraken-md.part0021.40000-90000-100.ions.xtc
 
-name=membrane-v511-ions
+name=membrane-v511-ions-deprecated
 struct=/home/rpb/compbio/membrane-v511/a3-ions/system.ions.gro
 /home/rpb/compbio/membrane-v511/a3-ions/s6-kraken-md.part0009.30000-80000-100.ions.xtc
 
@@ -71,7 +71,7 @@ name=membrane-v511-atomP
 struct=/home/rpb/compbio/membrane-v511/a2-surfacer/system.atomP.gro
 /home/rpb/compbio/membrane-v511/a2-surfacer/s6-kraken-md.part0009.30000-80000-100.atomP.xtc
 
-name=membrane-v530-ions
+name=membrane-v530-ions-deprecated
 struct=/home/rpb/compbio/membrane-v530/a3-ions/system.ions.gro
 /home/rpb/compbio/membrane-v530/a3-ions/u5-sim-trestles-md.part0006.30000-100000-100.ions.xtc
 
@@ -89,8 +89,8 @@ struct=/home/rpb/compbio/membrane-v530/a6-surfacer/system.director.gro
 /home/rpb/compbio/membrane-v530/a6-surfacer/u5-sim-trestles-md.part0006.30000-100000-100.director.xtc
 
 name=membrane-v531-ions
-struct=/home/rpb/compbio/membrane-v531/a5-ions/system.ions.gro
-/home/rpb/compbio/membrane-v531/a5-ions/s4-sim-trestles-md.part0007.20000-62000-100.ions.xtc
+struct=/home/rpb/compbio/membrane-v531/b1-ions/system.ions.gro
+/home/rpb/compbio/membrane-v531/b1-ions/s5-sim-kraken-md.part0016.pbcmol.40000-90000-50.ions.xtc
 
 name=membrane-v531-atomP
 struct=/home/rpb/compbio/membrane-v531/a6-surfacer/system.atomP.gro
@@ -99,6 +99,11 @@ struct=/home/rpb/compbio/membrane-v531/a6-surfacer/system.atomP.gro
 name=membrane-v530-keys
 struct=/home/rpb/compbio/membrane-v530/a7-structure/system.keylipidatoms.gro
 /home/rpb/compbio/membrane-v530/a7-structure/u5-sim-trestles-md.part0007.40000-90000-50.keylipidatoms.xtc
+/home/rpb/compbio/membrane-v530/a8-structure-pbc/u5-sim-trestles-md.part0007.pbcmol.40000-90000-50.keylipidatoms.xtc
+
+name=membrane-v530-ions
+struct=/home/rpb/compbio/membrane-v530/a9-ions/system.ions.gro
+/home/rpb/compbio/membrane-v530/a9-ions/u5-sim-trestles-md.part0007.pbcmol.40000-90000-50.ions.xtc
 
 name=membrane-v531-keys
 struct=/home/rpb/compbio/membrane-v531/a9-structure/system.keylipidatoms.gro
@@ -108,23 +113,67 @@ name=membrane-v532-keys
 struct=/home/rpb/compbio/membrane-v532/a6-structure/system.keylipidatoms.gro
 /home/rpb/compbio/membrane-v532/a6-structure/s5-sim-kraken-md.part0015.40000-90000-50.keylipidatoms.xtc
 
+name=membrane-v532-ions
+struct=/home/rpb/compbio/membrane-v532/a7-ions/system.ions.gro
+/home/rpb/compbio/membrane-v532/a7-ions/s5-sim-kraken-md.part0015.pbcmol.40000-90000-50.ions.xtc
+
 name=membrane-v509-keys
 struct=/home/rpb/compbio/membrane-v509/a6-structure/system.keylipidatoms.gro
 /home/rpb/compbio/membrane-v509/a6-structure/s6-kraken-md.part0018.40000-90000-50.keylipidatoms.xtc
+
+name=membrane-v509-ions
+struct=/home/rpb/compbio/membrane-v509/a8-ions/system.ions.gro
+/home/rpb/compbio/membrane-v509/a8-ions/s6-kraken-md.part0018.pbcmol.40000-90000-50.ions.xtc
 
 name=membrane-v510-keys
 struct=/home/rpb/compbio/membrane-v510/a6-structure/system.keylipidatoms.gro
 /home/rpb/compbio/membrane-v510/a6-structure/s8-kraken-md.part0021.40000-90000-50.keylipidatoms.xtc
 
+name=membrane-v510-ions
+struct=/home/rpb/compbio/membrane-v510/a7-ions/system.ions.gro
+/home/rpb/compbio/membrane-v510/a7-ions/s8-kraken-md.part0021.pbcmol.40000-90000-50.ions.xtc
+
 name=membrane-v511-keys
 struct=/home/rpb/compbio/membrane-v511/a6-structure/system.keylipidatoms.gro
 /home/rpb/compbio/membrane-v511/a6-structure/s8-kraken-md.part0021.40000-90000-50.keylipidatoms.xtc
+
+name=membrane-v511-ions
+struct=/home/rpb/compbio/membrane-v511/a7-ions/system.ions.gro
+/home/rpb/compbio/membrane-v511/a7-ions/s8-kraken-md.part0021.pbcmol.40000-90000-50.ions.xtc
 
 name=membrane-v533-keys
 struct=/home/rpb/compbio/membrane-v533/a3-structure/system.keylipidatoms.gro
 /home/rpb/compbio/membrane-v533/a3-structure/s4-sim-kraken-md.part0015.40000-90000-50.keylipidatoms.xtc
 
+name=membrane-v533-ions
+struct=/home/rpb/compbio/membrane-v533/a4-ions/system.ions.gro
+/home/rpb/compbio/membrane-v533/a4-ions/s4-sim-kraken-md.part0015.pbcmol.40000-90000-50.ions.xtc
+
 name=membrane-v534-keys
 struct=/home/rpb/compbio/membrane-v534/a2-structure/system.keylipidatoms.gro
 /home/rpb/compbio/membrane-v534/a2-structure/s4-sim-kraken-md.part0013.40000-90000-50.keylipidatoms.xtc
+
+name=membrane-v534-ions
+struct=/home/rpb/compbio/membrane-v534/a3-ions/system.ions.gro
+/home/rpb/compbio/membrane-v534/a3-ions/s4-sim-kraken-md.part0013.pbcmol.40000-90000-50.ions.xtc
+
+name=membrane-v514-keys
+struct=/home/rpb/compbio/membrane-v514/a4-structure/system.keylipidatoms.gro
+/home/rpb/compbio/membrane-v514/a4-structure/s3-sim-compbio-md.part0007.22000-32000-10.keylipidatoms.xtc
+
+name=membrane-v514-ions
+struct=/home/rpb/compbio/membrane-v514/a5-ions/system.ions.gro
+/home/rpb/compbio/membrane-v514/a5-ions/s3-sim-compbio-md.part0007.pbcmol.22000-32000-10.ions.xtc
+
+name=membrane-v515-keys
+struct=/home/rpb/compbio/membrane-v515/a3-structure/system.keylipidatoms.gro
+/home/rpb/compbio/membrane-v515/a3-structure/s2-sim-compbio-md.part0007.20000-30000-10.keylipidatoms.xtc
+
+name=membrane-v515-ions
+struct=/home/rpb/compbio/membrane-v515/a4-ions/system.ions.gro
+/home/rpb/compbio/membrane-v515/a4-ions/s2-sim-compbio-md.part0007.pbcmol.20000-30000-10.ions.xtc
+
+name=membrane-v532-ions
+struct=/home/rpb/compbio/membrane-v532/a7-ions/system.ions.gro
+/home/rpb/compbio/membrane-v532/a7-ions/s4-sim-trestles-md.part0007.20000-90000-100.ions.xtc
 
