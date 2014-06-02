@@ -228,6 +228,26 @@ analysis_descriptors = {
 		'headspan':'(name OP52 or name OP53 or name OP54 or name OP32 or name OP33 or name OP34)',
 		'headangle':'(name C2 or name P or name C14)',
 		},
+	'v534-20000-25000-10':{
+		'sysname':'membrane-v534',
+		'sysname_lookup':'membrane-v534-keys',
+		'director':director_aamd_asymmetric,
+		'selector':selector_aamd_asymmetric,
+		'protein_select':None,
+		'residues':'infer',
+		'trajsel':'s3-kraken-correct-md.part0006.20000-25000-10.keylipidatoms.xtc',
+		'ions_sysname':'membrane-v534-ions',
+		'ions_trajsel':'s3-kraken-correct-md.part0006.pbcmol.20000-25000-10.ions.xtc',
+		'whichframes':None,
+		'ptdins_resname':'P35P',
+		'ptdins_label':'PtdIns(3,5)P$_2$',
+		'ion_label':'Ca$^{2+}$',
+		'ion_name':'Cal',
+		'ion_name_alt':'CL',
+		'composition_name':'asymmetric'.capitalize(),
+		'headspan':'(name OP52 or name OP53 or name OP54 or name OP32 or name OP33 or name OP34)',
+		'headangle':'(name C2 or name P or name C14)',
+		},
 	#---alternate protonation states
 	'v514-22000-32000-10':{
 		'sysname':'membrane-v514',
@@ -512,7 +532,6 @@ proper_ion_labels = {
 	'NA':'Na$^{+}$',
 	'CL':'Cl$^{-}$',
 	}
-
 
 #---define proper latex names for different residues
 proper_residue_names_long = {

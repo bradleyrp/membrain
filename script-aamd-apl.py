@@ -25,7 +25,7 @@ if 'batch_override' not in globals():
 		'v530-pbcmol-40000-90000-50',
 		'v514-22000-32000-10',
 		'v515-20000-30000-10',
-		][-2:]
+		][3:4]
 	
 	#---alternate tests
 	if compare_phosphate_position:
@@ -41,7 +41,7 @@ if 'batch_override' not in globals():
 		'plot_apl',
 		'calc_span',
 		'plot_span',
-		][2]
+		][1:2]
 	
 	#---selector overrides
 	selector_override = [
@@ -95,7 +95,7 @@ if 'calc_apl' in routine:
 			if whichframes == None: whichframes = slice(None,None)
 			#---calcalate areas per lipid
 			for frameno in range(mset.nframes)[whichframes]:
-				status('status: storing points for fr = '+str(frameno+1)+'/'+str(mset.nframes))
+				status('status: storing points for fr = ',i=frameno,looplen=mset.nframes)
 				#---select the frame
 				mset.gotoframe(frameno)
 				if type(selector) == str:
@@ -184,7 +184,7 @@ if 'calc_span' in routine:
 						head_size*head_size,
 						angle*(180./pi),
 						mset.universe.trajectory[fr].time,
-						str(res)
+						res
 						])
 				result_data.add(results_by_frame,[fr])
 			#---descriptors in the pkl
@@ -192,8 +192,8 @@ if 'calc_span' in routine:
 				result_data.addnote([i,(analysis_descriptors[aname])[i]])
 			#---save	
 			mset.store.append(result_data)
-			pickle.dump(mset,open(pickles+'pkl.headspan-headangle2.'+\
-				specname_pickle(sysname,traj)+'.pkl','w'))
+			pickledump(mset,'pkl.headspan-headangle2.'+specname_pickle(sysname,traj)+'.pkl',
+				directory=pickles)
 			checktime()
 
 #---LOADS
@@ -410,6 +410,8 @@ if 'plot_span' == routine:
 		mset = msets[analysis_names.index(aname)]
 		tmp = mset.getdata('spanangle2')
 		tmp2 = tmp.get(['type','headspan'])
+		raw_input('...break dude...')
+		
 		#---note due to a slight issue with the membraindata get function, this returns array of strings
 		data = [float(i) for j in tmp2 for i in j]
 		#---got some weird high numbers due to PBC maybe

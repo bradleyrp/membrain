@@ -4,102 +4,218 @@ from membrainrunner import *
 execfile('locations.py')
 execfile('header-meso.py')
 
+#---BATCH DEFAULTS
+#-------------------------------------------------------------------------------------------------------------
+
+batch_override = True
+
 meso_avail = [
 	'v2004',
 	'v2005',
 	'v2006',
 	'v2008',
-	][-2:]
+	][2:]
+
 cgmd_avail = [
 	'v614-120000-220000-200',
 	'v616-210000-310000-200',
 	]
+	
+routine = [
+	'calc',
+	'masterplot',
+	'checkplot',
+	'plot2d',
+	'plotphase'
+	][:2]
 
-#---prepare list of collected residuals for a sweep over available simulations
-#collected_residuals = [[[],[],[]] for i in range(len(cgmd_avail))]
-#collected_residuals_sigs = [[[],[],[]] for i in range(len(cgmd_avail))]
-#thresh = 0.3
+showplots = False
+batch_override = True
 
+p_interest = (meso_expt_toc[key])['parameter_name']
 
+#---FUNCTIONS
+#-------------------------------------------------------------------------------------------------------------
+
+def collapse_spectrum(qs,hs):
+	'''For rectangular systems, treat lateral dimensions as equivalent and take their average.'''
+	cen = array([i/2 for i in shape(qs)])
+	discdists = [[sum(array([i-cen[0],j-cen[1]])**2) 
+		for j in range(shape(qs)[1])] for i in range(shape(qs)[0])]
+	uniqs = unique(flatten(discdists),return_inverse=True)[1]
+	collapsed = [mean(ravel(hs)[where(uniqs==i)]) for i in range(uniqs.max()) 
+		if mean(ravel(qs)[where(uniqs==i)]) != 0]
+	return collapsed
+	
+#---LOAD SWEEP
+#-------------------------------------------------------------------------------------------------------------
+
+#---see if the coupling sweep has already been done
 master_spectrum_dict = unpickle(
 	pickles+'pkl.bilayer-coupling-sweep.'+'-'.join(meso_avail)+'-'.join(cgmd_avail)+'.pkl')
 
+#---perform the sweep
 if master_spectrum_dict == None:
 	#---empty dictionary for cross-simulation comparisons
 	master_spectrum_dict = {}
 	#---this script will perform the script-coupling.py analysis for a parameter sweep
 	for batch_cgmd in cgmd_avail:
 		for batch_meso in meso_avail:
+			#---set curvature extent from fixed parameter in the toc, assuming isotropic
+			r_2 = (meso_expt_toc[batch_meso])['R_2']
 			for c0ask in (meso_expt_toc[batch_meso])['parameter_sweep']: 
+				match_scales = [batch_cgmd,batch_meso+'-'+p_interest+'-'+str(c0ask)]
+				analysis_names = [batch_cgmd,batch_meso+'-'+p_interest+'-'+str(c0ask)]
+				plot_reord = analysis_names
+				bigname = '-'.join(analysis_names)
 				if c0ask != 0:
 					execfile('script-coupling.py')
 					del msets,mscs,collect_c0s
+	pickledump(master_spectrum_dict,
+		'pkl.bilayer-coupling-sweep.'+'-'.join(meso_avail)+'-'.join(cgmd_avail)+'.pkl',
+		directory=pickles)
+else:
+	routine = []
+	execfile('script-coupling.py')
 
-#---plot the summary, see jot.py for current development
-if 0:
-	annotate = False
-	spec_colors = clrs[1:4]
-	spec_labels = [r'$\left\langle h_{\mathbf{q}}h_{\mathbf{-q}}\right\rangle$',
-		r'$\left\langle C_{0,\mathbf{q}} h_{-\mathbf{q}} \right\rangle $',
-		r'$\left\langle C_{0,\mathbf{q}} C_{0,-\mathbf{q}} \right\rangle $']
-	bigname_nometa = '-'.join(cgmd_avail+meso_avail)
-	npanels = len(collected_residuals)
-	fig = plt.figure(figsize=(10,2*npanels))
-	gs = gridspec.GridSpec(npanels,5,hspace=0,wspace=0.1)
-	for cri in range(npanels):
-		ax = plt.subplot((gs[cri,:4] if npanels > 1 else gs[cri,:4])) 
-		ax2 = plt.subplot((gs[cri,4] if npanels > 1 else gs[cri,4]),sharey = ax) 
-		for spec_query in range(3):
-			data = array([i for i in collected_residuals[cri][spec_query]])
-			ax.scatter(data[:,0]/a0,data[:,1],s=40,color=spec_colors[spec_query],
-				edgecolor='k',lw=1.)
-			ax2.scatter(data[:,0]/a0,data[:,1],s=40,color=spec_colors[spec_query],
-				edgecolor='k',lw=1.,
-				label=(spec_labels[spec_query] if cri == 0 else None))
-			if cri == 0 and spec_query == 2:
-				ax2.legend(bbox_to_anchor=(1.05,1),loc=2,borderaxespad=0.)
-		leftcut = 0.02
-		ax.set_xlim(0,leftcut)
-		label_offsets = [list(data[:,1]).index(i) for i in sort(data[:,1])]
-		ax2.set_xlim(
-			1/2.*(min([data[i,0]/a0 for i in label_offsets if data[i,0]/a0 >= leftcut])+\
-			max([data[i,0]/a0 for i in label_offsets if data[i,0]/a0 < leftcut])),
-			data[:,0].max()*1.1/a0)
-		ax.spines['right'].set_visible(False)
-		ax2.spines['left'].set_visible(False)
-		ax.yaxis.tick_left()
-		ax.tick_params(labeltop='off')
-		ax2.yaxis.tick_right()
-		plt.subplots_adjust(wspace=0.15)
-		ax.set_yticklabels([])
-		ax.set_ylim((0,array(collected_residuals)[...,1].max()*1.1))
-		ax.grid(True)
-		ax2.grid(True)
-		ax.set_xticks(data[array([i for i in label_offsets if data[i,0]/a0 < leftcut]),0]/a0)
-		ax2.set_xticks(data[array([i for i in label_offsets if data[i,0]/a0 >= leftcut]),0]/a0)
-		if annotate:
-			for ind in range(len(label_offsets)):
-				x,y = data[label_offsets[ind]]
-				plt.annotate(
-					('{0:.3f}'.format(x)), 
-					xy = (x/a0,y), 
-					xytext = (100+(ind%2==1)*50,50+(ind%2==1)*20),
-					textcoords = 'offset points', ha = 'right', va = 'bottom',
-					bbox = dict(boxstyle='round,pad=0.2',fc = 'black', alpha = 0.2),
-					arrowprops = dict(arrowstyle = '->', connectionstyle = 'arc3,rad=0'))
-		if cri == 0:
-			ax.set_title('CGMD-MESO matching, spectrum residuals')
-			#ax2.legend(loc='center right',bbox_to_anchor=(1,0.5))
-			#ax.legend(loc='upper right',bbox_to_anchor=(0, 0, 1, 1), bbox_transform=plt.gcf().transFigure)
-		if cri == npanels-1:
-			plt.setp(ax.xaxis.get_majorticklabels(),rotation=-90,fontsize=fsaxticks-4)
-			plt.setp(ax2.xaxis.get_majorticklabels(),rotation=-90,fontsize=fsaxticks-4)
-			ax.set_xlabel(r'$\left\langle C_0 \right\rangle (\mathrm{{nm}^{-1}})$',fontsize=fsaxlabel)
+#---DEFAULTS
+#-------------------------------------------------------------------------------------------------------------
+
+def compute_undulation_residuals(c0asks,simnames,thresh=0.3,specnum=0,view_resids=False):
+	'''Compute residuals between undulations for two simulations.'''
+	subj = [[],[]]
+	xdat = [[],[]]
+	ydat = [[],[]]
+	for s in range(len(simnames)):
+		simname = simnames[s]
+		#---use simulation indices to check CGMD vs MESO
+		if simname != 'meso' and int(simname.split('-')[0].strip('v')) < 2000:
+			subj[s] = master_spectrum_dict[simname+'-'+p_interest+'-'+str(c0asks[s])]
+			xdat[s] = collapse_spectrum(subj[s]['cgmd_qs'],subj[s]['cgmd_qs'])
+			ydat[s] = collapse_spectrum(subj[s]['cgmd_qs'],subj[s]['cgmd_t2d'][specnum])	
+		#---perform mesoscale simulation lookup
+		elif simname == 'meso':
+			simname = [i for i in master_spectrum_dict.keys() if (float(i.split('-')[-1]) == c0asks[s] and int(i.split('-')[0][1:]) > 2000)][0]
+			subj[s] = master_spectrum_dict[simname]
+			xdat[s] = collapse_spectrum(subj[s]['meso_qs'],subj[s]['meso_qs'])
+			ydat[s] = collapse_spectrum(subj[s]['meso_qs'],subj[s]['meso_t2d'][specnum])
 		else:
-			ax.set_xlabel(None)
-			ax.set_xticklabels([])
-			ax2.set_xlabel(None)
-			ax2.set_xticklabels([])
-		ax.set_ylabel((analysis_descriptors[cgmd_avail[cri]])['label'],fontsize=fsaxlabel)
-	plt.savefig(pickles+'fig-bilayer-couple-meta-'+bigname_nometa+'.png',bbox_inches='tight')
-	plt.show()
+			raise Exception('except: no simulation found')
+	dat0log = array([i for i in array([xdat[0],log10(ydat[0])]).T if i[0] < thresh])
+	dat1log = array([i for i in array([xdat[1],log10(ydat[1])]).T if i[0] < thresh])
+	resid = mean(abs(dat1log-dat0log)**2)
+	tmp = dat1log[:,1]+mean(dat0log[:,1])-mean(dat1log[:,1])
+	resid_shift = mean((dat0log-transpose([dat1log[:,0],tmp]))**2)
+	if view_resids:
+		ax = plt.subplot(111)
+		plt.plot(dat0log[:,0],dat0log[:,1],'ro-')
+		plt.plot(dat1log[:,0],dat1log[:,1],'bo-')
+		plt.show()
+	return resid,resid_shift
+	
+def plotter_undulation_residuals(thresholds,comp,comp_cgmd,toptitle,a0,filename_descriptor):
+	'''Plot a summary of the undulation residuals across systems.'''
+	fig = plt.figure(figsize=((4,3*len(thresholds)) if len(thresholds)>1 else (8,8)))
+	gs = gridspec.GridSpec(len(thresholds),2,wspace=0.1,hspace=0.1,
+		width_ratios=[len(meso_c0s),len(cgmd_list)])
+	cmap = mpl.cm.jet
+	for thresh in thresholds:
+		residual_comparisons = comp[thresholds.index(thresh)]
+		residual_comparisons_cgmd = comp_cgmd[thresholds.index(thresh)]
+		axl = plt.subplot(gs[thresholds.index(thresh),0])
+		axr = fig.add_subplot(gs[thresholds.index(thresh),1])
+		max_resid = max([residual_comparisons_cgmd.max(),residual_comparisons_cgmd.max()])
+		im = axl.imshow(residual_comparisons,interpolation='nearest',cmap=cmap,
+			vmax=max_resid,vmin=0)
+		axl.set_xticks(range(len(meso_c0s)))
+		axl.set_yticks(range(len(meso_c0s)))
+		axl.set_xticklabels(['{:.3f}'.format(i/a0) for i in meso_c0s])
+		axl.set_yticklabels(['{:.3f}'.format(i/a0) for i in meso_c0s])
+		for label in im.axes.xaxis.get_ticklabels():
+			label.set_rotation(90)
+		axl.set_xlim((0,len(meso_c0s)))
+		im = axr.imshow(residual_comparisons_cgmd,interpolation='nearest',cmap=cmap,
+			vmax=max_resid,vmin=0)
+		axr.set_xticks(range(len(cgmd_list)))
+		axr.set_xticklabels([(analysis_descriptors[name])['label'] for name in cgmd_list])
+		for label in im.axes.xaxis.get_ticklabels():
+			label.set_rotation(90)
+		plt.setp(axr.get_yticklabels(), visible=False)
+		axins = inset_axes(axr,width=1./len(cgmd_list)/2.,height="100%",loc=3,
+			bbox_to_anchor=(1.2,0.0,1.,1.),
+			bbox_transform=axr.transAxes,
+			borderpad=0)
+		boundaries = linspace(0,max_resid,21)
+		ticks = [float('{:.3f}'.format(i)) for i in boundaries]
+		norm = mpl.colors.BoundaryNorm(ticks,cmap.N)
+		cbar = mpl.colorbar.ColorbarBase(axins,cmap=cmap,ticks=ticks,boundaries=boundaries,
+			norm=norm,spacing='proportional',format='%03f')
+		cbar.set_ticklabels([str(i) for i in ticks])
+		axl.set_xlim((-0.5,len(meso_c0s)-1+0.5))
+		axr.set_xlim((-0.5,len(cgmd_list)-1+0.5))
+		axl.set_title(toptitle,fontsize=fsaxtitle)
+		axl.set_ylabel(r'$\mathrm{mesoscale\:C_0\:({nm}^{-1})}$',fontsize=fsaxlabel)
+		axl.set_xlabel(r'$\mathrm{mesoscale\:C_0\:({nm}^{-1})}$',fontsize=fsaxlabel)
+	#---save
+	plt.savefig(pickles+'fig-bilayer-couple-meta-'+filename_descriptor+\
+		'-'.join([i.split('-')[0] for i in cgmd_avail]+meso_avail)+\
+		'.png',
+		bbox_inches='tight',dpi=300)
+	if showplots: plt.show()
+	plt.close(fig)
+
+#---residual sweep parameters
+cgmd_list = ['v614-120000-220000-200','v616-210000-310000-200']
+qmagfilter = (analysis_descriptors[cgmd_avail[0]])['qmagfilter']
+thresholds = [qmagfilter[1]]
+shift_curves = True
+
+#---check the residuals to see that the wavevectors line up
+if 0: compute_undulation_residuals([meso_c0s[0],meso_c0s[1]],['meso','meso'],
+		thresh=qmagfilter[1],specnum=0,view_resids=True)
+if 0: compute_undulation_residuals([meso_c0s[1],meso_c0s[1]],['meso',cgmd_avail[0]],
+	thresh=qmagfilter[1],specnum=0,view_resids=True)
+
+#---loop over comparisons
+if 'comp' not in globals():
+	#---perform the fit for both undulations and height-curvature correlations
+	specnums = [0,1]
+	fnames = ['undulations-','curvature_undulations-']	
+	toptitles = ['Undulation residuals','Curvature-undulation residuals']
+	#---loop
+	comp = [[[] for i in thresholds] for sn in specnums]
+	comp_cgmd = [[[] for i in thresholds] for sn in specnums]
+	for sn in range(len(specnums)):	
+		for thresh in thresholds:
+			status('status: threshold = '+str(thresh))
+			meso_c0s = list(sort(list(set([float(i.split('-')[-1]) 
+				for i in master_spectrum_dict.keys() if int(i.split('-')[0][1:]) > 2000]))))
+			residual_comparisons = zeros((len(meso_c0s),len(meso_c0s)))
+			for i in meso_c0s:
+				status('status: undulation comparison, c0 = '+str(i+1).ljust(6),
+					i=meso_c0s.index(i),looplen=len(meso_c0s))
+				for j in meso_c0s:
+					resid,resid_shift = compute_undulation_residuals([i,j],['meso','meso'],
+						thresh=thresh,specnum=sn)
+					residual_comparisons[meso_c0s.index(i),meso_c0s.index(j)] = \
+						(resid if not shift_curves else resid_shift)
+			residual_comparisons_cgmd = zeros((len(meso_c0s),len(cgmd_list)))
+			for i in meso_c0s:
+				status('status: undulation comparison, c0 = '+str(i+1).ljust(4),
+					i=meso_c0s.index(i),looplen=len(meso_c0s))
+				for name in cgmd_list:
+					resid,resid_shift = compute_undulation_residuals([i,i],['meso',name],
+						thresh=thresh,specnum=sn)
+					residual_comparisons_cgmd[meso_c0s.index(i),cgmd_list.index(name)] = \
+						(resid if not shift_curves else resid_shift)
+			comp[sn][thresholds.index(thresh)] = residual_comparisons
+			comp_cgmd[sn][thresholds.index(thresh)] = residual_comparisons_cgmd
+		#---get a0 from any mesoscale simulation
+		simname = [i for i in master_spectrum_dict.keys() if (float(i.split('-')[-1]) == meso_c0s[0] 
+			and int(i.split('-')[0][1:]) > 2000)][0]
+		a0 = 1./(master_spectrum_dict[simname])['lenscale']
+		plotter_undulation_residuals(thresholds,comp[sn],comp_cgmd[sn],toptitles[sn],a0,
+			fnames[sn]+('shifted-' if shift_curves else ''))
+
+
+

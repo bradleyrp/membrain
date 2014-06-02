@@ -43,7 +43,6 @@ if 'batch_override' not in globals():
 	routine = [
 		'load',
 		'compute',
-		'plot',
 		][:1]
 	
 	#---settings
@@ -214,8 +213,8 @@ if 'plot_lipid_diffusion_detail' in routine:
 			datbuf = [int(len(msds_mean)*.1)+2,int(len(msds_mean)*.9)+1]
 			[q,r], covariance = polyfit(time_master[anum][datbuf[0]:datbuf[1]],
 				msds_mean[datbuf[0]:datbuf[1]],1,cov=True)
-			print 'Fitted D = ' + str(q*10**6/4.) + ' (micron**2/second)'
-
+			print 'aname = '+aname.ljust(22)+'resname = '+resname.ljust(6)+' D = ' + '{:0.3f}'.format(q*10**6/4.).ljust(10) +' +/- ' + '{:0.3f}'.format(sqrt(covariance[0][0])*10**6/4).ljust(8) + ' (micron**2/second)'
+			
 			#---plot all curves
 			if show_all:
 				#---color selection section
@@ -457,7 +456,7 @@ if 'plot_lipid_diffusion_ptdins' in routine:
 	ax.legend(loc='upper left',fontsize=fsaxlegend-2)
 	ax.set_xscale('log')
 	ax.set_yscale('log')
-	if fix_lims != None:x
+	if fix_lims != None:
 		ax.set_xlim(fix_lims[0])
 		ax.set_ylim(fix_lims[1])
 	if 0: ax.grid(b=True,which='major',color='k',linestyle='-')

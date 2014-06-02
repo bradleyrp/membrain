@@ -35,10 +35,26 @@ import scipy.interpolate
 #---Custom classes
 from membraindata import *
 
-#---Status update function
-def status(string):
-	print '\r'+string+'\t',
-	sys.stdout.flush()
+#---FUNCTIONS
+#-------------------------------------------------------------------------------------------------------------
+	
+def status(string,start=None,i=None,looplen=None):
+	'''Print status to the screen also allows for re-writing the line. Duplicate from membrainrunner.'''
+	#---display a refreshable string	
+	if start == None and looplen != None and i != None:		
+		if i+1 == looplen:
+			print '\r'+string+'  ...  '+str(i+1).rjust(7)+'/'+str(looplen).ljust(8)+'\n',
+		else:
+			print '\r'+string+'  ...  '+str(i+1).rjust(7)+'/'+str(looplen).ljust(8),
+			sys.stdout.flush()
+	#---estimate the remaining time given a start time, loop length, and iterator
+	elif start != None and i != None and looplen != None:
+		esttime = (time.time()-start)/(float(i+1)/looplen)
+		print '\r'+string.ljust(20)+str(abs(round((esttime-(time.time()-start))/60.,1))).ljust(10)+\
+			'minutes remain',
+		sys.stdout.flush()
+	#---standard output here
+	else: print string
 
 #---MEMBRANESET CLASS
 #-------------------------------------------------------------------------------------------------------------
@@ -139,7 +155,7 @@ class MembraneSet:
 			self.time_list = [self.universe.trajectory[i].time 
 				for i in range(len(self.universe.trajectory)) 
 				if hasattr(self.universe.trajectory[i],'time')]
-		status('status: the trajectory file has '+str(self.nframes)+' frames'+'\n')
+		status('status: the trajectory file has '+str(self.nframes)+' frames')
 
 	def load_points(self,xyzdir,nbase=0,start=None,end=None,
 		prefix='conf-',suffix='.xyz',xyzform='',rounder=1.0,lenscale=None,skip=1,regular=False,shifter=None):
@@ -320,8 +336,8 @@ class MembraneSet:
 
 	def identify_monolayers(self,atomdirectors,startframeno=0):
 		'''General monolayer identifier function. Needs: names of outer, inner atoms on lipids.'''
-		status('status: identifying monolayers'+'\n')
-		status('status: moving to frame '+str(startframeno)+'\n')
+		status('status: identifying monolayers')
+		if 0: status('status: moving to frame '+str(startframeno))
 		self.gotoframe(startframeno)
 		pointouts = self.universe.selectAtoms(atomdirectors[0])
 		pointins = [self.universe.selectAtoms(atomdirectors[j]).coordinates() 
@@ -682,13 +698,12 @@ class MembraneSet:
 		else:
 			framerange = whichframes
 		lenscale = self.lenscale
-		print 'property: lenscale = '+str(lenscale)
+		status('status: lenscale = '+str(lenscale))
 		#---undulations
 		self.undulate_raw = []
 		if removeavg == 0:
 			for k in framerange:
-				if k%100 == 0:
-					print 'status: Fourier transform, frame '+str(k)
+				status('status: Fourier transform, frame ',i=k,looplen=len(framerange))
 				if redundant == 1:
 					self.undulate_raw.append(fft.fftshift(fft.fft2(array(self.surf[k])[:-1,:-1]/lenscale)))
 				elif redundant == 2:
@@ -698,8 +713,7 @@ class MembraneSet:
 		else:
 			self.calculate_average_surface()
 			for k in range(len(self.surf)):
-				if k%100 == 0:
-					print 'status: Fourier transform, frame '+str(k)
+				status('status: Fourier transform, frame ',i=k,looplen=len(framerange))
 				if redundant == 1:
 					relative = array(self.surf[k])/lenscale-array(self.surf_mean)/lenscale
 					self.undulate_raw.append(fft.fftshift(fft.fft2(relative[:-1,:-1])))
@@ -713,8 +727,7 @@ class MembraneSet:
 		if peri:
 			self.undulate_peri_raw = []
 			for k in framerange:
-				if k%100 == 0:
-					print 'status: Fourier transform, frame '+str(k)
+				status('status: Fourier transform, frame ',i=k,looplen=len(framerange))
 				if redundant == 1:
 					self.undulate_peri_raw.append(fft.fftshift(fft.fft2(
 						array(self.surf_thick[k])[:-1,:-1]/lenscale)))
@@ -744,7 +757,7 @@ class MembraneSet:
 		spec1d = array([i for i in array(self.undulate_spec1d) if i[0] != 0.])
 		specsort = spec1d[np.lexsort((spec1d[:,1],spec1d[:,0]))]
 		#---fitting the best points based on prescribed limits
-		if fitbest:	
+		if fitbest and qmagfilter == None:	
 			best_rmsd,best_endpost = 10**10,0
 			for endpost in range(0,len(specsort)/fitlims[0]):
 				specfilter = specsort[endpost:len(specsort)/fitlims[1]]
@@ -756,7 +769,7 @@ class MembraneSet:
 					best_endpost = endpost
 			qmagfilter = [specsort[best_endpost,0],specsort[len(specsort)/fitlims[1],0]]
 		#---otherwise set the qmagfilter based on the number of points according to fitlims
-		else:
+		elif not fitbest and qmagfilter == None:
 			qmagfilter = [10**-10,specsort[len(specsort)/fitlims[1],0]]
 		specfilter = array(filter(lambda x: x[0] >= qmagfilter[0] 
 			and x[0] <= qmagfilter[1],self.undulate_spec1d))
@@ -1176,7 +1189,7 @@ def pickledump(obj,filename,directory=''):
 
 def unpickle(filename):
 	'''Un-pickles an object from a text file.'''
-	status('status: seeking/loading '+filename+'\n')
+	status('status: seeking or loading '+filename)
 	if os.path.isfile(filename):
 		fp = open(filename, 'r')
 		x = pickle.load(fp)
@@ -1188,6 +1201,6 @@ def unpickle(filename):
 		fp.close()
 		return x
 	else:
-		print 'status: file does not exist'
+		status('status: file does not exist')
 		return
 	

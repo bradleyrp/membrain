@@ -16,7 +16,8 @@ analysis_descriptors = {
 		'plotqe':True,
 		'removeavg':False,
 		'fitlims':None,
-		'forcekappa':True
+		'forcekappa':True,
+		'qmagfilter':[10**-10,0.4],
 		},
 	'v616-210000-310000-200': {
 		'simtype':'md',
@@ -33,7 +34,8 @@ analysis_descriptors = {
 		'plotqe':True,
 		'removeavg':False,
 		'fitlims':None,
-		'forcekappa':True
+		'forcekappa':True,
+		'qmagfilter':[10**-10,0.4],
 		},
 	}
 	

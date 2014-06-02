@@ -23,7 +23,8 @@ analysis_names = [
 	'v534-40000-90000-50',
 	'v530-40000-65000-50',
 	'v530-65000-90000-50',
-	][:8]
+	'v534-20000-25000-10',
+	][-1:]
 	
 #---plot settings
 nbins = 40
@@ -47,7 +48,7 @@ all_batches = [
 	'protonation',
 	'plot_span_angle',
 	'plot_span_angle_summary',
-	][8:9]
+	][3:4]
 
 #---BATCH
 #-------------------------------------------------------------------------------------------------------------
@@ -65,8 +66,9 @@ for batch in all_batches:
 			'v531-40000-90000-50',
 			'v532-40000-90000-50',
 			'v533-40000-90000-50',
+			'v534-20000-25000-10',
 			'v534-40000-90000-50',
-			]
+			][:-1]
 	elif batch == 'phosphate_position_apl_nochl':
 		selector_override = 'no_chl'
 		routine = 'plot_apl'

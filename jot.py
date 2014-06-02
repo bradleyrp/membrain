@@ -1,157 +1,107 @@
 #!/usr/bin/python
 
-#---residuals BILAYER COUPLING
+showplots = False
+norm_z_concentration = True
+resname_group = None
 
-if 0:
-	thresh = 1
-	spec_query = [0]
-	for s in range(len(spec_query)):
-		#---original residuals
-		a0 = msets[1].lenscale
-		dat0 =array([i for i in mscs[0].t1d[spec_query[s]] if i[0] != 0 and i[0] < thresh])
-		dat1 = array([i for i in mscs[1].t1d[spec_query[s]] if i[0] != 0 and i[0] < thresh])
-		dat0log = log10(dat0)
-		dat1log = log10(dat1)
-		cd = scipy.spatial.distance.cdist(dat0log,dat1log)
-		cd[cd.argmin(axis=argmax(shape(cd)))]
-		resid = mean([cd[i,argmax(shape(cd))] for i in cd.argmin(axis=argmax(shape(cd)))])
-		#---new residual signature curves
-		datlogs = []
-		for m in range(len(mscs)):
-			xdat0 = collapse_spectrum(mscs[m].qmagst,mscs[m].qmagst)
-			ydat0 = collapse_spectrum(mscs[m].qmagst,mscs[m].t2d[0])
-			datlogs.append([xdat0,ydat0])
-		#---save and report
-		print 'result: C_0 = '+('{0:.3f}'.format(c0ask*msets[1].lenscale)).rjust(5)+' (nm^-1)   '+\
-			'resid = '+('{0:.3f}'.format(resid)).rjust(10)+'  status: npts = ('+str(len(dat0))+\
-			','+str(len(dat1))+')'
-		if 'collected_residuals' in globals(): 
-			collected_residuals[cgmd_avail.index(cgmd_reference)][s].append([c0ask,resid])
-			collected_residual_sigs[cgmd_avail.index(cgmd_reference)][s].append([c0ask,datlogs])
+#---concentration calculations
 
+def concentration_profiler(disctraj,binedges,mset,normed=False,buffer_size=20,raw=False):
+	'''Basic function for returning a concentration profile in the correct units.'''
+	#---histogram
+	counts,edges = histogram(
+		disctraj.flatten(),
+		range=(0,len(binedges[0])-1),
+		bins=len(binedges[0])-1)
+	counts = array(counts)/float(mset.nframes)
+	meanedges = array(mean(array(binedges),axis=0))
+	mids = 1./2*(meanedges[1:]+meanedges[:-1])
+	vecs = array([mset.vec(i) for i in range(mset.nframes)])
+	#---nions = conc mol/L * 1000L / m3 * m3 / (10**10)**3 A3 * Av particles/M * vol A3
+	concfac = (6.0221413*10**23)/((10**10)**3)*10**3
+	boxvol = product(mean(vecs,axis=0))
+	conc = sum(counts)/boxvol/concfac
+	status('status: ['+str(ion_name)+'] = '+'{:.3f}'.format(conc*1000).ljust(8)+'mM')
+	conc_mM = counts/concfac/product(mean(vecs,axis=0)[:2])/binwidth*1000
+	#---buffer in Angstroms at maximum distance from bilayer to compute bulk
+	meanbins = mean(binedges,axis=0)
+	topbin = where(meanbins>(meanbins.max()-buffer_size))[0][0]
+	botbin = where(meanbins<(-meanbins.max()+buffer_size))[0][-1]
+	bulkconc = mean([mean(counts[1:botbin]),mean(counts[topbin:-1])])
+	bulkconc_mM = bulkconc/concfac/product(mean(vecs,axis=0)[:2])/binwidth*1000
+	status('status: ['+str(ion_name)+'],bulk = '+'{:.3f}'.format(bulkconc_mM).ljust(8)+'mM')
+	#---override to output raw counts
+	if raw: return mids,counts
+	else: return mids,(conc_mM/bulkconc_mM if normed else conc_mM)
 
-if 0:
-	#---codeblock which compares undulations to their residuals, requires mscs
-	ax1 = plt.subplot(211)
-	ax1.plot(dat0[:,0],dat0[:,1],'r+')
-	ax1.plot(dat1[:,0],dat1[:,1],'bx')
-	m = 1
-	xdat0 = collapse_spectrum(mscs[m].qmagst,mscs[m].qmagst)
-	ydat0 = collapse_spectrum(mscs[m].qmagst,mscs[m].t2d[0])
-	ax.plot(xdat0,ydat0,'ro')
-	m = 0
-	xdat1 = collapse_spectrum(mscs[m].qmagst,mscs[m].qmagst)
-	ydat1 = collapse_spectrum(mscs[m].qmagst,mscs[m].t2d[0])
-	ax1.plot(xdat1,ydat1,'bo')
-	ax1.set_xscale('log')
-	ax1.set_yscale('log')
-	ax2 = plt.subplot(212)
-	dat0log = array([i for i in array([xdat0,log10(ydat0)]).T if i[0] < thresh])
-	dat1log = array([i for i in array([xdat1,log10(ydat1)]).T if i[0] < thresh])
-	resid_distn = cd.min(axis=argmax(shape(cd)))
-	ax2.plot(dat0log[:,0],dat0log[:,1]-dat1log[:,1],'o-')
-	ax2.set_xlim(ax1.get_xlim())
-	ax2.set_xscale('log')
-	plt.show()
-	
-if 0:	
-	#---codeblock which looks at error signatures assuming same wavevectors
-	ax2 = plt.subplot(111)
-	dat0log = array([i for i in array([xdat0,log10(ydat0)]).T if i[0] < thresh])
-	dat1log = array([i for i in array([xdat1,log10(ydat1)]).T if i[0] < thresh])
-	ax2.plot(dat0log[:,0],dat0log[:,1]-dat1log[:,1],'o-')
-	ax2.set_xscale('log')
-	plt.show()
-	
-#---CONTINUING more advanced analysis of residuals BILAYER COUPLING
+#---concentration modular plotting functions
 
-#---signatures of the residuals
-if 0:
-	thresh = 0.5
-	fig = plt.figure(figsize=(12,12))
-	ax2 = plt.subplot(111)
-	for key in master_spectrum_dict.keys():
-		subj = master_spectrum_dict[key]	
-		xdat0 = collapse_spectrum(subj['cgmd_qs'],subj['cgmd_qs'])
-		ydat0 = collapse_spectrum(subj['cgmd_qs'],subj['cgmd_t2d'][0])
-		xdat1 = collapse_spectrum(subj['meso_qs'],subj['meso_qs'])
-		ydat1 = collapse_spectrum(subj['meso_qs'],subj['meso_t2d'][0])
-		dat0log = array([i for i in array([xdat0,log10(ydat0)]).T if i[0] < thresh])
-		dat1log = array([i for i in array([xdat1,log10(ydat1)]).T if i[0] < thresh])
-		resid = sum(abs(dat1log[:,1]-dat0log[:,1]))
-		label = '{0:.2f}'.format(resid)
-		ax2.plot(dat0log[:,0],dat1log[:,1]-dat0log[:,1],'-',label=label)
-	ax2.legend(loc='upper right')
-	ax2.set_xscale('log')
-	ax2.set_xlim([min(dat0log[:,0])/2.,2.*max(dat0log[:,0])])
-	plt.show()
-	
-	
-if 0:
-	pickledump(
-		master_spectrum_dict,
-		'pkl.bilayer-coupling-sweep.'+'-'.join(meso_avail)+'-'.join(cgmd_avail)+'.pkl',
-		directory=pickles)
-		
-#---scatterplot of the mean residuals
-if 0:
-	#---prepare plot
-	ax = plt.subplot(111)
-	color_dict = {
-		614:'r',
-		616:'b',
-		}
-	thresholds = [0.3,0.9]
-	alphas = [1.0,0.35]
-	for thresh in thresholds:
-		#---calculate
-		residuals_cgmd_meso = []
-		residuals_meso_meso = []
-		cgmd_flags = []
-		#subj_meso = master_spectrum_dict[('v614-120000-220000-200', 'v2005-C_0-0.038')]
-		subj_meso = master_spectrum_dict[('v614-120000-220000-200', 'v2008-C_0-0.0147')]
-		for key in master_spectrum_dict.keys():
-			subj = master_spectrum_dict[key]	
-			xdat0 = collapse_spectrum(subj['cgmd_qs'],subj['cgmd_qs'])
-			ydat0 = collapse_spectrum(subj['cgmd_qs'],subj['cgmd_t2d'][0])
-			xdat1 = collapse_spectrum(subj['meso_qs'],subj['meso_qs'])
-			ydat1 = collapse_spectrum(subj['meso_qs'],subj['meso_t2d'][0])
-			xdat2 = collapse_spectrum(subj_meso['meso_qs'],subj_meso['meso_qs'])
-			ydat2 = collapse_spectrum(subj_meso['meso_qs'],subj_meso['meso_t2d'][0])
-			dat0log = array([i for i in array([xdat0,log10(ydat0)]).T if i[0] < thresh])
-			dat1log = array([i for i in array([xdat1,log10(ydat1)]).T if i[0] < thresh])
-			dat2log = array([i for i in array([xdat2,log10(ydat2)]).T if i[0] < thresh])
-			resid = mean(abs(dat1log[:,1]-dat0log[:,1]))
-			resid_alt = mean(abs(dat1log[:,1]-dat2log[:,1]))
-			label = '{0:.2f}'.format(resid)
-			residuals_cgmd_meso.append([float(key[1].split('-')[-1])/2.32,resid])
-			residuals_meso_meso.append([float(key[1].split('-')[-1])/2.32,resid_alt])
-			flag = int(key[0].split('-')[0][1:])
-			cgmd_flags.append(flag)
-		#---plot
-		for cgmd_flag in list(set(cgmd_flags)):
-			plotdat = array([residuals_cgmd_meso[i] for i in range(len(residuals_cgmd_meso)) 
-				if cgmd_flags[i] == cgmd_flag])
-			ax.plot(plotdat[:,0],plotdat[:,1],'o',color=color_dict[cgmd_flag],
-				alpha=alphas[thresholds.index(thresh)])
-		cgmd_flag = 616
-		plotdat = array([residuals_meso_meso[i] for i in range(len(residuals_meso_meso)) 
-			if cgmd_flags[i] == cgmd_flag])
-		ax.plot(plotdat[:,0],plotdat[:,1],'o',color='g',
-			alpha=alphas[thresholds.index(thresh)])
-	plt.show()
+def plotter_concentration(mids,concs,ax=None,ion_name=None,color=None):
+	'''Plot the concentration in mM units.'''
+	ax.plot(mids,conc_mM,c=color,lw=2,label=proper_ion_labels[ion_name])
+	ax.set_ylabel(r'$\mathrm{concentration}\:\mathrm{(mM)}$',fontsize=fsaxlabel)
+	ax.set_xlabel(r'$z\:(\mathrm{\AA})$',fontsize=fsaxlabel)
+	ax.grid(True)
+def plotter_concentration_relative(mids,concs,mset,ax=None,ion_name=None,color=None):
+	'''Plot the concentration in mM units.'''
+	ax.plot(mids,concs,c=color,lw=2,label=proper_ion_labels[ion_name])
+	ax.set_ylabel('relative concentration',fontsize=fsaxlabel)
+	ax.set_xlabel(r'$z\:(\mathrm{\AA})$',fontsize=fsaxlabel)
+	ax.grid(True)
+def plotter_concentration_counts(disctraj,binedges,mset,ax=None,ion_name=None,color=None):
+	'''Plot the concentration relative to the bulk.'''
+	#---perform the computation here
+	mids,counts = concentration_profiler(disctraj,binedges,mset,raw=True)
+	centerbin = where(abs(mids)<10**-6)[0][0]
+	ax.plot(mids[centerbin:],ion_charges[inum]*cumsum(counts[centerbin:]),
+		c=color,lw=2,label=proper_ion_labels[ion_name])
+	ax.plot(mids[:centerbin],ion_charges[inum]*cumsum(counts[:centerbin][::-1])[::-1],c=color,lw=2)
+	ax.set_ylabel('cumulative counts',fontsize=fsaxlabel)
+	ax.set_xlabel(r'$z\:(\mathrm{\AA})$',fontsize=fsaxlabel)
+	ax.grid(True)
 
 
-def 
 
-if 'master_spectrum_dict' not in globals():
-	master_spectrum_dict = unpickle(
-		pickles+'pkl.bilayer-coupling-sweep.'+'-'.join(meso_avail)+'-'.join(cgmd_avail)+'.pkl')
+#---choose a system
+aname = 'v532-40000-90000-50'
+anum = analysis_names.index(aname)
+mset = msets[anum]
 	
+#---prepare figure	
+fig = plt.figure(figsize=(8,8))
+axes = []
+gs = gridspec.GridSpec(3,1)
+for i in range(3):
+	ax = fig.add_subplot(gs[i])
+	axes.append(ax)
+
+#---prepare figure settings
+ion_colors = ['r','b']
+ion_charges = [1,1]
+ion_resnames = [ion_name,ion_name_alt]
+
+#---loop over ions and make plots of concentration
+for inum in range(len(ionlist)):
+	#---copmpute discrete (binwise) ion trajectories
+	relpos = bilayer_shift(mset=mset,vecs=array([mset.vec(i) for i in range(mset.nframes)]),
+		ionspos=master_ionspos[anum][inum],midz=master_midz[anum])
+	disctraj = discretizer_z(binedges,array(relpos)[valid_inds])	
+	#---plot concentrations three different ways
+	mids,conc_mM = concentration_profiler(disctraj,binedges,mset,normed=False)
+	plotter_concentration(mids,conc_mM,ax=axes[0],ion_name=ion_resnames[inum],color=ion_colors[inum])
+	mids,conc_rel = concentration_profiler(disctraj,binedges,mset,normed=True)
+	plotter_concentration_relative(mids,conc_rel,mset,
+		ax=axes[1],ion_name=ion_resnames[inum],color=ion_colors[inum])
+	plotter_concentration_counts(disctraj,binedges,mset,
+		ax=axes[2],ion_name=ion_resnames[inum],color=ion_colors[inum])
+#---plot settings
+for ax in axes: ax.legend(loc='center left',bbox_to_anchor=(1, 0.5),ncol=1,fancybox=True,shadow=True)
+gs.tight_layout(fig,h_pad=0.6,w_pad=0.6)
+#---save
+plt.savefig(pickles+'/PREPARE-FIGURES/'+'fig-ion_equilibrium_z-'+aname+\
+	'.png',dpi=300,bbox_inches='tight')
+if showplots: plt.show()
+plt.close(fig)
+
 	
-	
-	
-	
-	
-	
-	
+

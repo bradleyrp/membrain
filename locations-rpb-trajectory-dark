@@ -151,11 +151,11 @@ struct=/home/rpb/compbio/membrane-v533/a4-ions/system.ions.gro
 
 name=membrane-v534-keys
 struct=/home/rpb/compbio/membrane-v534/a2-structure/system.keylipidatoms.gro
-/home/rpb/compbio/membrane-v534/a2-structure/s4-sim-kraken-md.part0013.40000-90000-50.keylipidatoms.xtc
+/home/rpb/compbio/membrane-v534/a5-structure/s3-kraken-correct-md.part0006.20000-25000-10.keylipidatoms.xtc
 
 name=membrane-v534-ions
 struct=/home/rpb/compbio/membrane-v534/a3-ions/system.ions.gro
-/home/rpb/compbio/membrane-v534/a3-ions/s4-sim-kraken-md.part0013.pbcmol.40000-90000-50.ions.xtc
+/home/rpb/compbio/membrane-v534/a6-ions/s3-kraken-correct-md.part0006.pbcmol.20000-25000-10.ions.xtc
 
 name=membrane-v514-keys
 struct=/home/rpb/compbio/membrane-v514/a4-structure/system.keylipidatoms.gro

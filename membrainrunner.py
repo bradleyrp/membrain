@@ -165,17 +165,22 @@ def specname_pickle(sysname,traj,timeslice=None):
 	return picklename
 	
 def status(string,start=None,i=None,looplen=None):
-	'''Print status to the screen also allows for re-writing the line.'''
+	'''Print status to the screen also allows for re-writing the line. Duplicate from membrainrunner.'''
 	#---display a refreshable string	
-	if start == None:
-		print '\r'+string+'\t',
-		sys.stdout.flush()
+	if start == None and looplen != None and i != None:		
+		if i+1 == looplen:
+			print '\r'+string+'  ...  '+str(i+1).rjust(7)+'/'+str(looplen).ljust(8)+'\n',
+		else:
+			print '\r'+string+'  ...  '+str(i+1).rjust(7)+'/'+str(looplen).ljust(8),
+			sys.stdout.flush()
 	#---estimate the remaining time given a start time, loop length, and iterator
-	else:
+	elif start != None and i != None and looplen != None:
 		esttime = (time.time()-start)/(float(i+1)/looplen)
 		print '\r'+string.ljust(20)+str(abs(round((esttime-(time.time()-start))/60.,1))).ljust(10)+\
 			'minutes remain',
 		sys.stdout.flush()
+	#---standard output here
+	else: print string
 
 #---MAIN
 #-------------------------------------------------------------------------------------------------------------

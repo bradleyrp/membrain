@@ -31,13 +31,16 @@ all_batches = [
 	'symmetric',
 	'compare_phosphate_position',
 	'compare_protonation',
-	][:]
+	][:1]
 	
 #---interpolation size 
 rounder = 4
 
 #---normalize to bulk concentratio
 norm_z_concentration = False
+
+#---develop mode
+devmode = True
 
 #---BATCH
 #-------------------------------------------------------------------------------------------------------------
@@ -102,12 +105,12 @@ for batch in all_batches:
 			r' $\mathrm{PIP_2^{-3}}$',
 			]
 	else: raise Exception('except: not in batchlist')
-	status('status: analysis_names = '+str(analysis_names)+'\n')
+	status('status: analysis_names = '+str(analysis_names))
 	if 'resname_group' not in globals(): resname_group = None
 	execfile('script-aamd-ions.py')
 	#---caution: if you comment this line for development, you must uncomment it before running many batches
-	#if 'msets' in globals(): del msets
-	#if 'resname_group' in globals(): del resname_group
-	#if 'extra_label_list' in globals(): del extra_label_list
+	if not devmode and 'msets' in globals(): del msets
+	if not devmode and 'resname_group' in globals(): del resname_group
+	if not devmode and 'extra_label_list' in globals(): del extra_label_list
 	checktime()
 

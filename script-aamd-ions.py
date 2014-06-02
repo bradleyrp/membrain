@@ -44,16 +44,21 @@ if 'batch_override' not in globals():
 		'load',
 		'compute',
 		'plot',
-		][:1]
+		][:2]
 	
 	#---settings
 	showplots = False
 	
 	#---interpolation size 
 	rounder = 4
+	
+	#---retrieve the other ion
+	get_ion_alt = True
 
 #---FUNCTIONS
 #-------------------------------------------------------------------------------------------------------------
+
+#---generic functions for generating discrete (i.e. in bins) ion trajectories
 
 def bilayer_shift(ionspos=None,midz=None,mset=None,vecs=None):
 	'''Function to change coordinate systems so the midplane is at zero.'''
@@ -198,7 +203,7 @@ def define_zones(zonetype):
 		zonelabels = ['free','bound']
 		return [zonelist,zonecolors,zonealphas,zonelabels]
 		
-#---plotting and analysis functions for the discrete trajectories
+#---DEPRECATED
 
 def plot_ion_distribution_deprecated(disctraj,binedges,fig=None,thisax=None,text=True,colors=True,mset=None):
 	'''Generic plotting function for ion distributions by height from midplane according to binedges.'''
@@ -237,9 +242,9 @@ def plot_ion_distribution_deprecated(disctraj,binedges,fig=None,thisax=None,text
 	plt.show()
 	return counts,edges
 	
-def plot_ion_distribution(disctraj_prime,binedges,fig=None,thisax=None,text=True,
+def plot_ion_distribution_deprecated2(disctraj_prime,binedges,fig=None,thisax=None,text=True,
 	colors=True,mset=None,barplot=False,bintype=None,ionlist=None,ionname=None,ls=None,label=None,
-	bulk_relative=True):
+	bulk_relative=True,cumsum=False):
 	'''Generic plotting function for ion distributions by height from midplane according to binedges.'''
 	peakval = 0.
 	#---Nb only works with discretizer_z
@@ -298,12 +303,23 @@ def plot_ion_distribution(disctraj_prime,binedges,fig=None,thisax=None,text=True
 		else:
 			label=label
 		#---plot
-		ax.plot(1./2*(meanedges[1:]+meanedges[:-1])[zslice],
-			#---disabled true concentration
-			#counts[zslice]/bul kconc/mset.nframes*100,ls,
-			counts[zslice]/bulkconc/mset.nframes,ls,
-			color=color,
-			alpha=1,lw=2.5,label=label)
+		if not cumsum:
+			ax.plot(1./2*(meanedges[1:]+meanedges[:-1])[zslice],
+				#---disabled true concentration
+				#counts[zslice]/bul kconc/mset.nframes*100,ls,
+				counts[zslice]/bulkconc/mset.nframes,ls,
+				color=color,
+				alpha=1,lw=2.5,label=label)
+		'''
+		#---was working on cumsum but gave up
+		else:
+			rawpoz = counts[zslice]/bulkconc/mset.nframes
+			pozvals = where(1./2*(meanedges[1:]+meanedges[:-1])[zslice]>0)[0]
+			ax.plot((1./2*(meanedges[1:]+meanedges[:-1])[zslice])[pozvals],
+				[cumsum(rawpoz[:i]) for i in range(len(pozvals))],ls,
+				color=color,
+				alpha=1,lw=2.5,label=label)
+		'''
 		if peakval < array(counts[zslice]/bulkconc).max(): peakval = array(counts[zslice]/bulkconc).max()
 	ax.grid(True)
 	plt.setp(ax.get_xticklabels(),fontsize=fsaxlabel)
@@ -329,6 +345,10 @@ def plot_ion_distribution(disctraj_prime,binedges,fig=None,thisax=None,text=True
 		ax.set_yticklabels([])
 	if fig == None: plt.show()
 	return array(counts[zslice]/bulkconc),edges
+
+#---plotting and analysis functions for the discrete trajectories
+	
+#---additional functions
 	
 def plot_ion_transition_matrix(disctraj,binedges,fig=None):
 	'''Plot the transition matrix for the discrete ion trajectories.'''
@@ -732,7 +752,7 @@ def plot_ion_residence_radial_binary_dev(disctraj,zonetype,fig=None,
 		dpi=500,bbox_inches='tight')
 	plt.show()
 
-#---MAIN
+#---DEPRECATED
 #-------------------------------------------------------------------------------------------------------------
 
 #---generic load routine for analyzing ions relative to the bilayer position
@@ -769,17 +789,116 @@ if 'load_deprecated' in routine:
 		#---midz and monoz provide the average midplane and average monolayer positions for each frame
 		monoz = array(monoz)
 		midz = mean(monoz,axis=1)
+
+#---example for doing the coordinate shift and the binning in the z-dimension
+if 'compute_z_deprecated' in routine:
+	aname = analysis_names[0]
+	#---shift coordinate systems so the frame-wise midplane is at zero
+	relpos = bilayer_shift()
+	#---return a list of bin edges and the bin index for the bin flanking the monolayer
+	#---choose 'fixed' for a fixed bin width or 'outside-inside' to get flush bins that might not be even
+	if 0:
+		binedges,monobins = binlister('fixed',mset=mset_surf,binw=5)
+		binedges,monobins = binlister('custom',mset=mset_surf,binw=5,custom_posts=[-6,-5,10,20,30,32,40])
+		binedges,monobins = binlister('custom',mset=mset_surf,binw=5,custom_posts=[-5,10])
+		binedges,monobins = binlister('custom',mset=mset_surf,binw=5,custom_posts=[-5,0,15])
+		binedges,monobins = binlister('custom',mset=mset_surf,binw=5,custom_posts=[-10,16])
+		binedges,monobins = binlister('custom',mset=mset_surf,binw=5,custom_posts=list(arange(-5,40+1,5)))	
+		binedges,monobins = binlister('fixed',mset=mset_surf,binw=5)
+	binedges,monobins = binlister('custom',mset=mset_surf,binw=5,custom_posts=[-10,16])
+	disctraj = discretizer_z(binedges)
+	if 0:
+		#---check the distribution
+		plot_ion_distribution(disctraj,binedges)
+		#---plot transition matrix
+		plot_ion_transition_matrix(disctraj,binedges)
+		#---plot residence times
+		plot_ion_residence(disctraj,binedges,ignorezero=True,mset=mset_surf)
+		plot_ion_residence(disctraj,binedges,ignorezero=True,mset=mset_surf,cumulative=False)
+		plot_ion_time_correlations(disctraj,binedges,mset=mset_surf)
 		
+#---example for doing the coordinate shift and the binning in the z-dimension
+if 'compute_z_deprecated2' in routine:
+	binwidth = 1
+	fig = plt.figure(figsize=(10,6))
+	gs = gridspec.GridSpec(2,1,wspace=0.0,hspace=0.0)
+	ax = fig.add_subplot(gs[0])
+	ax2 = fig.add_subplot(gs[1])
+	axes = [ax,ax2]
+	lslist = ['-','-']
+	peakval = [0,0]
+	for aname in analysis_names:
+		for i in analysis_descriptors[aname]: vars()[i] = (analysis_descriptors[aname])[i]
+		anum = analysis_names.index(aname)
+		mset = msets[anum]
+		mset_surf = msets_surf[anum]
+		ionlist = master_ionlist[anum]
+		binedges,monobins = binlister('fixed',mset=mset_surf,binw=binwidth,monoz=master_monoz[anum])
+		valid_inds = where([len(i)==int(round(mean([len(i) 
+			for i in binedges]))) for i in binedges])[0]
+		binedges = list(array(binedges)[valid_inds])
+		for ionnum in range(len(ionlist)):
+			relpos = bilayer_shift(mset=mset,vecs=array([mset.vec(i) for i in range(mset.nframes)]),
+				ionspos=master_ionspos[anum][ionnum],midz=master_midz[anum])
+			disctraj = discretizer_z(binedges,array(relpos)[valid_inds])
+			counts,edges = plot_ion_distribution(disctraj,binedges,
+				cumsum=False,
+				ionname=ionlist[0],ionlist=ionlist,
+				label=proper_ion_labels[ionlist[ionnum]]+\
+					(' with '+proper_ion_labels[ionlist[0]] if ionnum>0 else ''),
+				bintype='fixed',fig=fig,thisax=axes[ionnum],ls=lslist[ionnum],
+				bulk_relative=norm_z_concentration)
+			if peakval[ionnum] < counts.max():
+				peakval[ionnum] = counts.max()
+	ax.legend(loc='upper left',fontsize=fsaxlegend)
+	ax2.legend(loc=('lower left' if 
+		(resname_group == 'protonation' and norm_z_concentration == False) else 'upper left'),
+		fontsize=fsaxlegend)
+
+	#---note that the following plot specs were originally in the function, but I moved them here
+	if norm_z_concentration == True:
+		if peakval[1] < 3: peakval[1] = 3
+		ax.set_yticks(list(arange(0,1.1*peakval[0],1))[:-1])
+		ax.set_yticklabels([str(int(i)) for i in list(arange(0,1.1*peakval[0],1))[:-1]])
+		if len(list(arange(0,1.1*peakval[0],1))[:-1]) > 10:
+			ax.set_yticks([1]+list(arange(4,1.1*peakval[0],4)))
+			ax.set_yticklabels([1]+list([str(int(i)) for i in  arange(4,1.1*peakval[0],4)]))
+		ax.set_ylim((0,1.1*peakval[0]))
+		ax2.set_yticks(list(arange(0,1.1*peakval[1],1))[:-1])
+		ax2.set_yticklabels([str(int(i)) for i in list(arange(0,1.1*peakval[1],1))[:-1]])
+		if len(list(arange(0,1.1*peakval[1],1))[:-1]) > 10:
+			ax2.set_yticks([1]+list(arange(4,1.1*peakval[1],4)))
+			ax2.set_yticklabels([1]+list([str(int(i)) for i in  arange(4,1.1*peakval[1],4)]))
+		ax2.set_ylim((0,1.1*peakval[1]))
+	else:
+		ax.get_yaxis().set_major_locator(mpl.ticker.MaxNLocator(prune='upper',nbins=6))
+		ax2.get_yaxis().set_major_locator(mpl.ticker.MaxNLocator(prune='upper',nbins=6))
+
+	ax.set_xlabel('')
+	ax.set_xticklabels([])
+	ax.set_title(composition_name+' bilayer',fontsize=fsaxtitle)
+	#---save
+	plt.savefig(pickles+'/PREPARE-FIGURES/'+'fig-ion_equilibrium_z-'+\
+		'cumulative-'+\
+		('not_normalized-' if norm_z_concentration == False else '')+\
+		'-'.join(analysis_names)+'.png',dpi=300)
+	if showplots: plt.show()
+	plt.close(fig)
+
+#-------------------------------------------------------------------------------------------------------------
+
+#---generic load routine for analyzing ions relative to the bilayer position
 if 'load' in routine or 'ionspos' not in globals():
-	
+	#---variables which hold simulation-specific parameters, namely the ion positions
 	master_ionspos = [[] for aname in analysis_names]
 	master_clock = [[] for aname in analysis_names]
-	master_ionlist = [[] for aname in analysis_names]
 	master_monoz = [[] for aname in analysis_names]
 	master_midz = [[] for aname in analysis_names]
 	master_ionlist = [[] for aname in analysis_names]
+	#---define mset objects for both the surface and the ion positions
 	msets_surf = []
 	msets = []
+	#---loop over simulations
 	for aname in analysis_names:
 		for i in analysis_descriptors[aname]: vars()[i] = (analysis_descriptors[aname])[i]
 		anum = analysis_names.index(aname)
@@ -824,97 +943,8 @@ if 'load' in routine or 'ionspos' not in globals():
 		master_ionlist[anum] = ionlist
 
 #---example for doing the coordinate shift and the binning in the z-dimension
-if 'compute_z_deprecated' in routine:
-	aname = analysis_names[0]
-	#---shift coordinate systems so the frame-wise midplane is at zero
-	relpos = bilayer_shift()
-	#---return a list of bin edges and the bin index for the bin flanking the monolayer
-	#---choose 'fixed' for a fixed bin width or 'outside-inside' to get flush bins that might not be even
-	if 0:
-		binedges,monobins = binlister('fixed',mset=mset_surf,binw=5)
-		binedges,monobins = binlister('custom',mset=mset_surf,binw=5,custom_posts=[-6,-5,10,20,30,32,40])
-		binedges,monobins = binlister('custom',mset=mset_surf,binw=5,custom_posts=[-5,10])
-		binedges,monobins = binlister('custom',mset=mset_surf,binw=5,custom_posts=[-5,0,15])
-		binedges,monobins = binlister('custom',mset=mset_surf,binw=5,custom_posts=[-10,16])
-		binedges,monobins = binlister('custom',mset=mset_surf,binw=5,custom_posts=list(arange(-5,40+1,5)))	
-		binedges,monobins = binlister('fixed',mset=mset_surf,binw=5)
-	binedges,monobins = binlister('custom',mset=mset_surf,binw=5,custom_posts=[-10,16])
-	disctraj = discretizer_z(binedges)
-	if 0:
-		#---check the distribution
-		plot_ion_distribution(disctraj,binedges)
-		#---plot transition matrix
-		plot_ion_transition_matrix(disctraj,binedges)
-		#---plot residence times
-		plot_ion_residence(disctraj,binedges,ignorezero=True,mset=mset_surf)
-		plot_ion_residence(disctraj,binedges,ignorezero=True,mset=mset_surf,cumulative=False)
-		plot_ion_time_correlations(disctraj,binedges,mset=mset_surf)
-		
-#---example for doing the coordinate shift and the binning in the z-dimension
 if 'compute_z' in routine:
-	binwidth = 1
-	fig = plt.figure(figsize=(10,6))
-	gs = gridspec.GridSpec(2,1,wspace=0.0,hspace=0.0)
-	ax = fig.add_subplot(gs[0])
-	ax2 = fig.add_subplot(gs[1])
-	axes = [ax,ax2]
-	lslist = ['-','-']
-	peakval = [0,0]
-	for aname in analysis_names:
-		for i in analysis_descriptors[aname]: vars()[i] = (analysis_descriptors[aname])[i]
-		anum = analysis_names.index(aname)
-		mset = msets[anum]
-		mset_surf = msets_surf[anum]
-		ionlist = master_ionlist[anum]
-		binedges,monobins = binlister('fixed',mset=mset_surf,binw=binwidth,monoz=master_monoz[anum])
-		valid_inds = where([len(i)==int(round(mean([len(i) 
-			for i in binedges]))) for i in binedges])[0]
-		binedges = list(array(binedges)[valid_inds])
-		for ionnum in range(len(ionlist)):
-			relpos = bilayer_shift(mset=mset,vecs=array([mset.vec(i) for i in range(mset.nframes)]),
-				ionspos=master_ionspos[anum][ionnum],midz=master_midz[anum])
-			disctraj = discretizer_z(binedges,array(relpos)[valid_inds])
-			counts,edges = plot_ion_distribution(disctraj,binedges,
-				ionname=ionlist[0],ionlist=ionlist,
-				label=proper_ion_labels[ionlist[ionnum]]+\
-					(' with '+proper_ion_labels[ionlist[0]] if ionnum>0 else ''),
-				bintype='fixed',fig=fig,thisax=axes[ionnum],ls=lslist[ionnum],
-				bulk_relative=norm_z_concentration)
-			if peakval[ionnum] < counts.max():
-				peakval[ionnum] = counts.max()
-	ax.legend(loc='upper left',fontsize=fsaxlegend)
-	ax2.legend(loc=('lower left' if 
-		(resname_group == 'protonation' and norm_z_concentration == False) else 'upper left'),
-		fontsize=fsaxlegend)
-
-	#---note that the following plot specs were originally in the function, but I moved them here
-	if norm_z_concentration == True:
-		if peakval[1] < 3: peakval[1] = 3
-		ax.set_yticks(list(arange(0,1.1*peakval[0],1))[:-1])
-		ax.set_yticklabels([str(int(i)) for i in list(arange(0,1.1*peakval[0],1))[:-1]])
-		if len(list(arange(0,1.1*peakval[0],1))[:-1]) > 10:
-			ax.set_yticks([1]+list(arange(4,1.1*peakval[0],4)))
-			ax.set_yticklabels([1]+list([str(int(i)) for i in  arange(4,1.1*peakval[0],4)]))
-		ax.set_ylim((0,1.1*peakval[0]))
-		ax2.set_yticks(list(arange(0,1.1*peakval[1],1))[:-1])
-		ax2.set_yticklabels([str(int(i)) for i in list(arange(0,1.1*peakval[1],1))[:-1]])
-		if len(list(arange(0,1.1*peakval[1],1))[:-1]) > 10:
-			ax2.set_yticks([1]+list(arange(4,1.1*peakval[1],4)))
-			ax2.set_yticklabels([1]+list([str(int(i)) for i in  arange(4,1.1*peakval[1],4)]))
-		ax2.set_ylim((0,1.1*peakval[1]))
-	else:
-		ax.get_yaxis().set_major_locator(mpl.ticker.MaxNLocator(prune='upper',nbins=6))
-		ax2.get_yaxis().set_major_locator(mpl.ticker.MaxNLocator(prune='upper',nbins=6))
-
-	ax.set_xlabel('')
-	ax.set_xticklabels([])
-	ax.set_title(composition_name+' bilayer',fontsize=fsaxtitle)
-	#---save
-	plt.savefig(pickles+'/PREPARE-FIGURES/'+'fig-ion_equilibrium_z-'+\
-		('not_normalized-' if norm_z_concentration == False else '')+\
-		'-'.join(analysis_names)+'.png',dpi=300)
-	if showplots: plt.show()
-	plt.close(fig)
+	binedges,monobins = binlister('fixed',mset=mset_surf,binw=binwidth,monoz=master_monoz[anum])
 		
 #---example for doing the coordinate shift and the binning relative to key phospholipids
 if 'compute_radial_binary' in routine:
@@ -941,3 +971,8 @@ if 'compute_radial_binary' in routine:
 		plot_ion_residence_radial_binary(disctraj,'radial_binary',scale_by_time=False,cumulative=True)
 		plot_ion_residence_radial_binary_dev(disctraj,'radial_binary',normed=False,residence_exact=True)
 
+
+
+#---example for doing the coordinate shift and the binning in the z-dimension
+if 'compute_z' in routine:
+	binedges,monobins = binlister('fixed',mset=mset_surf,binw=binwidth,monoz=master_monoz[anum])

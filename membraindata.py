@@ -4,6 +4,20 @@ import numpy
 import collections
 import itertools
 
+#---master dictionary which provides specifications for different data types
+master_datatypes = {
+	'gr2d':{
+		'struct':{'frame':0,'monolayer':1,'lipid':2},
+		'struct_opts':None,
+		'description':'Basic object which actually contains 3D radial distribution function (i.e. g(r)) data for AAMD bilayers. The root data is a normalized histogram or probability curve of the likelihood of reaching another particle. Particle specs are in the pkl name and the notes.',
+		},
+	'cells':{
+		'struct':{'frame':0,'monolayer':1,'type':2},
+		'struct_opts':{'type':{'points':0,'voronoi':1,'areas':2}},
+		'description':'',
+		},
+	}
+
 #---MEMBRANEDATA CLASS
 #-------------------------------------------------------------------------------------------------------------
 
@@ -17,117 +31,53 @@ def flatten(x,loops=None):
 class MembraneData:
 	'''A class which holds a membrane simulation.'''
 	def __init__(self,name,label=None):
-		#---Descriptors
+		#---standard descriptors
 		self.calctype = name
 		self.pickle_name = ''
 		self.system_name = ''
-		if self.calctype == 'grvoronoi':
-			self.struct = {'frame':0,'monolayer':1,'direction':2,'lipid':3}
-			self.struct_opts = {'direction' : {'z':0,'2d':1}}
-		elif self.calctype == 'gr':
-			self.struct = {'frame':0,'monolayer':1}
-		elif self.calctype == 'triangles':
-			self.struct = {'frame':0,'monolayer':1,'type':2}
-			self.struct_opts = {'type' : {'points':0,'lines':1,'n_perfect_triangles':2}}
-		elif self.calctype == 'cells':
-			self.struct = {'frame':0,'monolayer':1,'type':2}
-			self.struct_opts = {'type' : {'points':0,'voronoi':1,'areas':2}}
-		#---retire the following data type, representing a verbatim port from old method
-		elif self.calctype == 'dimple_filter':
-			self.struct = {'frame':0,'type':1}
-			self.struct_opts = {'type' : {'points':0,'domain':1,'protptsplus':2,'domainw':3,'frameno':4}}
-		#---retired method, formerly named "dimple" so be careful not to confuse them
-		elif self.calctype == 'dimple_for':
-			self.struct = {'frame':0,'type':1}
-			self.struct_opts = {'type' : {'params':0,'maxhs':1,'maxhxys':2,'target_zones':3,'frameno':4}}
-		elif self.calctype == 'tilt_deprecated':
-			self.struct = {'frame':0,'type':1,'monolayer':2,'lipid':3}
-			self.struct_opts = {'type' : {'angle':0,'area':1}}
-		elif self.calctype == 'tilefilter_area_v1':
-			self.struct = {'frame':0,'type':1}
-			self.struct_opts = {'type' : {'positive':0,'negative':1}}
-		#---stores surface normal vectors
-		elif self.calctype == 'surfnorms':
-			self.struct = {'frame':0,'monolayer':1,'type':2,'lipid':3}
-			self.struct_opts = {'type':{'normals','areas'}}
-		elif self.calctype == 'tilts':
-			self.struct = {'frame':0,'tail':1,'monolayer':2,'lipid':3}
-			self.struct_opts = {'tail' : {'a':0,'b':1}}
-		elif self.calctype == 'protdists':
-			self.struct = {'frame':0,'monolayer':2,'lipid':3}
-		elif self.calctype == 'lipid_positions':
-			self.struct = {'frame':0,'type':1,'monolayer':2,'lipid':3}
-			self.struct_opts = {'type' : {'position':0,'mindist':1}}
-		elif self.calctype == 'dimple':
-			self.struct = {'frame':0,'type':1}
-			self.struct_opts = {'type' : {'params':0,'maxhs':1,'maxhxys':2,'target_zones':3,'frameno':4}}
-		elif self.calctype == 'gr2d':
-			self.struct = {'frame':0,'monolayer':1,'lipid':2}
-		elif self.calctype == 'xyz_assoc':
-			self.struct = {'frame':0,'monolayer':1,'lipid':2}
-		#---type: c0map holds data in stressmap pickles after integrating the voxel-wise stress tensors
-		elif self.calctype == 'c0map':
-			self.struct = {'frame':0}
-		#---type: topography_transform holds an array of minimum distance vs surface point height
-		#---Nb this is an alternative to the topographycorrelate class
-		elif self.calctype == 'topography_transform':
-			self.struct = {'frame':0}
-		#---type: ionskate for storing ice-skating ion MSD decompositions
-		#---Nb the mastermsd_zones array is very jagged so easy lookups might not work
-		#---Nb this was basically scrapped due to memory issues
-		elif self.calctype == 'ionskate':
-			self.struct = {'type':0,'zone':1,'ion':2,'deltat':3,'start_frame':4}
-			self.struct_opts = {'type': {'mastermsd_zones':0,'distsxy':1,'distsz':2}}
-		elif self.calctype == 'spanangle':
-			self.struct = {'frame':0,'resid':1,'headspan':2,'headangle':3}
-		elif self.calctype == 'spanangle2':
-			self.struct = {'frame':0,'resid':1,'type':2}
-			self.struct_opts = {'type': {'headspan':0,'headangle':1,'time':2,'resid':3}}
-		#---type: updated/advanced dimple fitting (dimple2 pkl objects)
-		elif self.calctype == 'dimple2':
-			self.struct = {'frame':0,'type':1}
-			self.struct_opts = {'type' : {'params':0,'maxhs':1,'maxhxys':2,'target_zones':3,'frameno':4}}
-		#---type: updated/advanced dimple fitting (dimple3 pkl objects)
-		elif self.calctype == 'dimple3':
-			self.struct = {'frame':0,'type':1}
-			self.struct_opts = {'type' : {'params':0,'maxhs':1,'maxhxys':2,'target_zones':3,'frameno':4}}
-		#---type: updated object which holds height distributions near certain neighborhoods (topography)
-		elif self.calctype == 'topography3':
-			self.struct = {'frame':0,'heights':1}
-		#---default values for label if no extra descriptors
-		if label != None:
-			self.description = label 
-		else:
-			self.description = name
-		#---Data
+		#---look up the type definitions from the master list
+		if name in master_datatypes.keys():
+			self.struct = (master_datatypes[name])['struct']
+			self.struct_opts = (master_datatypes[name])['struct_opts']
+		else: raise Exception('except: data type does not exist')
+		#---an extra descriptor for the object, distinct from label, which labels added data pieces
+		if label != None: self.description = label 
+		else: self.description = name
+		#---data objects
 		self.data = []
 		self.label = []
 		self.notes = []
-	#---Add a piece of data
+	#---add a piece of data with a label, usually the frame number as an extra check
 	def add(self,item,descriptor):
 		self.data.append(item)
 		self.label.append(descriptor)
-	#---Add a note
+	#---add a note, usually information from analysis_descriptors about the corresponding simulation
 	def addnote(self,notable):
 		self.notes.append(notable)
 	#---retrieve a note
 	def getnote(self,note):
 		availnotes = [i[0] for i in self.notes]
-		if note in availnotes:
-			return self.notes[availnotes.index(note)][1]
-		#else: print 'missing note'
-	#---Retrieve data
+		if note in availnotes: return self.notes[availnotes.index(note)][1]
+		else: return None
+# NEEDS COMMENTS
+	#---retrieve data
 	def get(self,*args,**kwargs):
+		print 'debug: get'
 		#---Flatten the data as necessary, or depending on the calculation
 		if 'flat' in kwargs.keys():
+			print 'debug: flat'
 			flat = kwargs['flat']
 		else:
+			print 'debug: flat else'
+			print self.calctype
 			if (self.calctype == 'grvoronoi' or self.calctype == 'gr'):
 				flat = True
 			elif (self.calctype == 'triangles' or self.calctype == 'cells'):
 				flat = False
 			else:
 				flat = False
+		print 'debug: flat ='
+		print flat
 		#---Identify dimensions to slice, and what their slice will be
 		keydims = []
 		slices = []
@@ -154,9 +104,21 @@ class MembraneData:
 			else:
 				slicer.append(slice(0,None))
 		slicer = tuple(slicer)
+		print 'slicer: '
+		print slicer
 		#---Return the data, flattened if desired
 		if flat:
 			return flatten(numpy.array(self.data)[slicer])
 		else:
+			print 'dbug: else return'
+			print type(numpy.array(self.data)[slicer])
+			print type(slicer)
+			print type(self.data)
+			tmpvar = numpy.array(self.data)[slicer]
+			print tmpvar[0]
+			tmpvar = numpy.array(self.data)
+			print tmpvar[0]
+			print self.data[0]
+			print self.data[0][0]
 			return numpy.array(self.data)[slicer]
 

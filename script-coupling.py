@@ -2,46 +2,58 @@
 
 from membrainrunner import *
 execfile('locations.py')
+execfile('header-meso.py')
 
 import scipy.ndimage
 
-#---SETTINGS
+#---DEFAULTS
 #-------------------------------------------------------------------------------------------------------------
 
 #---if script is run in standalone mode
-if 'c0ask' not in globals(): 
-	c0ask = 0.028
-	execfile('header-meso.py')
+if 'batch_override' not in globals() or not batch_override:
 
-#---inputs
-cgmd_avail = [
-	'v614-120000-220000-200',
-	'v616-210000-310000-200',
-	]
-cgmd_reference = batch_cgmd if 'batch_cgmd' in globals() else cgmd_avail[-1]
-meso_reference = batch_meso if 'batch_meso' in globals() else 'v2005'
-routine = ['load','calc','masterplot','checkplot','plot2d','plotphase'][1:3]
+	cgmd_avail = [
+		'v614-120000-220000-200',
+		'v616-210000-310000-200',
+		]
+		
+	meso_avail = [
+		'v2004',
+		'v2005',
+		'v2006',
+		'v2008',
+		]
 
-#---set curvature extent from fixed parameter in the toc, assuming isotropic
-r_2 = (meso_expt_toc[meso_reference])['R_2']
+	routine = [
+		'calc',
+		'masterplot',
+		'checkplot',
+		'plot2d',
+		'plotphase'
+		][:2]
 
-#---bookkeeping
-p_interest = (meso_expt_toc[key])['parameter_name']
-analysis_names = [cgmd_reference,meso_reference+'-'+p_interest+'-'+str(c0ask)]
-plot_reord = analysis_names
-match_scales = [cgmd_reference,meso_reference+'-'+p_interest+'-'+str(c0ask)]
-bigname = '-'.join(analysis_names)
+	#---select a single cgmd experiment and a panel of meso experiments, from which c0ask will be used
+	batch_cgmd = cgmd_avail[-1]
+	batch_meso = meso_avail[3]
+	c0ask = 0.0541
+	
+	#---set curvature extent from fixed parameter in the toc, assuming isotropic
+	r_2 = (meso_expt_toc[batch_meso])['R_2']
+	
+	showplots = True
+	
+	#---bookkeeping
+	p_interest = (meso_expt_toc[key])['parameter_name']
+	analysis_names = [batch_cgmd,batch_meso+'-'+p_interest+'-'+str(c0ask)]
+	plot_reord = analysis_names
+	match_scales = [batch_cgmd,batch_meso+'-'+p_interest+'-'+str(c0ask)]
+	bigname = '-'.join(analysis_names)
 
 #---allocate if empty
 if 'msets' not in globals(): msets = []; 
 if showplots and 'msets' not in globals(): plt.ion()
 if 'mscs' not in globals(): mscs = []
 if 'collect_c0s' not in globals(): collect_c0s = []
-
-#---plot settings
-clist = [(brewer2mpl.get_map('Set1', 'qualitative', 8).mpl_colors)[i] for i in [1,2,0,3,4,5,6,7,]]
-
-showplots = False
 
 #---FUNCTIONS
 #-------------------------------------------------------------------------------------------------------------
@@ -92,7 +104,8 @@ class ModeCouple():
 	def calculate_mode_coupling(self,mset,c0s):
 		'''Moved the entire mode-coupling calculation to a single function so it can be repeated easily.'''
 		#---compute dimensions
-		mset.calculate_undulations(removeavg=removeavg,fitlims=fitlims,forcekappa=forcekappa)
+		mset.calculate_undulations(removeavg=removeavg,fitlims=fitlims,
+			forcekappa=forcekappa,qmagfilter=qmagfilter)
 		grid = mset.griddims
 		m,n = grid[0]-1,grid[1]-1
 		#---if no curvature field, use zeros
@@ -172,6 +185,7 @@ def spectrum_summary(fig=None,gs=None,lowlim=10**-14,titletext='undulations'):
 	axl = plt.subplot(gs3[0])
 	axr = plt.subplot(gs3[1])
 	axl_range = [[10**-10,10**10],[10**-10,10**10]]
+	clist = [(brewer2mpl.get_map('Set1', 'qualitative', 8).mpl_colors)[i] for i in [1,2,0,3,4,5,6,7,]]
 	#---plot undulations
 	extra_legend = []
 	for m in [analysis_names.index(aname) for aname	in plot_reord]:
@@ -189,7 +203,10 @@ def spectrum_summary(fig=None,gs=None,lowlim=10**-14,titletext='undulations'):
 		leftcom = [mean(log(specfilter[:,0])),mean(log(specfilter[:,1]))]
 		az_enforced = leftcom[1]+4.*leftcom[0]
 		kappa_enforced = 1./exp(az_enforced)/area
-		axl.plot([10**-3,10**3],[exp(az_enforced)*(i**-4) for i in [10**-3,10**3]],c='k',lw=2,alpha=0.5)
+		axl.plot([10**-3,10**3],[exp(az)*(i**bz) for i in [10**-3,10**3]],'--',c=clist[m],
+			lw=2,zorder=0)
+		axl.plot([10**-3,10**3],[exp(az_enforced)*(i**-4) for i in [10**-3,10**3]],c='k',
+			lw=2,zorder=0)
 		#---plot the undulations
 		if 0: xdat,ydat = mscs[m].t1d[0][:,0],mscs[m].t1d[0][:,1]
 		#---new method
@@ -197,11 +214,15 @@ def spectrum_summary(fig=None,gs=None,lowlim=10**-14,titletext='undulations'):
 		ydat = collapse_spectrum(mscs[m].qmagst,mscs[m].t2d[0])
 		plotobj = axl.scatter(xdat,ydat,color=colord,marker='o',s=30,
 			label=r'$\left\langle h_{q}h_{-q}\right\rangle$'+', '+shortname+
-			'\n'+r'$\boldsymbol{\kappa} = '+str('%3.1f'%(kappa_enforced))+'\:k_BT$')
+			'\n'+r'$\boldsymbol{\kappa} = '+str('%3.1f'%(kappa_enforced))+'\:k_BT$',
+			zorder=1)
+		axl.scatter([xdat[i] for i in range(len(xdat)) if xdat[i]<qmagfilter[1]],
+			[ydat[i] for i in range(len(ydat)) if xdat[i]<qmagfilter[1]],color=colord,marker='o',s=30,
+			zorder=2,lw=0.5,edgecolor='k')
 		if m == 0: extra_legend.append(plotobj)
 		if axl_range[0][0] > min(mscs[m].t1d[0][:,0]): axl_range[0][0] = min(mscs[m].t1d[0][:,0])
-		if axl_range[0][1] < max(mscs[m].t1d[0][:,0]): axl_range[0][1] = max(mscs[m].t1d[0][:,0])
 		if axl_range[1][0] > min(mscs[m].t1d[0][:,1]): axl_range[1][0] = min(mscs[m].t1d[0][:,1])
+		if axl_range[0][1] < max(mscs[m].t1d[0][:,0]): axl_range[0][1] = max(mscs[m].t1d[0][:,0])
 		if axl_range[1][1] < max(mscs[m].t1d[0][:,1]): axl_range[1][0] = max(mscs[m].t1d[0][:,1])
 		#---plotting extra terms
 		if hascurv:
@@ -211,7 +232,7 @@ def spectrum_summary(fig=None,gs=None,lowlim=10**-14,titletext='undulations'):
 			ydat = collapse_spectrum(mscs[m].qmagst,mscs[m].t2d[1])
 
 			plotobj = axl.scatter(xdat,ydat,facecolor=colord,marker='o',s=40,
-				edgecolor='k',lw=0.5,alpha=0.65)
+				edgecolor='k',lw=0.5,alpha=0.65,zorder=2)
 			if m == 0: extra_legend.append(plotobj)
 
 			if 0: xdat,ydat = mscs[m].t1d[2][:,0],mscs[m].t1d[2][:,1]
@@ -219,14 +240,14 @@ def spectrum_summary(fig=None,gs=None,lowlim=10**-14,titletext='undulations'):
 			ydat = collapse_spectrum(mscs[m].qmagst,mscs[m].t2d[2])
 
 			axl.scatter(xdat,ydat,facecolor=colord,marker='o',s=40,
-				edgecolor='k',lw=0.5,label='',alpha=0.65)
+				edgecolor='k',lw=0.5,label='',alpha=0.65,zorder=3)
 
 			if 0: xdat,ydat = mscs[m].t1d[3][:,0],mscs[m].t1d[3][:,1]
 			xdat = collapse_spectrum(mscs[m].qmagst,mscs[m].qmagst)
 			ydat = collapse_spectrum(mscs[m].qmagst,mscs[m].t2d[3])
 
-			plotobj = axl.scatter(xdat,ydat,color=colord,marker='x',s=20,
-				label='',alpha=0.65)
+			plotobj = axl.scatter(xdat,ydat,color=colord,marker=('x' if m==0 else '+'),s=20,
+				label='',alpha=1,zorder=4,lw=1.5)
 			if m == 0: extra_legend.append(plotobj)
 		#---extra legend
 		legend2 = axl.legend(extra_legend,
@@ -234,6 +255,9 @@ def spectrum_summary(fig=None,gs=None,lowlim=10**-14,titletext='undulations'):
 			r'$\left\langle C_{0,\mathbf{q}} h_{-\mathbf{q}} \right\rangle $',
 			r'$\left\langle C_{0,\mathbf{q}} C_{0,-\mathbf{q}} \right\rangle $'],
 			loc='upper right')
+		for legobj in legend2.legendHandles:
+		    legobj.set_color('k')
+		    legobj.set_alpha(0.65)
 		#---plot details
 		axl.set_xlabel(r'$\left|\mathbf{q}\right|(\mathrm{nm}^{-1})$',fontsize=fsaxlabel)
 		h,l = axl.get_legend_handles_labels() 
@@ -258,17 +282,15 @@ def spectrum_summary(fig=None,gs=None,lowlim=10**-14,titletext='undulations'):
 		if plotqe and 0:
 			reord0b = np.lexsort((mscs[m].t1denergy[0][:,1],mscs[m].t1denergy[0][:,0]))
 			axr.scatter(mscs[m].t1denergy[0][reord0b,0],mscs[m].t1denergy[0][reord0b,1],
-				marker='o',color=colord,s=20)
+				marker='o',color=colord,s=20,zorder=6)
 		#---plot the data
-
 		if 0: xdat,ydat = mscs[m].tsum1d[reord0,0],mscs[m].tsum1d[reord0,1]
 		xdat = collapse_spectrum(mscs[m].qmagst,mscs[m].qmagst)
 		ydat = collapse_spectrum(mscs[m].qmagst,mscs[m].tsum2d)
 
 		if 0: axr.scatter(xdat,ydat,
-			marker='o',color=colord,s=20,label=shortname)
+			marker='o',color=colord,s=20,label=shortname,zorder=7)
 		axr.plot(xdat,ydat,'o-',color=colord,label=shortname)
-		
 		#---plot a single line
 		if 0:
 			inds = unique(mscs[m].tsum1d[:,0],return_inverse=True)[1]
@@ -293,6 +315,9 @@ def spectrum_summary(fig=None,gs=None,lowlim=10**-14,titletext='undulations'):
 		axr.grid(True,which='both')
 		axr.set_title('energy',fontsize=fsaxtitle)
 		plt.tick_params(labelsize=fsaxticks)
+	axl.grid(b=True,which='minor',color='k',linestyle=':',alpha=0.5)
+	axl.axvline(x=qmagfilter[1],ymin=0,ymax=1.,lw=2,c='r',alpha=0.5,zorder=0)
+	axr.axvline(x=qmagfilter[1],ymin=0,ymax=1.,lw=2,c='r',alpha=0.5,zorder=0)
 	#---set final plots limits for the undulations
 	xlims = (1./2*min([min([min([i for i in mscs[analysis_names.index(k)].t1d[t][:,0] if i != 0.]) 
 		for t in ([0,1,2,3] if (analysis_descriptors[k])['hascurv'] else [0])]) for k in analysis_names]),
@@ -330,7 +355,7 @@ def collapse_spectrum(qs,hs):
 #-------------------------------------------------------------------------------------------------------------
 
 #---load and interpolate
-if 'load' in routine or msets == []:
+if ('load' in routine or ('msets' in globals() and msets == [])) and 'analysis_names' in globals():
 	lenscale = 1.0
 	for a in analysis_names:
 		for i in analysis_descriptors[a]: vars()[i] = (analysis_descriptors[a])[i]
@@ -342,7 +367,7 @@ if 'load' in routine or msets == []:
 			collect_c0s.append(c0s)
 			msets.append(mset)
 		elif simtype == 'md':
-			print 'loading from MD'
+			status('status: loading from MD')
 			if 'mset' in globals(): del mset
 			mset = unpickle(pickles+locate)
 			msets.append(mset)
@@ -424,51 +449,24 @@ if 'calc' in routine:
 		msc = ModeCouple()
 		msc.calculate_mode_coupling(msets[m],collect_c0s[m])
 		mscs.append(msc)
-	hypo = (analysis_descriptors[cgmd_reference])['hypo']
+	hypo = (analysis_descriptors[batch_cgmd])['hypo']
 	hypo[0] = c0ask
 	if 'masterplot' not in routine and 'simple_summary' in routine: spectrum_summary()
-	#---calculate residuals
-	if 0:
-		#---method 1
-		spec_query = [0,1,3]
-		for s in range(len(spec_query)):
-			a0 = msets[1].lenscale
-			thresh = 0.4
-			dat0 =array([i for i in mscs[0].t1d[spec_query[s]] if i[0] != 0 and i[0] < thresh])
-			dat1 = array([i for i in mscs[1].t1d[spec_query[s]] if i[0] != 0 and i[0] < thresh])
-			dat0log = log10(dat0)
-			dat1log = log10(dat1)
-			cd = scipy.spatial.distance.cdist(dat0log,dat1log)
-			cd[cd.argmin(axis=argmax(shape(cd)))]
-			resid = mean([cd[i,argmax(shape(cd))] for i in cd.argmin(axis=argmax(shape(cd)))])
-			print 'result: C_0 = '+('{0:.3f}'.format(c0ask*msets[1].lenscale)).rjust(5)+' (nm^-1)   '+\
-				'resid = '+('{0:.3f}'.format(resid)).rjust(10)+'  status: npts = ('+str(len(dat0))+\
-				','+str(len(dat1))+')'
-			if 'collected_residuals' in globals(): 
-				collected_residuals[cgmd_avail.index(cgmd_reference)][s].append([c0ask,resid])
-		#---method 2
-		spec_query = [0,1,2]
-		for s in range(len(spec_query)):
-			#---new residual signature curves
-			datlogs = []
-			for m in range(len(mscs)):
-				xdat0 = collapse_spectrum(mscs[m].qmagst,mscs[m].qmagst)
-				ydat0 = collapse_spectrum(mscs[m].qmagst,mscs[m].t2d[0])
-				datlogs.append([xdat0,ydat0])
-			#---save and report
-			#print 'result: C_0 = '+('{0:.3f}'.format(c0ask*msets[1].lenscale)).rjust(5)+' (nm^-1)   '+\
-			#	'resid = '+('{0:.3f}'.format(resid)).rjust(10)+'  status: npts = ('+str(len(dat0))+\
-			#	','+str(len(dat1))+')'
-			if 'collected_residuals' in globals(): 
-				#collected_residuals[cgmd_avail.index(cgmd_reference)][s].append([c0ask,resid])
-				collected_residuals_sigs[cgmd_avail.index(cgmd_reference)][s].append([c0ask,datlogs])
-	master_spectrum_dict[tuple(analysis_names)] = {\
-		'c0ask':c0ask,
-		'cgmd_qs':mscs[0].qmagst,
-		'meso_qs':mscs[1].qmagst,
-		'cgmd_t2d':mscs[0].t2d,
-		'meso_t2d':mscs[1].t2d,
-		}
+	if 'batch_override' in globals() and batch_override:
+		if analysis_names[0]+'-'+p_interest+'-'+str(c0ask) not in master_spectrum_dict.keys():
+			master_spectrum_dict[analysis_names[0]+'-'+p_interest+'-'+str(c0ask)] = {\
+				'c0ask':c0ask,
+				'cgmd_qs':mscs[0].qmagst,
+				'cgmd_t2d':mscs[0].t2d,
+				'lenscale':msets[0].lenscale,
+				}
+		if analysis_names[1] not in master_spectrum_dict.keys():
+			master_spectrum_dict[analysis_names[1]] = {\
+				'c0ask':c0ask,
+				'meso_qs':mscs[1].qmagst,
+				'meso_t2d':mscs[1].t2d,
+				'lenscale':msets[1].lenscale,
+				}
 		
 #---plots, compare 2D undulation spectra between bare and protein systems alone, or scaled by q4
 if 'plot2d' in routine:
@@ -697,6 +695,7 @@ if 'checkplot' in routine:
 		'='+('{0:.3f}'.format(c0ask*msets[1].lenscale))+'\:\mathrm{({nm}^{-1})}$')
 	#---hard-coded requirement that the CGMD simulation is first on the list
 	index_md = 0
+	clist = [(brewer2mpl.get_map('Set1', 'qualitative', 8).mpl_colors)[i] for i in [1,2,0,3,4,5,6,7,]]
 	for m in range(1,len(analysis_names)):
 		axl.scatter(mscs[m].t1d[1][:,0],mscs[m].t1d[1][:,1],marker='o',color=clist[m],s=40,label='MESO')
 	m = index_md
@@ -709,7 +708,7 @@ if 'checkplot' in routine:
 	axl.yaxis.set_ticks_position("right")
 	axl.legend(loc='lower left')
 	#---save
-	plt.savefig(pickles+'fig-bilayer-couple-compare-'+bigname+'.png',bbox_inches='tight')
+	plt.savefig(pickles+'fig-bilayer-couple-compare-'+bigname+'.png',bbox_inches='tight',dpi=300)
 	if showplots: plt.show()
 	plt.close(fig)
 
@@ -843,7 +842,7 @@ if 'masterplot' in routine:
 		titletext=r'$\mathrm{C_{0,hypo}}='+('{0:.3f}'.format(c0ask))+'a_0^{-1}'+\
 		'='+('{0:.3f}'.format(c0ask*msets[1].lenscale))+'\:\mathrm{({nm}^{-1})}$')
 	#---save
-	plt.savefig(pickles+'fig-bilayer-couple-'+bigname+'.png',bbox_inches='tight')
+	plt.savefig(pickles+'fig-bilayer-couple-'+bigname+'.png',bbox_inches='tight',dpi=300)
 	if showplots: plt.show()
 	plt.close(fig)
 	

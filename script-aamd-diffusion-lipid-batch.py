@@ -31,7 +31,7 @@ all_batches = [
 	'symmetric',
 	'compare_phosphate_position',
 	'compare_protonation',
-	][-2:-1]
+	][1:2]
 
 #---BATCH
 #-------------------------------------------------------------------------------------------------------------
@@ -106,10 +106,17 @@ for batch in all_batches:
 	else: raise Exception('except: not in batchlist')
 	status('status: analysis_names = '+str(analysis_names)+'\n')
 	if 'resname_group' not in globals(): resname_group = None
+	
+	routine = [
+		'load',
+		'compute',
+		'plot_lipid_diffusion_detail',
+		]
+
 	execfile('script-aamd-diffusion-lipid.py')
 	#---caution: if you comment this line for development, you must uncomment it before running many batches
-	#if 'msets' in globals(): del msets
-	#if 'resname_group' in globals(): del resname_group
-	#if 'extra_label_list' in globals(): del extra_label_list
+	if 'msets' in globals(): del msets
+	if 'resname_group' in globals(): del resname_group
+	if 'extra_label_list' in globals(): del extra_label_list
 	checktime()
 
