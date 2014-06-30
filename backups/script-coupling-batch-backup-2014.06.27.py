@@ -13,8 +13,11 @@ meso_avail = [
 	'v2004',
 	'v2005',
 	'v2006',
+	'v2009',
 	'v2008',
-	][2:]
+	'v2012',
+	'v2013',
+	][-1:]
 
 cgmd_avail = [
 	'v614-120000-220000-200',
@@ -27,6 +30,7 @@ routine = [
 	'checkplot',
 	'plot2d',
 	'plotphase'
+	'print_new_c0_vals',
 	][:2]
 
 showplots = False
@@ -52,7 +56,7 @@ def collapse_spectrum(qs,hs):
 
 #---see if the coupling sweep has already been done
 master_spectrum_dict = unpickle(
-	pickles+'pkl.bilayer-coupling-sweep.'+'-'.join(meso_avail)+'-'.join(cgmd_avail)+'.pkl')
+	pickles+'pkl.bilayer-coupling-sweep.'+'-'.join(meso_avail)+'-'+'-'.join(cgmd_avail)+'.pkl')
 
 #---perform the sweep
 if master_spectrum_dict == None:
@@ -72,7 +76,7 @@ if master_spectrum_dict == None:
 					execfile('script-coupling.py')
 					del msets,mscs,collect_c0s
 	pickledump(master_spectrum_dict,
-		'pkl.bilayer-coupling-sweep.'+'-'.join(meso_avail)+'-'.join(cgmd_avail)+'.pkl',
+		'pkl.bilayer-coupling-sweep.'+'-'.join(meso_avail)+'-'+'-'.join(cgmd_avail)+'.pkl',
 		directory=pickles)
 else:
 	routine = []
@@ -95,7 +99,8 @@ def compute_undulation_residuals(c0asks,simnames,thresh=0.3,specnum=0,view_resid
 			ydat[s] = collapse_spectrum(subj[s]['cgmd_qs'],subj[s]['cgmd_t2d'][specnum])	
 		#---perform mesoscale simulation lookup
 		elif simname == 'meso':
-			simname = [i for i in master_spectrum_dict.keys() if (float(i.split('-')[-1]) == c0asks[s] and int(i.split('-')[0][1:]) > 2000)][0]
+			simname = [i for i in master_spectrum_dict.keys() if (float(i.split('-')[-1]) == c0asks[s] 
+				and int(i.split('-')[0][1:]) > 2000)][0]
 			subj[s] = master_spectrum_dict[simname]
 			xdat[s] = collapse_spectrum(subj[s]['meso_qs'],subj[s]['meso_qs'])
 			ydat[s] = collapse_spectrum(subj[s]['meso_qs'],subj[s]['meso_t2d'][specnum])
@@ -119,6 +124,7 @@ def plotter_undulation_residuals(thresholds,comp,comp_cgmd,toptitle,a0,filename_
 	gs = gridspec.GridSpec(len(thresholds),2,wspace=0.1,hspace=0.1,
 		width_ratios=[len(meso_c0s),len(cgmd_list)])
 	cmap = mpl.cm.jet
+	#---plots loop over rows where each row has the comparison for a different wavevector cutoff
 	for thresh in thresholds:
 		residual_comparisons = comp[thresholds.index(thresh)]
 		residual_comparisons_cgmd = comp_cgmd[thresholds.index(thresh)]
@@ -136,6 +142,13 @@ def plotter_undulation_residuals(thresholds,comp,comp_cgmd,toptitle,a0,filename_
 		axl.set_xlim((0,len(meso_c0s)))
 		im = axr.imshow(residual_comparisons_cgmd,interpolation='nearest',cmap=cmap,
 			vmax=max_resid,vmin=0)
+		#---plot lowest residual rankings
+		tmp = array(comp_cgmd)[0].T
+		for k in range(4):
+			for i in range(len(tmp)):
+				pos = argsort(tmp[i])[k]
+				axr.text(i,pos,str(k),fontsize=16,horizontalalignment='center',va='center',weight='bold')
+		#---settings
 		axr.set_xticks(range(len(cgmd_list)))
 		axr.set_xticklabels([(analysis_descriptors[name])['label'] for name in cgmd_list])
 		for label in im.axes.xaxis.get_ticklabels():
@@ -168,7 +181,8 @@ def plotter_undulation_residuals(thresholds,comp,comp_cgmd,toptitle,a0,filename_
 cgmd_list = ['v614-120000-220000-200','v616-210000-310000-200']
 qmagfilter = (analysis_descriptors[cgmd_avail[0]])['qmagfilter']
 thresholds = [qmagfilter[1]]
-shift_curves = True
+thresholds = [0.2]
+shift_curves = False
 
 #---check the residuals to see that the wavevectors line up
 if 0: compute_undulation_residuals([meso_c0s[0],meso_c0s[1]],['meso','meso'],
@@ -217,5 +231,13 @@ if 'comp' not in globals():
 		plotter_undulation_residuals(thresholds,comp[sn],comp_cgmd[sn],toptitles[sn],a0,
 			fnames[sn]+('shifted-' if shift_curves else ''))
 
+#---generate a list of curvatures in the mesoscale simulations
+if 'print_new_c0_vals' in routine:
+	lister = [0.002, 0.004, 0.006, 0.008, 0.01, 0.015, 0.02, 0.022, 
+		0.025, 0.028, 0.03, 0.035, 0.04, 0.045, 0.05]
+	lister = [0.002, 0.004, 0.006, 0.008, 0.01, 0.011, 0.012, 0.013, 0.014, 0.015, 0.016, 0.017, 0.018, 
+		0.019, 0.02, 0.021, 0.022, 0.023, 0.024, 0.025, 0.026, 0.027, 0.028, 0.029, 0.03, 0.032, 0.034, 
+		0.036, 0.038, 0.04, 0.045, 0.05]
+	print '( \''+'\' \''.join(['{0:.4f}'.format(round(i*a0,4)) for i in lister])+'\' )'
 
 

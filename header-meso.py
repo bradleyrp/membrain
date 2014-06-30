@@ -65,6 +65,30 @@ meso_expt_toc = {
 		'start':1500,
 		'end':3500,
 		},
+	'v2009' : {
+		'basedir':'/home/rpb/compbio/mesomembrane-v2009/',
+		'R_2':25,
+		'start':1500,
+		'end':2000,
+		},
+	'v2012' : {
+		'basedir':'/home/rpb/compbio/mesomembrane-v2012/',
+		'R_2':25,
+		'start':1500,
+		'end':2500,
+		},
+	'v2013' : {
+		'basedir':'/home/rpb/compbio/mesomembrane-v2013/',
+		'R_2':25,
+		'start':1200,
+		'end':2700,
+		},
+	'v2014' : {
+		'basedir':'/home/rpb/compbio/mesomembrane-v2014/',
+		'R_2':25,
+		'start':2000,
+		'end':5000,
+		},
 	}
 
 #---load the results of a parameter sweep into the dictionary
@@ -77,7 +101,9 @@ for key in meso_expt_toc.keys():
 	paramstring = subprocess.check_output(\
 		'grep \"param_list=\" '+basedir+'/mesomania.sh | tail -1',shell=True)
 	param_precision = len(paramstring.strip().replace('\'','').split(' ')[1:-1][0].split('.')[-1])
-	params = [float(i) for i in paramstring.strip().replace('\'','').split(' ')[1:-1]]
+	#---note that the following line may be problematic depending on how you have written mesomania.sh 
+	if 0: params = [float(i) for i in paramstring.strip().replace('\'','').split(' ')[1:-1]]
+	params = [float(i) for i in paramstring.split('\'') if re.match("^\d+?\.\d+?$",i.strip(' ')) != None]
 	(meso_expt_toc[key])['parameter_name'] = pname
 	(meso_expt_toc[key])['parameter_sweep'] = params
 	(meso_expt_toc[key])['basedir'] = basedir

@@ -15,6 +15,7 @@ struct=/home/rpb/compbio-alt/membrane-v614/s9-lonestar/system-input.resnr.gro
 /home/rpb/compbio-alt/membrane-v614/s9-lonestar/md.part0004.120000-220000-200.xtc
 /home/rpb/compbio/membrane-v614-enthx4-12800/s6-sim-lonestar/md.part0002.40000-140000-200.trr
 /home/rpb/compbio/membrane-v614-enthx4-12800/s6-sim-lonestar/md.part0002.40000-140000-200.xtc
+/home/rpb/compbio/membrane-v614-enthx4-12800/a5-stress-1.0-berendsen/md.part0002.rerun.trr
 
 name=membrane-v612
 struct=/home/rpb/compbio-alt/membrane-v612/t2-pip2-fix/md.part0005.gro

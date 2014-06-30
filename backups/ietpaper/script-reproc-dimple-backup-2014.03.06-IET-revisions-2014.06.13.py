@@ -10,6 +10,10 @@ from pylab import *
 #---PARAMETERS
 #-------------------------------------------------------------------------------------------------------------
 
+#---modified for IET revisions stage 2014.06.13
+#---NOTE the original file named script-reproc-dimple-backup-2014.03.06.py was moved here and modified 
+#---NOTE modifications were mostly aesthetic changes to the IET paper figures
+
 skip = 1
 framecount = None
 location = ''
@@ -102,23 +106,39 @@ elif plotspecs == 'enthpub':
 	do_pubplot = True
 	figsize = (10,4)
 	figoutnamebase = 'fig-dimple-manuscript-ENTH'
+	#---added these modifiers during IET revisions
+	deprecated_pkl_dir = 'backup-2014.06.01-DEPRECATED/'
+	iet_figs_dir = 'backup-2014.06.12-IET-revision-figs/'
+	structpkldir = 'backup-2014.01.09-enth-review-pickles-exo70-pickles-transpose-error/'
 
 #---method settings
 do_resid_filter = True
+resid_filter = 8.
+#---modified for IET revisions stage 2014.06.13
 resid_filter = 8.
 show_areas_on_master_plot = True
 
 #---parameters
 nbins = 20
+#---modified for IET revisions stage 2014.06.13
+nbins = 100
 nbins_sigma = 20
 minval,maxval = -0.10,0.10
+#---modified for IET revisions stage 2014.06.13
 minval_sigma,maxval_sigma = 0,30
+minval_sigma,maxval_sigma = 0,20
 maxhfilter = [0.001,0.1]
-maxhrange = (-0.06,0.06)
+#---modified for IET revisions stage 2014.06.13
+maxhfilter = [0.008,0.8]
+maxhrange = (-0.04,0.04)
 maxhstep = 0.01
-sigmamax = 30
+sigmamax = 20
 which_orders = [2]
 which_orders_extents = 2
+
+#---modified for IET revisions stage 2014.06.13
+#---NOTE: the function gauss2dh returns a value equal to 2H, which is corrected with the following factor
+curvfac = float32(0.5)
 
 #---FUNCTIONS
 #-------------------------------------------------------------------------------------------------------------
@@ -138,12 +158,43 @@ def gauss2d(params,x,y):
 #---load
 results_stack = []
 for pnum in range(len(analyses)):
-	results_stack.append(pickle.load(open(pickles+analyses[pnum][0],'r')))
+	results_stack.append(pickle.load(open(pickles+deprecated_pkl_dir+analyses[pnum][0],'r')))
 	
 #---publication-style plots, ENTH results
 if do_pubplot:
 	#---this is custom plot for IET manuscript
 	#---note overall grid is really 3 rows (systems) and 5 columns (3 for curvs, 2 for area)
+
+	#---file naming
+	if do_resid_filter:
+		figoutname = figoutnamebase+'-rmsd-filter-'+str(resid_filter)+'A-maxhfilter-'+\
+		str(maxhfilter[0])+'-'+str(maxhfilter[1])+'.png'
+	else:
+		figoutname = figoutnamebase+'-maxhfilter-'+str(maxhfilter[0])+'-'+str(maxhfilter[1])+'.png'
+
+	
+	#---modified for IET revisions stage 2014.06.13
+	fp = open(pickles+iet_figs_dir+'dat-'+figoutname[4:-4]+'.txt','w')
+	settinglist = [
+		'do_resid_filter',
+		'resid_filter',
+		'show_areas_on_master_plot',
+		'nbins',
+		'nbins_sigma',
+		'minval',
+		'maxval',
+		'minval_sigma',
+		'maxval_sigma',
+		'maxhfilter',
+		'maxhrange',
+		'maxhstep',
+		'sigmamax',
+		'which_orders',
+		'which_orders_extents',
+		'curvfac',
+		]
+	for name in settinglist:
+		fp.write(name.ljust(25)+':'.ljust(10)+str(globals()[name])+'\n')
 
 	#---plots
 	fig = plt.figure(figsize=figsize)
@@ -178,6 +229,8 @@ if do_pubplot:
 
 	#---plot maximum mean curvatures	
 	maxpeak = 0
+	#---modified for IET revisions stage 2014.06.13
+	fp.write('\n\noutputting curvatures\n')
 	for p in range(len(analyses)):
 		thisaxis = ax_hmax[p]
 		ccodes = analyses[p][1]
@@ -190,7 +243,8 @@ if do_pubplot:
 		valid_frames = [0,0,0]
 		for o in which_orders:
 			params = results_stack[p][order[o]].get(['type','params'])
-			maxhs = results_stack[p][order[o]].get(['type','maxhs'])
+			#---modified for IET revisions stage 2014.06.13 curvfac
+			maxhs = curvfac*results_stack[p][order[o]].get(['type','maxhs'])
 			maxhxys = results_stack[p][order[o]].get(['type','maxhxys'])
 
 			if do_resid_filter:
@@ -207,15 +261,28 @@ if do_pubplot:
 			hist0,binedge0 = numpy.histogram(validhs,bins=nbins,normed=False,weights=[1./len(validhs) 
 				for i in validhs],range=(minval,maxval))
 			mid0 = (binedge0[1:]+binedge0[:-1])/2
+			#---modified for IET revisions stage 2014.06.13
+			fp.write('analysis: '.ljust(10)+analyses[p][0].ljust(75)+str(mean(validhs)).ljust(30)+'+/- '+\
+				str(std(validhs)).ljust(30)+str(len(validhs)).ljust(20)+\
+				str(float(len(validhs))/len(maxhs)).ljust(20)+'\n')
 			if o == 1:
 				#thisaxis.plot(mid0,hist0,'-',c=ccodes[o],alpha=1,lw=2,label=name)
-				thisaxis.plot(mid0,hist0,'-',c=ccodes[o],alpha=1,lw=2)
+				#---modified for IET revisions stage 2014.06.13 to make it use steps
+				#---added ls = "steps" to recapitulate the histtype stepfilled option
+				#thisaxis.plot(mid0,hist0,'-',c=ccodes[o],alpha=1,lw=2,ls='steps-mid')
+				thisaxis.bar(binedge0[:-1],hist0,width=binedge0[1]-binedge0[0],color=ccodes[o],
+					alpha=1,lw=0,fill=True,ec=ccodes[o])
 			elif o == 0:
-				thisaxis.plot(mid0,hist0,'-',c=ccodes[o],alpha=1,lw=2)
+				#thisaxis.plot(mid0,hist0,'-',c=ccodes[o],alpha=1,lw=2,ls='steps-mid')
+				thisaxis.bar(binedge0[:-1],hist0,width=binedge0[1]-binedge0[0],color=ccodes[o],
+					alpha=1,lw=0,fill=True,ec=ccodes[o])
 			else:
-				thisaxis.plot(mid0,hist0,'-',c=ccodes[1],alpha=1.,lw=2)
-			thisaxis.fill_between(mid0,hist0,[0 for i in mid0],facecolor=ccodes[1],
-				alpha=0.2,interpolate=True)
+				#thisaxis.plot(mid0,hist0,'-',c=ccodes[1],alpha=1.,lw=2,ls='steps-mid')
+				thisaxis.bar(binedge0[:-1],hist0,width=binedge0[1]-binedge0[0],color=ccodes[1],
+					alpha=1,lw=0,fill=True,ec=ccodes[1])
+			#---modified for IET revisions stage 2014.06.13
+			#thisaxis.fill_between(mid0,hist0,[0 for i in mid0],facecolor=ccodes[1],
+			#	alpha=0.2,interpolate=True)
 			if max(hist0) > maxpeak: maxpeak = max(hist0)
 			meanslist[order[o]] = mean(validhs)
 			valid_frames[order[o]] = len(validhis)
@@ -233,11 +300,15 @@ if do_pubplot:
 		if a == 0:
 			ax.set_title(r'$\textbf{curvature}$',fontsize=16)
 		ax.set_ylim(0,1.2*maxpeak)
-		ax.axvline(x=0,ls='-',lw=1,c='k')
+		ax.axvline(x=0,ls='--',lw=2,c='k')
 		ax.get_yaxis().set_major_locator(MaxNLocator(nbins=6,prune='both'))
 		ax.grid(True)
 		ax.set_xlim(maxhrange)
 		ax.set_yticklabels([])
+		#---modified for IET revisions stage 2014.06.13
+		letterlist = ['a','b','c','d','e','f','g','h','i','j','k','l'][0:]
+		ax.text(0.03,0.8,r'$\mathbf{('+letterlist[a].capitalize()+')}$',transform=ax.transAxes,
+			fontsize=14)
 		if a == len(ax_hmax)-1:
 			ax.set_xticks(arange(maxhrange[0],maxhrange[1]+0.001,maxhstep))
 			ax.spines['bottom'].set_position(('outward', 10))
@@ -266,6 +337,7 @@ if do_pubplot:
 		thisaxis = ax_sigs[p]
 		params = results_stack[p][order[o]].get(['type','params'])
 		maxhs = results_stack[p][order[o]].get(['type','maxhs'])
+		#---
 		ccodes = analyses[p][1]
 		validhis = [i for i in range(len(maxhs)) if (10*abs(maxhs[i]) > maxhfilter[0] 
 			and abs(10*maxhs[i]) < maxhfilter[1])]
@@ -276,11 +348,34 @@ if do_pubplot:
 		hist0,binedge0 = numpy.histogram(sigma_x,bins=nbins_sigma,normed=True,density=True,
 			range=(minval_sigma,maxval_sigma))
 		mid0 = (binedge0[1:]+binedge0[:-1])/2
-		thisaxis.plot(mid0,hist0,c=ccodes[1],alpha=1.,lw=2)
+		#---modified for IET revisions stage 2014.06.13 to make it use steps
+		#thisaxis.plot(mid0,hist0,c=ccodes[1],alpha=1.,lw=2)
+		#thisaxis.bar(binedge0[:-1],hist0,width=binedge0[1]-binedge0[0],color=ccodes[1],
+		#	alpha=1,lw=0,fill=True,ec=ccodes[1])
 		hist1,binedge1 = numpy.histogram(sigma_y,bins=nbins_sigma,normed=True,density=True,
 			range=(minval_sigma,maxval_sigma))
 		mid1 = (binedge1[1:]+binedge1[:-1])/2
-		thisaxis.plot(mid1,hist1,c=ccodes[0],alpha=1.,lw=2)
+		#thisaxis.plot(mid1,hist1,c=ccodes[0],alpha=1.,lw=2)
+		#thisaxis.bar(binedge0[:-1],hist0,width=binedge0[1]-binedge0[0],color=ccodes[1],
+		#	alpha=1,lw=0,fill=True,ec=ccodes[1])
+		#---modified for IET revisions stage 2014.06.13
+		hist0,binedge0 = numpy.histogram(sigma_x+sigma_y,bins=nbins_sigma,normed=True,density=True,
+			range=(minval_sigma,maxval_sigma))
+		mid0 = (binedge0[1:]+binedge0[:-1])/2
+		thisaxis.bar(binedge0[:-1],hist0,width=binedge0[1]-binedge0[0],color=ccodes[1],
+			alpha=1,lw=0,fill=True,ec=ccodes[1])
+
+		fp.write('analysis: '.ljust(10)+analyses[p][0].ljust(75)+\
+			'sigma_x'.ljust(10)+str(mean(sigma_x)).ljust(30)+'+/- '+\
+			str(std(sigma_x)).ljust(30)+str(len(sigma_x)).ljust(10)+'\n')
+		fp.write('analysis: '.ljust(10)+analyses[p][0].ljust(75)+\
+			'sigma_y'.ljust(10)+str(mean(sigma_y)).ljust(30)+'+/- '+\
+			str(std(sigma_y)).ljust(30)+str(len(sigma_y)).ljust(10)+'\n')
+		fp.write('analysis: '.ljust(10)+analyses[p][0].ljust(75)+\
+			'sigma_xy'.ljust(10)+str(mean(sigma_x+sigma_y)).ljust(30)+'+/- '+\
+			str(std(sigma_x+sigma_y)).ljust(30)+str(len(sigma_x+sigma_y)).ljust(10)+'\n')
+		
+
 		if max(max(hist0),max(hist1)) > maxpeak: maxpeak = max(max(hist0),max(hist1))
 		sigmeans.append([mean(sigma_x),mean(sigma_y)])
 		sigmodes.append([mid0[argmax(hist0)],mid1[argmax(hist1)]])
@@ -299,6 +394,10 @@ if do_pubplot:
 			ax.set_xlabel('$\mathsf{\sigma_a,\sigma_b\,(nm)}$',fontsize=14)
 		else:
 			ax.set_xticklabels([])		
+		#---modified for IET revisions stage 2014.06.13
+		letterlist = ['a','b','c','d','e','f','g','h','i','j','k','l'][3:]
+		ax.text(0.82,0.8,r'$\mathbf{('+letterlist[a].capitalize()+')}$',transform=ax.transAxes,
+			fontsize=14)
 		'''
 		textline = 'means: ['+str('%3.1f'%sigmeans[a][0])+','+str('%3.1f'%sigmeans[a][1])+\
 			']\n'+'modes: ['+str('%3.1f'%sigmodes[a][0])+','+str('%3.1f'%sigmodes[a][1])+']'+\
@@ -313,7 +412,7 @@ if do_pubplot:
 	numframes = []
 	for p in range(len(analyses)):
 		thisaxis = ax_area[p]
-		mset = unpickle(pickles+results_stack[p][2].getnote('startpickle'))
+		mset = unpickle(pickles+structpkldir+results_stack[p][2].getnote('startpickle'))
 		vecs = mean(mset.vecs,axis=0)
 		area_per_tile = product(vecs[0:2])/100./((mset.griddims[0]-1)*(mset.griddims[1]-1))
 		target_zones = results_stack[p][2].get(['type','target_zones'])
@@ -364,6 +463,11 @@ if do_pubplot:
 		#---modification for extra axis here
 		elif a != 1:
 			ax.set_xticklabels([])		
+		#---modified for IET revisions stage 2014.06.13
+		letterlist = ['a','b','c','d','e','f','g','h','i','j','k','l'][6:]
+		ax.text(0.85,0.8,r'$\mathbf{('+letterlist[a].capitalize()+')}$',transform=ax.transAxes,
+			fontsize=12)
+
 
 	#---plot area histograms
 	minval_areas = 0
@@ -371,7 +475,7 @@ if do_pubplot:
 	maxfreq = 0
 	for p in range(len(analyses)):
 		thisaxis = ax_area_distn[p]
-		mset = unpickle(pickles+results_stack[p][2].getnote('startpickle'))
+		mset = unpickle(pickles+structpkldir+results_stack[p][2].getnote('startpickle'))
 		vecs = mean(mset.vecs,axis=0)
 		area_per_tile = product(vecs[0:2])/100./((mset.griddims[0]-1)*(mset.griddims[1]-1))
 		target_zones = results_stack[p][2].get(['type','target_zones'])
@@ -429,10 +533,15 @@ if do_pubplot:
 		ax.get_yaxis().set_major_locator(MaxNLocator(prune='both',nbins=4))
 		ax.get_xaxis().set_major_locator(MaxNLocator(prune='both',nbins=4))
 		#---disabled all frequency labels
-		if a == len(ax_area_distn)-1 and False:
+		if a == len(ax_area_distn)-1:
 			ax.set_xlabel('frequency',fontsize=14)
+			ax.set_xticklabels([])
 		else:
 			ax.set_xticklabels([])
+		#---modified for IET revisions stage 2014.06.13
+		letterlist = ['a','b','c','d','e','f','g','h','i','j','k','l'][9:]
+		ax.text(0.85,0.8,r'$\mathbf{('+letterlist[a].capitalize()+')}$',transform=ax.transAxes,
+			fontsize=12)
 
 	#---extra frame counter since frame counts different
 	ax = ax_area[1]
@@ -445,17 +554,15 @@ if do_pubplot:
 	#---extra legend for areas
 	outsidelegendax = ax_area_distn[-1]
 	axpos = outsidelegendax.get_position()
-	outlegend = outsidelegendax.legend(loc='right',prop={'size':12,'weight':'bold'})
+	outlegend = outsidelegendax.legend(loc='lower right',prop={'size':12,'weight':'bold'})
 	for legobj in outlegend.legendHandles:
 		legobj.set_linewidth(3.0)
 
-	#---finalize	
-	if do_resid_filter:
-		figoutname = figoutnamebase+'-rmsd-filter-'+str(resid_filter)+'A-maxhfilter-'+str(maxhfilter[0])+'-'+str(maxhfilter[1])+'.png'
-	else:
-		figoutname = figoutnamebase+'-maxhfilter-'+str(maxhfilter[0])+'-'+str(maxhfilter[1])+'.png'
-	plt.savefig(pickles+figoutname,dpi=500,bbox_inches='tight')
-	plt.show()
+	plt.savefig(pickles+iet_figs_dir+'/'+figoutname,dpi=500,bbox_inches='tight')
+	if 0: plt.show()
+	
+	#---modified for IET revisions stage 2014.06.13
+	fp.close()
 	
 #---summary plots
 if do_stacked_plot:

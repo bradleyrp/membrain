@@ -117,7 +117,7 @@ params_plot_settings = {
 	'smallfilt' : 0.001,
 	'hist_step' : 0.005,
 	'extent_range' : 32,
-	'filter_type' : 'mod2',
+	'filter_type' : 'mod1',
 	}
 
 #---needs notes on filter types
@@ -165,6 +165,34 @@ params_plot_master.append(
 		'geography' : geog,
 		},))
 	for geog in [['control','v614-120000-220000-200'],['control','v612-75000-175000-200']]
+		for aname in analysis_names
+		if (analysis_descriptors[aname])['nprots'] == 0]])
+
+#---plot parameter set "proteins_controls"
+params_plot_master_names.append('proteins_controls_pub')
+params_plot_master.append(
+	[[(aname,
+		dict({
+			'decay_z0' : 'zero',
+			'cutoff' : 100,
+			'fit_dynamics_type' : 'dynamic',
+			'z_filter' : 'inclusive',
+			'framecounts' : 500, 
+			'geography' : geog,
+			},))
+		for geog in ['proteins']] 
+			for aname in analysis_names 
+			if (analysis_descriptors[aname])['nprots'] > 0]+\
+	[[(aname,
+	dict({
+		'decay_z0' : 'zero',
+		'cutoff' : 100,
+		'fit_dynamics_type' : 'dynamic',
+		'z_filter' : 'inclusive',
+		'framecounts' : 500, 
+		'geography' : geog,
+		},))
+	for geog in [['control','v612-75000-175000-200']]
 		for aname in analysis_names
 		if (analysis_descriptors[aname])['nprots'] == 0]])
 

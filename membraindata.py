@@ -14,7 +14,27 @@ master_datatypes = {
 	'cells':{
 		'struct':{'frame':0,'monolayer':1,'type':2},
 		'struct_opts':{'type':{'points':0,'voronoi':1,'areas':2}},
-		'description':'',
+		'description':'Holds the list of raw points, the Voronoi mesh, and the area per neighborhood. These are often stored in separate pickles, with the other fields blanked out.',
+		},
+	'spanangle2':{
+		'struct':{'frame':0,'resid':1,'type':2},
+		'struct_opts':{'type': {'headspan':0,'headangle':1,'time':2,'resid':3}},
+		'description':'Holds the headgroup angle and headgroup span for use in AAMD bilayer simulations',
+		},
+	'c0map':{
+		'struct':{'frame':0},
+		'struct_opts':None,
+		'description':'holds interpolated C_0 map from mesoscale simulations',
+		},
+	'surfnorms':{
+		'struct':{'frame':0,'monolayer':1,'type':2,'lipid':3},
+		'struct_opts':{'type':{'normals','areas'}},
+		'description':'stores surface normal vectors',
+		},
+	'collect_c0maps':{
+		'struct':{'frame':0},
+		'struct_opts':None,
+		'description':'c0map holds data in stressmap pickles after integrating the voxel-wise stress tensors',
 		},
 	}
 
@@ -62,22 +82,21 @@ class MembraneData:
 # NEEDS COMMENTS
 	#---retrieve data
 	def get(self,*args,**kwargs):
-		print 'debug: get'
 		#---Flatten the data as necessary, or depending on the calculation
 		if 'flat' in kwargs.keys():
-			print 'debug: flat'
+			#print 'debug: flat'
 			flat = kwargs['flat']
 		else:
-			print 'debug: flat else'
-			print self.calctype
+			#print 'debug: flat else'
+			#print self.calctype
 			if (self.calctype == 'grvoronoi' or self.calctype == 'gr'):
 				flat = True
 			elif (self.calctype == 'triangles' or self.calctype == 'cells'):
 				flat = False
 			else:
 				flat = False
-		print 'debug: flat ='
-		print flat
+		#print 'debug: flat ='
+		#print flat
 		#---Identify dimensions to slice, and what their slice will be
 		keydims = []
 		slices = []
@@ -104,21 +123,21 @@ class MembraneData:
 			else:
 				slicer.append(slice(0,None))
 		slicer = tuple(slicer)
-		print 'slicer: '
-		print slicer
+		#print 'slicer: '
+		#print slicer
 		#---Return the data, flattened if desired
 		if flat:
 			return flatten(numpy.array(self.data)[slicer])
 		else:
-			print 'dbug: else return'
-			print type(numpy.array(self.data)[slicer])
-			print type(slicer)
-			print type(self.data)
-			tmpvar = numpy.array(self.data)[slicer]
-			print tmpvar[0]
-			tmpvar = numpy.array(self.data)
-			print tmpvar[0]
-			print self.data[0]
-			print self.data[0][0]
+			#print 'dbug: else return'
+			#print type(numpy.array(self.data)[slicer])
+			#print type(slicer)
+			#print type(self.data)
+			#tmpvar = numpy.array(self.data)[slicer]
+			#print tmpvar[0]
+			#tmpvar = numpy.array(self.data)
+			#print tmpvar[0]
+			#print self.data[0]
+			#print self.data[0][0]
 			return numpy.array(self.data)[slicer]
 

@@ -1,13 +1,14 @@
-#!/usr/bin/python -i
+#!/usr/bin/python
 
 from membrainrunner import *
 execfile('locations.py')
-execfile('header-aamd.py')
 
 #---DEFAULTS
 #-------------------------------------------------------------------------------------------------------------
 
 if 'batch_override' not in globals():
+
+	execfile('header-aamd.py')
 
 	#---settings
 	compare_phosphate_position = False
@@ -168,7 +169,7 @@ if 'calc_span' in routine:
 			whichframes = range(len(mset.universe.trajectory))
 			for fr in whichframes:
 				mset.gotoframe(fr)		
-				status('status: frame = '+str(fr+1)+'/'+str(len(whichframes)))
+				status('status: frame ',i=fr,looplen=len(whichframes))
 				results_by_frame = []
 				for res in residues:
 					coords = mset.universe.selectAtoms(\
@@ -397,7 +398,7 @@ if 'plot_apl_all_lipids' in routine:
 
 if 'plot_span' == routine:
 	
-	status('status: running plot_span'+'\n')
+	status('status: running plot_span')
 
 	nbins = 200
 	largest_area = hist_area_max
@@ -410,10 +411,10 @@ if 'plot_span' == routine:
 		mset = msets[analysis_names.index(aname)]
 		tmp = mset.getdata('spanangle2')
 		tmp2 = tmp.get(['type','headspan'])
-		raw_input('...break dude...')
-		
+
 		#---note due to a slight issue with the membraindata get function, this returns array of strings
 		data = [float(i) for j in tmp2 for i in j]
+		raw_input('...break dude...')
 		#---got some weird high numbers due to PBC maybe
 		data = [i for i in data if i < hist_area_max]
 		hist,binedges = histogram(data,bins=nbins,normed=True,range=lims)
@@ -537,7 +538,7 @@ if 'plot_snapshot' in routine:
 
 if 'plot_span_angle' == routine:
 	
-	status('status: starting plot_span_angle'+'\n')
+	status('status: starting plot_span_angle')
 	colorbar = False
 	fig = plt.figure()
 	ax = plt.subplot(111)
@@ -589,7 +590,7 @@ if 'plot_span_angle_summary' == routine:
 	ncols = max([len(i) for i in layout])	
 	flushvert = True
 	axgrid = [[[] for j in range(ncols)] for i in range(nrows)]
-	status('status: starting plot_span_angle_summary'+'\n')
+	status('status: starting plot_span_angle_summary')
 	colorbar = False
 	fig = plt.figure(figsize=(2*ncols,2.5*nrows))
 	gs = gridspec.GridSpec(nrows,ncols,wspace=(0. if flushvert else None))

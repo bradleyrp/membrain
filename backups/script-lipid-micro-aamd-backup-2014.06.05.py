@@ -1,5 +1,10 @@
 #!/usr/bin/python
 
+'''
+deprecated. formerly used in script-lipid-micro.py
+'''
+
+
 from membrainrunner import *
 execfile('locations.py')
 

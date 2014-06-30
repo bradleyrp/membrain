@@ -1,4 +1,4 @@
-#!/usr/bin/python
+#!/usr/bin/python -i
 
 from membrainrunner import *
 execfile('locations.py')
@@ -22,6 +22,7 @@ if 'batch_override' not in globals() or not batch_override:
 		'v2005',
 		'v2006',
 		'v2008',
+		'v2013',
 		]
 
 	routine = [
@@ -33,14 +34,14 @@ if 'batch_override' not in globals() or not batch_override:
 		][:2]
 
 	#---select a single cgmd experiment and a panel of meso experiments, from which c0ask will be used
-	batch_cgmd = cgmd_avail[-1]
-	batch_meso = meso_avail[3]
-	c0ask = 0.0541
+	batch_cgmd = cgmd_avail[0]
+	batch_meso = meso_avail[-1]
+	c0ask = 0.0615
 	
 	#---set curvature extent from fixed parameter in the toc, assuming isotropic
 	r_2 = (meso_expt_toc[batch_meso])['R_2']
 	
-	showplots = True
+	showplots = False
 	
 	#---bookkeeping
 	p_interest = (meso_expt_toc[key])['parameter_name']
@@ -113,7 +114,14 @@ class ModeCouple():
 		#---units of hqs are unspecified here but then set by autocorr
 		hqs = [fftwrap(mset.surf[i])/double(m*n) for i in range(len(mset.surf))]
 		#---units of incoming c0s must be in the units specified by mset.lenscale
+
+		print 'max c0s incoming = '+str(array(c0s).max())
+
 		cqs = [fftwrap(mset.lenscale*array(c0s[i]))/double(m*n) for i in range(len(c0s))]
+		
+		print 'max cqs = '+str(array(cqs).max())
+		print 'lenscale = '+str(mset.lenscale)
+		
 		Lx,Ly = mean(mset.vecs,axis=0)[0:2]
 		cm,cn = [int(round(i/2.-1)) for i in shape(hqs[0])]
 		qmags = mset.lenscale*array([[sqrt(((i-cm)/((Lx)/1.)*2*pi)**2+((j-cn)/((Ly)/1.)*2*pi)**2) 
@@ -123,15 +131,25 @@ class ModeCouple():
 		center = [cm,cn]
 		cqsa = autocorr(cqs,direct=0,lenscale=1.0)
 		cqsb = autocorr(cqs,direct=1,lenscale=1.0)
+
+		print 'max cqsa = '+str(array(cqsa).max())
+		print 'max cqsb = '+str(array(cqsb).max())
+		print 'max hqsa = '+str(array(hqsa).max())
+
 		qmagst = qmags[0:(-1 if m%2==0 else None),0:(-1 if n%2==0 else None)]
 		mt,nt = shape(hqsa[0])
 		area = double(mean([mset.vec(i)[0]*mset.vec(i)[1] for i in mset.surf_index])/mset.lenscale**2)
 		scalefac = mset.undulate_kappa*area
+		#---?
+		print 'mset.lenscale = '+str(mset.lenscale)
 		#---compute terms which contribute to the elastic energy in 2D
 		self.t2d[0] = mean((abs(array(hqsa)))**2,axis=0)
 		self.t2d[1] = mean(abs(hqsa)*abs(cqsb),axis=0)
 		self.t2d[2] = mean(abs(cqsa*hqsb),axis=0)
 		self.t2d[3] = mean(abs(cqsa*cqsb),axis=0)
+		
+		print 'max right after t2d = '+str(max(collapse_spectrum(qmagst,self.t2d[3])))
+		
 		#---compute terms which contribute to the elastic energy in 2D, errors
 		self.t2de[0] = std((abs(array(hqsa)))**2,axis=0)
 		self.t2de[1] = std(abs(hqsa)*abs(cqsb),axis=0)
@@ -174,6 +192,9 @@ class ModeCouple():
 		self.qmagst = qmagst
 		#---store c0s in nm units
 		self.c0s = [mset.lenscale*array(c0s[i]) for i in range(len(c0s))]
+		print 'max = '+str(array(self.t2d[3]).max())
+		print 'max = '+str(max(collapse_spectrum(qmagst,self.t2d[3])))
+		print shape(mset.surf[0])
 
 def spectrum_summary(fig=None,gs=None,lowlim=10**-14,titletext='undulations'):
 	'''Plots the 1D spectrum from global variables.'''
@@ -245,6 +266,9 @@ def spectrum_summary(fig=None,gs=None,lowlim=10**-14,titletext='undulations'):
 			if 0: xdat,ydat = mscs[m].t1d[3][:,0],mscs[m].t1d[3][:,1]
 			xdat = collapse_spectrum(mscs[m].qmagst,mscs[m].qmagst)
 			ydat = collapse_spectrum(mscs[m].qmagst,mscs[m].t2d[3])
+			
+			print 'min qmagst '+a+' = '+str(min(xdat))
+			print 'max c0c0 for '+a+' = '+str(max(ydat))
 
 			plotobj = axl.scatter(xdat,ydat,color=colord,marker=('x' if m==0 else '+'),s=20,
 				label='',alpha=1,zorder=4,lw=1.5)
@@ -714,7 +738,7 @@ if 'checkplot' in routine:
 
 #---comparison of curvature between MESO and CGMD methods
 #---plots height-curvature correlation alongsize structure and variations
-if 'masterplot' in routine:		
+if 0 and 'masterplot' in routine:		
 	#---fixed limits for making smooth gifs
 	extremz_checkplot_global = -2.5,2.5
 	extrems_checkplot_global = 2.0

@@ -33,6 +33,7 @@ hist_area_max = 140
 
 all_batches = [
 	'calc_apl',
+	'calc_apl_nochl',
 	'calc_span',
 	'snapshot',
 	'phosphate_position_apl',
@@ -48,7 +49,7 @@ all_batches = [
 	'protonation',
 	'plot_span_angle',
 	'plot_span_angle_summary',
-	][3:4]
+	][5:6]
 
 #---BATCH
 #-------------------------------------------------------------------------------------------------------------
@@ -56,6 +57,9 @@ all_batches = [
 for batch in all_batches:
 	if batch ==	'calc_apl':
 		routine = 'calc_apl'
+	elif batch ==	'calc_apl_nochl':
+		routine = 'calc_apl'
+		selector_override = 'no_chl'
 	elif batch ==	'calc_span':
 		routine = 'calc_span'
 	elif batch == 'phosphate_position_apl':
@@ -77,8 +81,9 @@ for batch in all_batches:
 			'v531-40000-90000-50',
 			'v532-40000-90000-50',
 			'v533-40000-90000-50',
+			'v534-20000-25000-10',
 			'v534-40000-90000-50',
-			]
+			][:-1]
 	elif batch == 'asymmetric_apl':
 		routine = 'plot_apl'
 		resname_group = 'all'
@@ -114,8 +119,9 @@ for batch in all_batches:
 			'v531-40000-90000-50',
 			'v532-40000-90000-50',
 			'v533-40000-90000-50',
+			'v534-20000-25000-10',
 			'v534-40000-90000-50',
-			]
+			][:-1]
 	elif batch == 'asymmetric_span':
 		routine = 'plot_span'
 		resname_group = 'all'
@@ -179,6 +185,7 @@ for batch in all_batches:
 			'v511-40000-90000-50',
 			'v533-40000-90000-50',
 			'v534-40000-90000-50',
+			'v534-20000-25000-10',
 			'v514-22000-32000-10',
 			'v515-20000-30000-10',
 			'v530-40000-65000-50',
@@ -204,7 +211,7 @@ for batch in all_batches:
 			['v530-40000-90000-50','v531-40000-90000-50','v532-40000-90000-50'],
 			['v509-40000-90000-50','v510-40000-90000-50','v511-40000-90000-50'],
 			['v514-22000-32000-10','v515-20000-30000-10'],
-			['v533-40000-90000-50','v534-40000-90000-50'],
+			['v533-40000-90000-50','v534-20000-25000-10',],
 			]
 		rightlabels = [(analysis_descriptors[aname])['composition_name']+' bilayer' 
 			for aname in [
@@ -225,8 +232,8 @@ for batch in all_batches:
 			(analysis_descriptors[aname])['selector'] = selector_aamd_asymmetric_no_chl
 		flaglist.append('no_chl')
 
-	status('status: routine = '+routine+'\n')
-	status('status: analysis_names = '+str(analysis_names)+'\n')
+	status('status: routine = '+routine)
+	status('status: analysis_names = '+str(analysis_names))
 
 	#---loop over requested analyses
 	execfile('script-aamd-apl.py')

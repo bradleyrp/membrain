@@ -1,4 +1,4 @@
-#!/usr/bin/python
+#!/usr/bin/python -i
 
 interact = True
 from membrainrunner import *
@@ -18,9 +18,10 @@ analysis_names = [
 	'v614-40000-140000-200',
 	'v612-10000-80000-200',
 	'v550-300000-400000-200',
-	'v616-110000-209900-200',
 	'v616-210000-310000-200',
-	][-2:]
+	'v701-60000-160000-200',
+	'v550-300000-400000-200',
+	][-3:]
 plot_reord = analysis_names
 routine = [
 	'plot',
@@ -29,9 +30,10 @@ routine = [
 	'video_height',
 	'video_height_cat',
 	'extrema_dynamics',
-	][-2:-1]
+	][1:2]
 bigname = 'v616-v614-v612-v550'
 bigname = 'v616-combine'
+bigname = 'v616-v701-v550'
 panel_nrows = [1,2][0]
 
 #---FUNCTIONS
@@ -280,18 +282,22 @@ if 'plot_mean_z' in routine:
 		for i in analysis_descriptors[a]: vars()[i] = (analysis_descriptors[a])[i]
 		m = analysis_names.index(a)
 		mset = msets[m]
-		if protein_pkl != None: mset_protein = unpickle(pickles+protein_pkl)
-		else: mset_protein = mset
+		#if protein_pkl != None: mset_protein = unpickle(pickles+protein_pkl)
+		#if nprots == 0:
+		#else: mset_protein = mset
+		mset_protein = mset
 		if panel_nrows > 1:
 			ax = fig.add_subplot(gs[m/(len(msets)/panel_nrows),int(m%(floor(len(msets)/panel_nrows)))])
 		else:
 			ax = fig.add_subplot(gs[m])
-		ax.set_title(label,fontsize=fsaxtitle)
+		ax.set_title(label,fontsize=fsaxtitle-2)
 		im = plotter2d(ax,mset,dat=mean(mset.surf,axis=0),tickshow=True,
 			label_style='xy',lims=[-1*extremum,extremum],lognorm=False,
 			cmap=mpl.cm.RdBu_r,fs=fsaxlabel)
-		if protein_pkl == None:
-			print a
+		#if protein_pkl == None:
+		#	print a
+		#	plothull(ax,mean(mset_protein.protein,axis=0),mset=mset_protein,c='k',subdivide=nprots)
+		if nprots > 0:
 			plothull(ax,mean(mset_protein.protein,axis=0),mset=mset_protein,c='k',subdivide=nprots)
 		if m != 0: ax.set_ylabel('')
 		if m == len(msets)-1 or (panel_nrows > 1 and 
@@ -301,9 +307,11 @@ if 'plot_mean_z' in routine:
 				bbox_transform=ax.transAxes,
 				borderpad=0)
 			cbar = plt.colorbar(im,cax=axins,orientation="vertical")
-			plt.setp(axins.get_yticklabels(),fontsize=fsaxlabel)
-			axins.set_ylabel(r'$\left\langle H(x,y)\right\rangle \:(\mathrm{{nm}^{-1}})$',
-				fontsize=fsaxlabel,rotation=270)
+			plt.setp(axins.get_yticklabels(),fontsize=fsaxlabel-4)
+			axins.set_ylabel(r'$\left\langle z(x,y)\right\rangle \:(\mathrm{{nm}})$',
+				fontsize=fsaxlabel-2,rotation=270)
+		plt.setp(ax.get_yticklabels(),fontsize=fsaxlabel-6)
+		plt.setp(ax.get_xticklabels(),fontsize=fsaxlabel-6)
 	fig.set_size_inches(fig.get_size_inches()[0]*1.5,fig.get_size_inches()[1]*1.5)
 	gs.tight_layout(fig,h_pad=0.2,w_pad=0.2)
 	plt.savefig(pickles+'fig-mean_z_map-'+bigname+'.png',dpi=500,bbox_inches='tight')

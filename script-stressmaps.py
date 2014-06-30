@@ -1,4 +1,4 @@
-#!/usr/bin/python
+#!/usr/bin/python -i
 
 from membrainrunner import *
 execfile('locations.py')
@@ -30,6 +30,9 @@ the other parameters are all smoothing parameters
 hence the way to calculate the c0 maps is to do the integration, dump the then-much-smaller data
 and smooth it seperately
 '''
+
+#---temporary
+execfile('header-cgmd.py')
 
 #---analysis plan
 analysis_descriptors = {
@@ -87,7 +90,7 @@ analysis_names = [
 	'v612-75000-175000-200',
 	'v550-300000-400000-200',
 	'v614-40000-140000-200'
-	][:-1]
+	][:3]
 
 #---methods
 routine = [
@@ -96,13 +99,13 @@ routine = [
 	'video',
 	'plot_extendview',
 	'plot_histograms',
-	'plot_2dhistograms'][-2:-1]
-span_sweep = [1,2,3,4,5,6]
+	'plot_2dhistograms'][10:-10]
+span_sweep = [1,2,3,4,5,6,7,8,9,10,11,12]
 flatz0 = True #---use a flat plane z0=0 instead of z0=z(x,y) for the integral
 bigname = '.'.join(analysis_names)
-do_blur = False #---use Gaussian blur
+do_blur = True #---use Gaussian blur !!! this is automatic for the regular plot
 do_blur_first = False #---use Gaussian blur before taking the mean (has no effect)
-smooth_wid = 2 #---sigma for the Gaussian blur
+smooth_wid = 1.2 #---sigma for the Gaussian blur
 window_half = 140 #---half-width in Angstroms of the zoom window for the plot_extendview
 
 #---units
@@ -121,7 +124,7 @@ plot_menu = [
 	'neighborhood_unfiltered'
 	][-1:]
 smooth_mean = 1 #---method: histogram > smooth > sum frames > norm (r)
-plot_span = 4 #---method: join all C0 for one span, all systems > histogram
+plot_span = 8-1 #---method: join all C0 for one span, all systems > histogram
 systems_join_span_histogram_subset = False #---method: join all C0 for one span, all systems > histogram
 
 #---FUNCTIONS
@@ -143,7 +146,7 @@ def stressmap_panel_plot(dat,fig,fr=None,cmap=None,vmax=None,vmin=None,altdat=No
 		axeslist.append(ax)
 		im = ax.imshow((dat[p]).T,interpolation='nearest',origin='lower',
 			cmap=cmap,vmax=vmax,vmin=vmin)
-		if altdat != None and altdat[p].protein != []:
+		if altdat != None and (not hasattr(altdat[p],'protein') or altdat[p].protein != []):
 			plothull(ax,msets[p].protein[fr],griddims=shape(md_maps[0][0].data)[1:],
 				vecs=mean(msets[p].vecs,axis=0),subdivide=nnprots[p],alpha=0.35,c='k')
 		ax.set_xlabel(r'$x\:(\mathrm{nm})$',fontsize=fsaxlabel)
@@ -176,7 +179,7 @@ if 'calc_c0maps' in routine or ('md_maps' not in globals() and 'calc_c0maps' not
 		for i in analysis_descriptors[aname]: vars()[i] = (analysis_descriptors[aname])[i]
 		grofile,trajfile = trajectory_lookup(analysis_descriptors,aname,globals())
 		if 'structure_pkl' not in globals() or structure_pkl == None:
-			msetfile = 'pkl.structures.'+specname_pickle(sysname,trajfile[0])+'.pkl'
+			msetfile = 'pkl.structures.'+spacetag+specname_pickle(sysname,trajfile[0])+'.pkl'
 		else: msetfile = structure_pkl
 		mset = unpickle(pickles+msetfile)
 		msets.append(mset)
@@ -243,6 +246,7 @@ if 'plot' in routine:
 	#---the following selects the span
 	panelplots = [scipy.ndimage.filters.gaussian_filter(numpy.tile(mean(md_maps[i][plot_span].data,axis=0),
 		(3,3)),smooth_wid)[m:2*m,n:2*n] for i in range(len(md_maps))]
+	panelplots = [array(i)/conv_fac for i in panelplots]
 	vmin = array(panelplots).min()
 	vmax = array(panelplots).max()
 	extrem = max(abs(vmax),abs(vmin))
@@ -251,8 +255,12 @@ if 'plot' in routine:
 	fig = plt.figure()
 	gs = stressmap_panel_plot(panelplots,fig,vmax=vmax,vmin=vmin,altdat=msets)
 	fig.set_size_inches(fig.get_size_inches()[0]*1.5,fig.get_size_inches()[1]*1.5)
-	gs.tight_layout(fig,h_pad=0.6,w_pad=0.6)
-	plt.savefig(pickles+'fig-stressmap-'+bigname+'.png',dpi=300,bbox_inches='tight')
+	#gs.tight_layout(fig,h_pad=0.6,w_pad=0.6)
+	plt.savefig(pickles+'fig-stressmap-'+bigname+\
+		'-span'+str(span_sweep[plot_span])+\
+		('-blur'+str(smooth_wid) if do_blur else '')+\
+		('-blurfirst'+str(smooth_wid) if do_blur_first else '')+\
+		'.png',dpi=300,bbox_inches='tight')
 	plt.show()
 	
 #---plot with zoom
@@ -765,7 +773,7 @@ for plot_type in plot_menu:
 		for ax in statsaxs:
 			ax.grid(True)
 			ax.get_yaxis().set_major_locator(mpl.ticker.MaxNLocator(prune='both',nbins=4))
-			ax.set_xlabel(r'$\left|\mathbf{r}_{max}\right|\,\mathrm{(nm)}$',fontsize=fsaxlabel)
+			ax.set_xlabel(r'$\left|\mathbf{r}_{min}\right|\,\mathrm{(nm)}$',fontsize=fsaxlabel)
 		#---peak distributions
 		ax = fig.add_subplot(gs1[1])
 		for j in range(len(allhists)):
@@ -816,7 +824,7 @@ for plot_type in plot_menu:
 			ax.get_xaxis().set_major_locator(mpl.ticker.MaxNLocator(prune='both',nbins=7))
 			ax.set_xlabel(r'$\mathsf{C_{0}(nm^{-1})}$',fontsize=fsaxlabel)
 			plt.setp(ax.get_xticklabels(),fontsize=fsaxlabel)
-			ax.set_xlabel(r'$\left|\mathbf{r}_{max}\right|\,\mathrm{(nm)}$',fontsize=fsaxlabel)
+			ax.set_xlabel(r'$\left|\mathbf{r}_{min}\right|\,\mathrm{(nm)}$',fontsize=fsaxlabel)
 		plt.savefig(pickles+'fig-stressmap-overview-'+bigname+('.flat' if flatz0 else '')+\
 			'-span'+str(span_sweep[plot_span])+\
 			('-blur'+str(smooth_wid) if do_blur else '')+\

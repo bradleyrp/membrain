@@ -1,5 +1,9 @@
 #!/usr/bin/python
 
+'''
+note that this was previously called by script-lipid-micro.py before switching to proper header files
+'''
+
 #---AAMD
 
 director_aamd_symmetric = ['name P and not resname CHL1','name C218','name C318']

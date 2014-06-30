@@ -19,6 +19,8 @@ import random
 import subprocess
 import re
 import code
+import datetime
+import operator
 
 #---Set up visualization
 os.environ['ETS_TOOLKIT'] = 'qt4'
@@ -37,24 +39,12 @@ from membraindata import *
 
 #---FUNCTIONS
 #-------------------------------------------------------------------------------------------------------------
-	
-def status(string,start=None,i=None,looplen=None):
-	'''Print status to the screen also allows for re-writing the line. Duplicate from membrainrunner.'''
-	#---display a refreshable string	
-	if start == None and looplen != None and i != None:		
-		if i+1 == looplen:
-			print '\r'+string+'  ...  '+str(i+1).rjust(7)+'/'+str(looplen).ljust(8)+'\n',
-		else:
-			print '\r'+string+'  ...  '+str(i+1).rjust(7)+'/'+str(looplen).ljust(8),
-			sys.stdout.flush()
-	#---estimate the remaining time given a start time, loop length, and iterator
-	elif start != None and i != None and looplen != None:
-		esttime = (time.time()-start)/(float(i+1)/looplen)
-		print '\r'+string.ljust(20)+str(abs(round((esttime-(time.time()-start))/60.,1))).ljust(10)+\
-			'minutes remain',
-		sys.stdout.flush()
-	#---standard output here
-	else: print string
+
+#---execute membrainrunner.py only to get the correct status function
+#---check the parent directory in case we are executing in a subfolder
+if os.path.isfile('membrainrunner.py'): execfile('membrainrunner.py')
+elif os.path.isfile('../membrainrunner.py'): execfile('../membrainrunner.py')
+else: raise Exception('except: cannot locate membrainrunner.py')
 
 #---MEMBRANESET CLASS
 #-------------------------------------------------------------------------------------------------------------
@@ -129,8 +119,33 @@ class MembraneSet:
 
 #---Loading functions
 
-	def load_trajectory(self,files,start=None,skip=None,end=None,resolution=None,lenscale=None):
-		'''Load the molecular dynamics trajectory.'''
+	def load_trajectory(self,files,resolution=None,lenscale=None):
+		"""Load a molecular dynamics trajectory into the MembraneSet instance.
+
+        This function takes a structure and trajectory file and creates a Universe instance from the
+        MDAnalysis library which serves as a member of MembraneSet. The function also populates meta-data 
+        inside the MembraneSet instance which keep track of the frames and timining of the trajectory.
+
+        Args:
+           files (tuple): A tuple containing the path to the structure (usually a GRO file) and trajectory for
+           the target simulation.
+
+        Kwargs:
+           resolution (str): Specify either "CGMD" or "AAMD" to denote the "graining" of simulation. This is
+           only used in a few functions, for bookkeeping purposes.
+           
+           lenscale (float): Set the natural lengthscale of the incoming data. Since this function uses the
+           MDAnalysis package, the default value is 10, corresponding to 10 Angstroms, so that all 
+           downstream units are in nanometers.
+           
+        You never call this class before calling :func:`public_fn_with_sphinxy_docstring`.
+
+        .. note::
+
+        	An example of intersphinx is this: you **cannot** use :mod:`pickle` on this class.
+
+        """
+		
 		self.lenscale = lenscale if lenscale != None else 10.
 		if resolution != None:
 			self.resolution = resolution
@@ -282,8 +297,7 @@ class MembraneSet:
 					getchildren()]].index('boundary')
 				nonbounds = list(where(array(map(float,root[0].find('Piece').find('PointData').\
 					getchildren()[boundsind].text.split()))==0.0)[0])
-			if index%100 == 0:
-				print 'reading vtu file number '+str(index)
+			status('status: reading vtu file number',i=whichframes.index(index),looplen=len(whichframes))
 			coord = root[0].find('Piece').find('Points').find('DataArray').text.split()
 			coord = map(float,coord)
 			n = coord.__len__()/3
@@ -421,7 +435,7 @@ class MembraneSet:
 	def surfacer(self,skip=1,interp='best',lenscale=None):
 		'''Interpolate the mesoscale bilayers.'''
 		for fr in range(0,len(self.xyzs),skip):
-			status('status: interpolating splines, '+str(fr)+'/'+str(len(range(0,len(self.xyzs),skip))))
+			status('status: interpolating splines',i=fr,looplen=len(range(0,len(self.xyzs),skip)))
 			#---Nb currently set for VTU files from RWT simulations. Needs explained.
 			vecs = self.vecs[fr]
 			grid = self.griddims[0],self.griddims[1]
@@ -431,7 +445,6 @@ class MembraneSet:
 			rezip = self.rezipgrid(res1,diff=1)
 			self.surf.append(rezip-mean(rezip))
 			self.surf_index.append(fr)
-		print '\n'
 		#---scale box vectors by the correct length scale, deprecated
 		if 0:
 			self.vecs = [[j*self.lenscale for j in i] for i in self.vecs]
@@ -441,7 +454,7 @@ class MembraneSet:
 		'''Interpolate any quantity, as long as you supply it in the order of the xyz positions.'''
 		interpdata = []
 		for fr in range(0,len(self.xyzs),skip):
-			status('status: interpolating splines, '+str(fr)+'/'+str(len(range(0,len(self.xyzs),skip))))
+			status('status: interpolating splines',i=fr,looplen=len(range(0,len(self.xyzs),skip)))
 			#---Nb currently set for VTU files from RWT simulations. Needs explained.
 			vecs = self.vecs[fr]
 			grid = self.griddims[0],self.griddims[1]
@@ -451,7 +464,6 @@ class MembraneSet:
 			res1 = self.makemesh(res0,vecs,grid,method=interp)
 			rezip = self.rezipgrid(res1,diff=1)
 			interpdata.append(rezip)
-		print '\n'
 		return interpdata
 			
 	def midplaner(self,selector,rounder=4.0,framecount=None,start=None,end=None,
