@@ -41,7 +41,7 @@ def regen_mesosims(cur):
 	#---if mesosim_datastore table already exists, drop it (beware)
 	cur.execute("select * from information_schema.tables where table_name=%s", ('mesosims_datastore',))
 	if bool(cur.rowcount):
-		status('status: mesosims table exists')
+		status('status: mesosims_datastore table exists')
 		msg = 'status: okay to drop the table?'
 		shall = True if raw_input("%s (y/N) " % 'status: okay to drop the table?').lower() == 'y' else False
 		confirmed = True if raw_input("%s (y/N) " % 'status: confirmed?').lower() == 'y' else False
@@ -59,7 +59,8 @@ def regen_mesosims(cur):
 
 	#---load the mesosims table with the appropriate parameters
 	for param in param_names:
-		if 0: cur.execute("ALTER TABLE mesosims ADD COLUMN %s %s" % (param,sqlvartypes[param_types[param]],))
+		if 0: cur.execute("ALTER TABLE mesosims ADD COLUMN %s %s" \
+			% (param,sqlvartypes[param_types[param]],))
 		cur.execute('ALTER TABLE mesosims ADD COLUMN '+param+' '+sqlvartypes[param_types[param]])
 		conn.commit()
 	
@@ -168,7 +169,4 @@ for simpath in validpaths:
 		', '.join(["%("+i+")s" for i in ['callsign','path']+param_names])+');',
 		thisdict)
 	conn.commit()
-
-
-'INSERT INTO mesosims ('+','.join(['callsign','path']+param_names)+') VALUES ('+', '.join(["%("+i+")s" for i in ['callsign','path']+param_names])+');'
 

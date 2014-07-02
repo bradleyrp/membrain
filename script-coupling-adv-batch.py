@@ -1,4 +1,4 @@
-#!/usr/bin/python
+#!/usr/bin/python -i
 
 from membrainrunner import *
 execfile('locations.py')
@@ -85,7 +85,7 @@ analysis_descriptors = {
 #-------------------------------------------------------------------------------------------------------------
 
 #---selection criteria
-select_criteria_meso = {'callsign':'v2014'}
+select_criteria_meso = {'callsign':'v2015'}
 cgmd_avail = [
 	'v550-300000-400000-200',
 	'v614-120000-220000-200',
@@ -547,7 +547,8 @@ if master_spectrum_dict == None:
 			bigname = '-'.join(analysis_names)
 			execfile('script-coupling-adv.py')
 			del msets,mscs,collect_c0s
-	pickledump(master_spectrum_dict,'pkl.bilayer-coupling-sweep.'+batchname+'.pkl',directory=pickles)
+	if master_spectrum_dict != {}:
+		pickledump(master_spectrum_dict,'pkl.bilayer-coupling-sweep.'+batchname+'.pkl',directory=pickles)
 
 #---residual sweep parameters
 cgmd_list = ['v550-300000-400000-200','v614-120000-220000-200','v616-210000-310000-200']
@@ -561,7 +562,7 @@ meso_keys = [i for i in analysis_descriptors.keys()
 	if (analysis_descriptors[i]['simtype']=='meso')]
 a0 = 1./(master_spectrum_dict[meso_keys[0]])['lenscale']
 #---generate a list of curvatures in the mesoscale simulations
-if 1 or 'print_new_c0_vals' in routine:
+if 0 or 'print_new_c0_vals' in routine:
 	lister = [0.002, 0.004, 0.006, 0.008, 0.01, 0.015, 0.02, 0.022, 
 		0.025, 0.028, 0.03, 0.035, 0.04, 0.045, 0.05]
 	lister = [0.002, 0.004, 0.006, 0.008, 0.01, 0.011, 0.012, 0.013, 0.014, 0.015, 0.016, 0.017, 0.018, 
@@ -569,7 +570,6 @@ if 1 or 'print_new_c0_vals' in routine:
 		0.036, 0.038, 0.04, 0.045, 0.05]
 	lister = [0.01,0.018,0.024,0.030]
 	print '( \''+'\' \''.join(['{0:.4f}'.format(round(i*a0,4)) for i in lister])+'\' )'
-raw_input('...')
 
 #---loop over comparisons
 if 'comp' not in globals():
@@ -591,7 +591,7 @@ if 'comp' not in globals():
 				if (analysis_descriptors[i]['simtype']=='meso')] # and analysis_descriptors[i]['C_0'] > 0
 			cgmd_keys = [i for i in analysis_descriptors.keys() if analysis_descriptors[i]['simtype']=='md']
 			#---sorting the keys
-			sortvals = ['C_0','kappa']
+			sortvals = ['kappa','C_0']
 			valpairs = [[(analysis_descriptors[i])[j] for j in sortvals] for i in meso_keys]
 			reord = sorted(enumerate(valpairs),key=operator.itemgetter(1))
 			meso_keys = [meso_keys[i[0]] for i in reord]

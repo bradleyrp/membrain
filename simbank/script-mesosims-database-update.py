@@ -29,7 +29,7 @@ else: raise Exception('except: journal directory exists')
 cwd = os.path.realpath('.')+'/'
 files_to_log = ['header-mesosims-database.py',sys.argv[0].strip('./')]
 for f in files_to_log: os.system('cp '+cwd+f+' '+loggerdir+'/'+logname+'/')
-logfile = loggerdir+logname+'/log-'+logname
+#logfile = loggerdir+logname+'/log-'+logname
 
 from membrainrunner import *
 execfile('../locations.py')
@@ -218,6 +218,9 @@ def load_dataref_table(dataref_key,intable):
 	for metadat,rowdict in intable:
 		metadat['parent_mesosims'] = rowdict['id']
 		#---extra metadata added here
+		#---? should the startframe variable be used here
+		#---? this function is loading the dataref table from previously created pkls
+		#---? so it should get the frame counts from there
 		metadat['startframe'] = startframe
 		metadat['endframe'] = endframe
 		metadat['lenscale'] = lenscale
@@ -279,8 +282,15 @@ def calculate_structures(paramdict,start,end,lenscale):
 			if 'c_0' in params.keys(): params['C_0'] = params['c_0']
 			params['hascurv'] = True if params['C_0'] > 0 else False
 			params['testname'] = params['callsign']+'-C_0-'+str(params['C_0'])
-		#---enabled the lenscale when testing the code on older pickles not stored in rundir
-		if 0: params['lenscale'] = lenscale
+			
+		#---? NEEDS EXPLAINED, rectify with dataref loader above
+		
+		params['startframe'] = startframe
+		params['endframe'] = endframe
+		params['nbase'] = params['gsize']			
+		
+		#---lenscale was previously enabled for older pickles, disabled for error checking C_0 spectra
+		params['lenscale'] = lenscale
 		params['timestamp_created'] = \
 			datetime.datetime.fromtimestamp(time.time()).strftime('%Y.%m.%d.%H%M.%S')
 		rundirnum = int(params['path'].split('/')[-1].split('-')[1])
@@ -291,12 +301,13 @@ def calculate_structures(paramdict,start,end,lenscale):
 			'rundir-'+str(rundirnum)+\
 			'.pkl'
 		mset = unpickle(pickles+pklname)
-		status('status: checking for structure pickle, '+params['testname'])
+		print params.keys()
+		status('status: checking for structure pickle '+pickles+pklname)
 		if mset == None:
 			status('status: calculation = '+pklname)
 			mset = MembraneSet()
-			status('status: computing structure, '+params['testname'])
-			c0sraw = array(mset.load_points_vtu(params['locate'],extra_props='induced_cur',
+			status('status: computing structure '+params['path'])
+			c0sraw = array(mset.load_points_vtu(params['path'],extra_props='induced_cur',
 				start=params['startframe'],end=params['endframe'],nbase=params['nbase'],
 				lenscale=lenscale,prefix='EQUIB-conf-'))[:,0]
 			mset.surfacer()
@@ -349,7 +360,7 @@ for calctype in calctypes:
 		needs = missing_calcs(calctype)
 
 #---settings
-if 'structure' in calctypes: needs = [i for i in needs if int(i['callsign'][1:]) == 2014]
+if 'structure' in calctypes: needs = [i for i in needs if int(i['callsign'][1:]) == 2015]
 
 #---computations
 if 'structure' in calctypes: calculate_structures(needs,startframe,endframe,lenscale)

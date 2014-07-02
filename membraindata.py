@@ -36,6 +36,11 @@ master_datatypes = {
 		'struct_opts':None,
 		'description':'c0map holds data in stressmap pickles after integrating the voxel-wise stress tensors',
 		},
+	'polyangles':{
+		'struct':{'frame':0,'angles':1},
+		'struct_opts':None,
+		'description':'stores the angles along a polymer chain',
+		},
 	}
 
 #---MEMBRANEDATA CLASS
