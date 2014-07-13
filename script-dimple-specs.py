@@ -164,7 +164,7 @@ params_plot_master.append(
 		'framecounts' : 500, 
 		'geography' : geog,
 		},))
-	for geog in [['control','v614-120000-220000-200'],['control','v612-75000-175000-200']]
+	for geog in [['control','v614-120000-220000-200'],['control','v612-75000-175000-200']][:]
 		for aname in analysis_names
 		if (analysis_descriptors[aname])['nprots'] == 0]])
 

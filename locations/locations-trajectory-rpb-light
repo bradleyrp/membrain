@@ -1,0 +1,110 @@
+name=membrane-v511-ions
+struct=membrane-v511/a3-ions/system.ions.gro
+membrane-v511/a3-ions/s6-kraken-md.part0009.30000-80000-100.ions.xtc
+
+name=membrane-v511-atomP
+struct=membrane-v511/a2-surfacer/system.atomP.gro
+membrane-v511/a2-surfacer/s6-kraken-md.part0009.30000-80000-100.atomP.xtc
+
+name=membrane-v530
+struct=membrane-v530/system-input.gro
+membrane-v530/md.part0004.skip50.xtc
+
+name=membrane-v509
+struct=membrane-v509/system-input.gro
+membrane-v509/md.part0009.skip2.shift2.pbcmol.xtc
+
+name=membrane-v534
+struct=membrane-v534/system-input.gro
+membrane-v534/md.part0003.pbcmol.xtc
+
+name=membrane-v510-atomP
+struct=membrane-v510/system.atomP.gro
+membrane-v510/s8-kraken-md.part0021.40000-90000-100.atomP.xtc
+
+name=membrane-v533
+struct=membrane-v533/system-input.gro
+membrane-v533/md.part0004.3590.3790.xtc
+
+#---calculating PI2P head spans
+name=membrane-v531-headspan
+struct=membrane-v531-headspan/md.part0010.25500.gro
+membrane-v531-headspan/md.part0010.25500-27500-4.xtc
+
+#---calculating PI2P head spans
+name=membrane-v532-headspan
+struct=membrane-v532-headspan/md.part0010.25500.gro
+membrane-v532-headspan/md.part0010.25500-27500-4.xtc
+
+name=membrane-v531-ions
+struct=membrane-v531/a5-ions/system.ions.gro
+membrane-v531/a5-ions/s4-sim-trestles-md.part0007.20000-62000-100.ions.xtc
+
+name=membrane-v531-atomP
+struct=membrane-v531/a6-surfacer/system.atomP.gro
+membrane-v531/a6-surfacer/s4-sim-trestles-md.part0007.20000-62000-100.atomP.xtc
+
+
+########################################################
+
+#---name, location may be outdated
+#name=membrane-v509
+#struct=./look-v509/system-input.gro
+#./look-v509/md.part0033.skip10.pbcmol.xtc
+
+#---name, location may be outdated
+name=membrane-v510
+struct=./look-v510/system-input.gro
+./look-v510/md.part0033.skip10.pbcmol.xtc
+membrane-v510/s8-kraken-md.part0021.40000-90000-100.atomP.xtc
+
+#---name, location may be outdated
+name=membrane-v532
+struct=quicklook-gr/look-v532/system-input.gro
+quicklook-gr/look-v532/md.part0003.skip50.xtc
+
+#---name, location may be outdated
+name=membrane-v514
+struct=quicklook-gr/look-v514/system-input.gro
+quicklook-gr/look-v514/md.part0008.skip50.xtc
+
+#---name, location may be outdated
+name=membrane-v515
+struct=quicklook-gr/look-v515/system-input.gro
+quicklook-gr/look-v515/md.part0008.skip50.xtc
+
+#---name, location may be outdated
+name=membrane-v700
+struct=look-v700/system-input.gro
+look-700/md.part0002.skip10.xtc
+
+#---name, location may be outdated
+#---Note: if proteins in your system, run "editconf -resnr 1" to remove residue numbering redundancies
+name=membrane-v614
+struct=./membrane-v614-analyze/md.part0002.resnr.gro
+./membrane-v614-analyze/md.part0002.skip10.xtc
+
+#---name, location may be outdated
+#---Note: if proteins in your system, run "editconf -resnr 1" to remove residue numbering redundancies
+name=membrane-v612
+struct=./membrane-v612-analyze/md.part0003.resnr.gro
+./membrane-v612-analyze/md.part0003.skip10.xtc
+
+#---name, location may be outdated
+#---Note: if proteins in your system, run "editconf -resnr 1" to remove residue numbering redundancies
+name=membrane-v550
+struct=./membrane-v550-control/md.part0004.po4c2a.gro
+./membrane-v550-control/md.parts4to7.skip10.po4c2a.xtc
+
+name=membrane-v614-stress
+struct=/store-delta/compbio/membrane-v614-enthx4-12800/a5-stress-1.0-berendsen/system-input.resnr.gro
+/store-delta/compbio/membrane-v614-enthx4-12800/a5-stress-1.0-berendsen/md.part0002.rerun.trr
+
+name=membrane-v612-stress
+struct=/store-delta/compbio/membrane-v612-enthx1-12800/a1-stress-1.0-berendsen/system-input.resnr.gro
+/store-delta/compbio/membrane-v612-enthx1-12800/a1-stress-1.0-berendsen/md.part0003.rerun.trr
+
+name=membrane-v550-stress
+struct=/store-delta/compbio/membrane-v550/u0-sim-copy/system-input.gro
+/store-delta/compbio/membrane-v550/u2-stress-1.0/md.part0008.rerun.trr
+

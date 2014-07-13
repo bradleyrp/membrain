@@ -36,7 +36,11 @@ analysis_names = [
 	'v550-300000-400000-200',
 	'v700-500000-600000-200',
 	'v701-60000-160000-200',
-	][1:4]
+	'v616-210000-310000-200',
+	'v614-120000-220000-200',
+	'v612-75000-175000-200',
+	'v550-400000-500000-160',
+	][:4]
 routine = [
 	'compute_dimple',
 	'plot_dimple',
@@ -45,8 +49,13 @@ routine = [
 	'compute_topog',
 	'plot_topog',
 	][2:3]
-bigname = 'v616-v614-v612-v550-ver2'
-bigname = 'v614-v612-v550-IET-revise'
+bigname = [
+	'v616-v614-v612-v550-ver2',
+	'v614-v612-v550-IET-revise',
+	'v700-v701-v616-v614-v612-v550',
+	'v616-v614-v612',
+	'v616-v614-v612-v550',
+	][-1]
 
 #---available dimple plots
 dimple_plot_type = [
@@ -55,7 +64,7 @@ dimple_plot_type = [
 	'proteins_controls',
 	'proteins_controls_pub',
 	'extrema_meta',
-	][3]
+	][2]
 	
 #---available radar plots
 radar_plot_type = ['radar_proteins','radar_extrema'][-1]
@@ -64,8 +73,12 @@ radar_plot_type = ['radar_proteins','radar_extrema'][-1]
 topog_plot_type = [
 	'extrema',
 	][0]
-	
+
+#---print plots to the screen
 show_plots = False
+
+#---override area plots
+suppress_area_plots = True
 	
 #---DOWNSTREAM
 #-------------------------------------------------------------------------------------------------------------
@@ -79,7 +92,7 @@ if any([i in routine for i in ['compute_dimple','plot_dimple','plot_dimple_pub']
 	pklprefix = 'pkl.dimple3.'
 	testtype = 'dimple'
 elif any([i in routine for i in ['compute_topog','plot_topog']]): 
-	execfile('specs-topography.py')
+	execfile('dev/specs-topography.py')
 	pklprefix = 'pkl.topog3.'
 	testtype = 'topography'
 	
@@ -283,12 +296,16 @@ def dimple_colordict_systems(nname):
 	bold_purple = brewer2mpl.get_map('Set1','qualitative',9).mpl_colors[3]
 	bold_light_purple = brewer2mpl.get_map('Set1','qualitative',9).mpl_colors[7]
 	bold_gray = brewer2mpl.get_map('Set1','qualitative',9).mpl_colors[7]
+	bold_magenta = brewer2mpl.get_map('Dark2','qualitative',8).mpl_colors[3]
+	bold_orange = brewer2mpl.get_map('Set1','qualitative',9).mpl_colors[4]
 	bold_black = 'k'
 	colornamedict = {
 		'8xENTH(close)' : [bold_blue,r'$\mathrm{8 \times ENTH}$'],
 		'4xENTH' : [bold_green,r'$\mathrm{4 \times ENTH}$'],
 		'1xENTH' : [bold_light_purple,r'$\mathrm{1 \times ENTH}$'],
 		'control' : [bold_black,r'$\mathrm{control}$'],
+		'2xExo70(parallel)' : [bold_magenta,r'$\mathrm{2 \times Exo70_{parallel}}$'],
+		'2xExo70(antiparallel)' : [bold_orange,r'$\mathrm{8 \times Exo70_{antiparallel}}$'],
 		}
 	return colornamedict[nname]
 	
@@ -948,41 +965,44 @@ if 'plot_dimple_pub' in routine:
 			axlist_extent.append(ax_extent)
 			nnames_control = []
 			
-			#---area plots, outside of the loop over plots-within-a-panel, because only one can be plotted
-			ax = axlist_areas[pnum]
-			#---codeblock from script-reproc-dimple-backup
-			poz_area_counts = posnegs[pnum][:,0]
-			neg_area_counts = posnegs[pnum][:,1]
-			area_per_tile = product(mean(msets[pnum].vecs,axis=0)[:2])/100./\
-				((msets[pnum].griddims[0]-1)*(msets[pnum].griddims[1]-1))
-			posarea = array([area_per_tile*poz_area_counts[i] for i in range(len(poz_area_counts))])
-			negarea = array([area_per_tile*neg_area_counts[i] for i in range(len(neg_area_counts))])
-			ax.plot(posarea,'r-',label='$z>0$',lw=1,alpha=0.8)
-			ax.plot(negarea,'b-',label='$z<0$',lw=1,alpha=0.8)
-			t = range(len(poz_area_counts))
-			ax.fill_between(t, negarea,posarea, facecolor='b',alpha=0.25,where=negarea>posarea)
-			ax.fill_between(t, posarea,negarea, facecolor='r',alpha=0.25,where=negarea<posarea)
-			if max(max(posarea),max(negarea)) > maxpeak_areas: maxpeak_areas = max(max(posarea),max(negarea))
+			if not suppress_area_plots:
+				#---area plots, outside of the loop over plots-within-a-panel
+				#---...because only one can be plotted
+				ax = axlist_areas[pnum]
+				#---codeblock from script-reproc-dimple-backup
+				poz_area_counts = posnegs[pnum][:,0]
+				neg_area_counts = posnegs[pnum][:,1]
+				area_per_tile = product(mean(msets[pnum].vecs,axis=0)[:2])/100./\
+					((msets[pnum].griddims[0]-1)*(msets[pnum].griddims[1]-1))
+				posarea = array([area_per_tile*poz_area_counts[i] for i in range(len(poz_area_counts))])
+				negarea = array([area_per_tile*neg_area_counts[i] for i in range(len(neg_area_counts))])
+				ax.plot(posarea,'r-',label='$z>0$',lw=1,alpha=0.8)
+				ax.plot(negarea,'b-',label='$z<0$',lw=1,alpha=0.8)
+				t = range(len(poz_area_counts))
+				ax.fill_between(t, negarea,posarea, facecolor='b',alpha=0.25,where=negarea>posarea)
+				ax.fill_between(t, posarea,negarea, facecolor='r',alpha=0.25,where=negarea<posarea)
+				if max(max(posarea),max(negarea)) > maxpeak_areas: maxpeak_areas = max(max(posarea),
+					max(negarea))
 
-			nbins_areas = 40
-			minval_areas = 0
-			maxval_areas = maxpeak_areas
-			ax = axlist_areas2[pnum]
-			hist0,binedge0 = numpy.histogram(posarea,bins=nbins_areas,normed=False,
-				weights=[1./len(negarea) for i in negarea],
-				range=(minval_areas,maxval_areas*1.35))
-			mid0 = (binedge0[1:]+binedge0[:-1])/2
-			ax.plot(hist0,mid0,c='r',alpha=1.,lw=1,label='$z>0$')
-			hist1,binedge1 = numpy.histogram(negarea,bins=nbins_areas,normed=False,
-				weights=[1./len(negarea) for i in negarea],
-				range=(minval_areas,maxval_areas*1.35))
-			mid1 = (binedge1[1:]+binedge1[:-1])/2
-			ax.plot(hist1,mid1,c='b',alpha=1.,lw=1,label='$z<0$')
-			ax.fill_betweenx(mid0,[0 for i in mid0],hist0,facecolor='r',
-				alpha=0.2)
-			ax.fill_betweenx(mid1,[0 for i in mid1],hist1,facecolor='b',
-				alpha=0.2)
-			if max(max(hist0),max(hist1)) > maxfreq: maxfreq = max(max(hist0),max(hist1))
+				nbins_areas = 40
+				minval_areas = 0
+				maxval_areas = maxpeak_areas
+				ax = axlist_areas2[pnum]
+				hist0,binedge0 = numpy.histogram(posarea,bins=nbins_areas,normed=False,
+					weights=[1./len(negarea) for i in negarea],
+					range=(minval_areas,maxval_areas*1.35))
+				mid0 = (binedge0[1:]+binedge0[:-1])/2
+				ax.plot(hist0,mid0,c='r',alpha=1.,lw=1,label='$z>0$')
+				hist1,binedge1 = numpy.histogram(negarea,bins=nbins_areas,normed=False,
+					weights=[1./len(negarea) for i in negarea],
+					range=(minval_areas,maxval_areas*1.35))
+				mid1 = (binedge1[1:]+binedge1[:-1])/2
+				ax.plot(hist1,mid1,c='b',alpha=1.,lw=1,label='$z<0$')
+				ax.fill_betweenx(mid0,[0 for i in mid0],hist0,facecolor='r',
+					alpha=0.2)
+				ax.fill_betweenx(mid1,[0 for i in mid1],hist1,facecolor='b',
+					alpha=0.2)
+				if max(max(hist0),max(hist1)) > maxfreq: maxfreq = max(max(hist0),max(hist1))
 			
 			#---loop over plots within a panel
 			chists = []
@@ -1045,9 +1065,10 @@ if 'plot_dimple_pub' in routine:
 							scheme=dimple_plot_type,nprots=nprots)
 					#--- !!!
 					if color_override and len(plot_order)>1 and nbornames[cnum] != 'oligomer':
-						color = [brewer2mpl.get_map('Set1','qualitative',9).mpl_colors[i] 
+						if 0: color = [brewer2mpl.get_map('Set1','qualitative',9).mpl_colors[i] 
 							for i in [0,1,2,3,4,6,7,8]][cnum]
-					
+						color = [brewer2mpl.get_map('Set1','qualitative',9).mpl_colors[i] 
+							for i in [0,1,2,3,4,6,7,8,0,1,2,3]][cnum]
 					if label in ['peak (dynamic)','valley (dynamic)']: alpha = 0.5
 					else: alpha = 1.
 					status('panel = '+str(pnum+1)+'/'+str(len(params_plot))+
@@ -1245,6 +1266,7 @@ if 'plot_dimple_pub' in routine:
 							fontsize=fsaxlabel)
 							
 					#---modified for IET revisions stage 2014.06.13
+					
 					letterlist = ['a','b','c','d','e','f','g','h','i','j','k','l'][3:]
 					axlist_extent[pnum].text(0.82,0.86,r'$\mathbf{('+letterlist[pnum].capitalize()+')}$',
 						transform=axlist_extent[pnum].transAxes,fontsize=14)							
@@ -1286,13 +1308,25 @@ if 'plot_dimple_pub' in routine:
 
 				#---truncate the legend if too large
 				ax = axlist[pnum]
-				if len(plot_order) < 8: 
+				if len(plot_order) < 9:
+					print pnum
+					print 'legend section 1'
 					ax.legend(loc='upper left',prop={'size':fsaxlegend_small})
+				elif len(plot_order) >= 9:
+					print pnum
+					print 'legend section 2'
+					h,l = ax.get_legend_handles_labels()
+					h = h[:5]+[h[-1]]
+					l = l[:2]+['monomer ...']+l[-1:]
+					ax.legend(h,l,loc='upper left',
+						prop={'size':fsaxlegend_small})
 				else:
+					print pnum
+					print 'legend section 2'
 					which_label = slice(-1,None) if plot_order[0] != 0 else slice(None,1)
 					h,l = ax.get_legend_handles_labels()
 					ax.legend(h[which_label],l[which_label],loc='upper left',
-					prop={'size':fsaxlegend_small})
+						prop={'size':fsaxlegend_small})
 			
 			#---collect the sum of each curve for further analysis
 			phists.append(mean(chists,axis=0))
@@ -1307,7 +1341,7 @@ if 'plot_dimple_pub' in routine:
 			ax.set_ylim((0,1.1*maxpeak))
 			ax.set_yticklabels([])
 			color,proper_name = dimple_colordict_systems(sysnames[a])
-			ax.set_ylabel(proper_name,fontsize=fsaxlabel)
+			ax.set_ylabel(proper_name,fontsize=fsaxlabel+8)
 			ax.axvline(x=0,ls='--',ymax=1.,ymin=0.,lw=1.5,color='k')
 			if a == 0:
 				ax.set_title(r'$\textbf{curvature}$',fontsize=16)
@@ -1341,12 +1375,13 @@ if 'plot_dimple_pub' in routine:
 				ax.set_xticklabels([])
 			ax.set_yticklabels([])
 			#---modified for IET revisions stage 2014.06.13
-			letterlist = ['a','b','c','d','e','f','g','h','i','j','k','l'][6:]
-			ax.text(0.85,0.86,r'$\mathbf{('+letterlist[a].capitalize()+')}$',transform=ax.transAxes,
-				fontsize=14)
+			if not suppress_area_plots:
+				letterlist = ['a','b','c','d','e','f','g','h','i','j','k','l'][6:]
+				ax.text(0.85,0.86,r'$\mathbf{('+letterlist[a].capitalize()+')}$',transform=ax.transAxes,
+					fontsize=14)
 			ax.xaxis.set_tick_params(width=tickwid)
 			ax.yaxis.set_tick_params(width=tickwid)
-			if a == len(axlist_areas)-1:
+			if a == len(axlist_areas)-1 and not suppress_area_plots:
 				#---extra legend for areas
 				outsidelegendax = ax
 				axpos = outsidelegendax.get_position()
@@ -1376,9 +1411,10 @@ if 'plot_dimple_pub' in routine:
 			else:
 				ax.set_xticklabels([])
 			#---modified for IET revisions stage 2014.06.13
-			letterlist = ['a','b','c','d','e','f','g','h','i','j','k','l'][9:]
-			ax.text(0.75,0.86,r'$\mathbf{('+letterlist[a].capitalize()+')}$',transform=ax.transAxes,
-				fontsize=14)
+			if not suppress_area_plots:
+				letterlist = ['a','b','c','d','e','f','g','h','i','j','k','l'][9:]
+				ax.text(0.75,0.86,r'$\mathbf{('+letterlist[a].capitalize()+')}$',transform=ax.transAxes,
+					fontsize=14)
 			ax.xaxis.set_tick_params(width=tickwid)
 			ax.yaxis.set_tick_params(width=tickwid)
 

@@ -4,15 +4,30 @@ import sys,os,re,time
 import datetime
 import psycopg2
 import psycopg2.extras
+import argparse
 
 #---PARAMETERS
 #-------------------------------------------------------------------------------------------------------------
 
 #---settings
 lenscale = 0.5
-startframe = 2000
-endframe = 5000
-calctypes = ['structure','update_kappas'][-1:]
+startframe = 1200
+endframe = 2200
+newcallsign = 2017
+calctypes = ['structure','update_kappas'][:]
+
+#---parser and logging overrides the standard in membrainrunner
+parser = argparse.ArgumentParser(description='PARSER',prog='MEMBRAIN SIMBANK UPDATE')
+parser.add_argument('-c','--calcs',help='Comma-separated string of calculation flags.')
+parser.add_argument('-b','--begin',help='Beginning frame for analysis.')
+parser.add_argument('-e','--end',help='Ending frame for analysis.')
+parser.add_argument('-n','--number',help='Number of the new batch.')
+args = parser.parse_args()
+if args.calcs != None: calctypes = args.calcs.split(',')
+if args.begin != None: startframe = int(args.begin)
+if args.end != None: endframe = int(args.end)
+if args.number != None: newcallsign = int(args.number)
+else: newcallsign = 2017
 
 #---INCLUDES
 #-------------------------------------------------------------------------------------------------------------
@@ -21,18 +36,23 @@ calctypes = ['structure','update_kappas'][-1:]
 sys.path.insert(0,os.path.abspath('..'))
 
 #---initiate lab notebook
-loggerdir = '/home/rpb/worker/repo-journals'+'/'
-logname = 'labnotes-calculation-'+'-'.join(calctypes)+'-time-'+\
-	datetime.datetime.fromtimestamp(time.time()).strftime('%Y.%m.%d.%H%M.%S')
-if not os.path.exists(loggerdir+logname): os.makedirs(loggerdir+logname)
-else: raise Exception('except: journal directory exists')
-cwd = os.path.realpath('.')+'/'
-files_to_log = ['header-mesosims-database.py',sys.argv[0].strip('./')]
-for f in files_to_log: os.system('cp '+cwd+f+' '+loggerdir+'/'+logname+'/')
-#logfile = loggerdir+logname+'/log-'+logname
+if 0:
+	loggerdir = '/home/rpb/worker/repo-journals'+'/'
+	logname = 'labnotes-calculation-'+'-'.join(calctypes)+'-time-'+\
+		datetime.datetime.fromtimestamp(time.time()).strftime('%Y.%m.%d.%H%M.%S')
+	if not os.path.exists(loggerdir+logname): os.makedirs(loggerdir+logname)
+	else: raise Exception('except: journal directory exists')
+	cwd = os.path.realpath('.')+'/'
+	files_to_log = ['header-mesosims-database.py',sys.argv[0].strip('./')]
+	for f in files_to_log: os.system('cp '+cwd+f+' '+loggerdir+'/'+logname+'/')
+	logfile = loggerdir+logname+'/log-'+logname
 
 from membrainrunner import *
 execfile('../locations.py')
+
+status('status: calctypes = '+str(calctypes))
+status('status: startframe = '+str(startframe))
+status('status: endframe = '+str(endframe))
 
 #---PARAMETERS
 #-------------------------------------------------------------------------------------------------------------
@@ -212,7 +232,7 @@ def load_dataref_table(dataref_key,intable):
 	colnames = [desc[0] for desc in cur.description]
 	#---add columns to the (presumably blank) dataref table
 	for col in newcolumns:
-		if col[0] not in colnames:
+		if col[0] not in colnames and col[0].lower() not in colnames:
 			cur.execute('ALTER TABLE '+tablename+' ADD COLUMN '+col[0]+' '+col[1])
 			conn.commit()
 	for metadat,rowdict in intable:
@@ -264,7 +284,7 @@ def calculate_structures(paramdict,start,end,lenscale):
 		params = dict(newcalc)
 		if any([i[:4]=='rep-' for i in dirnames]): 
 			raise Exception('except: not prepared for replicate subdirectories')
-		#---the following section disables this code for use on directory structures not organized by rundirs
+		#---the following section disables the code for use on directory structures not organized by rundirs
 		if params['path'].split('/')[-1].split('-')[0] != 'rundir':
 			raise Exception('except: only set for rundir-style directories')
 		#---augment the dictionary with useful information
@@ -301,7 +321,9 @@ def calculate_structures(paramdict,start,end,lenscale):
 			'rundir-'+str(rundirnum)+\
 			'.pkl'
 		mset = unpickle(pickles+pklname)
-		print params.keys()
+		#print params.keys()
+		print params['path']
+		print rundirnum
 		status('status: checking for structure pickle '+pickles+pklname)
 		if mset == None:
 			status('status: calculation = '+pklname)
@@ -358,13 +380,19 @@ for calctype in calctypes:
 		intable,outtable = scan_datastore(calctype)
 		load_dataref_table(calctype,intable)
 		needs = missing_calcs(calctype)
+		status('status: new calculations = '+str(needs))
 
 #---settings
-if 'structure' in calctypes: needs = [i for i in needs if int(i['callsign'][1:]) == 2015]
+if 'structure' in calctypes: needs = [i for i in needs if int(i['callsign'][1:]) == newcallsign]
 
 #---computations
 if 'structure' in calctypes: calculate_structures(needs,startframe,endframe,lenscale)
 if 'update_kappas' in calctypes: update_kappas()
+if 'update_datarefs' in calctypes:
+	calctype = 'structure'
+	intable,outtable = scan_datastore(calctype)
+	load_dataref_table(calctype,intable)
+	needs = missing_calcs(calctype)
 
 """
 NOTE: extremely useful way to lookup items in a child table and print alongside items from the parent:
@@ -372,9 +400,9 @@ NOTE: extremely useful way to lookup items in a child table and print alongside 
 SELECT kappa_apparent,parent_mesosims,mesosims.kappa 
 FROM dataref_structure,mesosims 
 WHERE kappa_apparent IS NOT NULL and mesosims.id=dataref_structure.parent_mesosims;
+
+SELECT mesosims.path,mesosims.c_0,kappa_apparent,mesosims.kappa,parent_mesosims 
+FROM dataref_structure,mesosims 
+WHERE mesosims.id=dataref_structure.parent_mesosims and mesosims.callsign='v2015' ORDER BY kappa,c_0;
 """
 
-
-
-	
-	

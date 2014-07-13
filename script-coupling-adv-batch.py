@@ -1,5 +1,30 @@
 #!/usr/bin/python -i
 
+#---SETTINGS
+#-------------------------------------------------------------------------------------------------------------
+
+#---selection criteria
+select_criteria_meso = {'callsign':'v2016'}
+cgmd_avail = [
+	'v550-300000-400000-200',
+	'v614-120000-220000-200',
+	'v616-210000-310000-200',
+	]
+
+batch_override = True
+routine = ['print_new_c0_vals','batchcalc','megaplot','signatures'][-1:]
+showplots = False
+
+#---parser and logging overrides the standard in membrainrunner
+import argparse
+parser = argparse.ArgumentParser(description='PARSER',prog='MEMBRAIN SIMBANK UPDATE')
+parser.add_argument('-c','--calcs',help='Comma-separated string of calculation flags.')
+parser.add_argument('-n','--number',help='Number of the new batch.')
+args = parser.parse_args()
+if args.calcs != None: routine = args.calcs.split(',')
+if args.number != None:  select_criteria_meso['callsign'] = 'v'+str(args.number)
+else: select_criteria_meso['callsign'] = 'v'+str(2017)
+
 from membrainrunner import *
 execfile('locations.py')
 
@@ -47,7 +72,7 @@ analysis_descriptors = {
 		'simtype':'md',
 		'label':r'$\mathrm{{ENTH}\ensuremath{\times}8}$',
 		'detail_name':r'$\mathrm{{ENTH}\ensuremath{\times}8}$',
-		'testname':'v614',
+		'testname':'v616',
 		'locate':'pkl.structures.space10A.membrane-v616.u6-trestles.md.part0005.210000-310000-200.pkl',
 		'startframe':None,
 		'endframe':None,
@@ -83,18 +108,6 @@ analysis_descriptors = {
 	
 #---SETTINGS
 #-------------------------------------------------------------------------------------------------------------
-
-#---selection criteria
-select_criteria_meso = {'callsign':'v2015'}
-cgmd_avail = [
-	'v550-300000-400000-200',
-	'v614-120000-220000-200',
-	'v616-210000-310000-200',
-	]
-
-batch_override = True
-routine = ['calc','masterplot']
-showplots = False
 
 #---naming the batch calculation
 mesoname = '-'.join([k for l in [[i,select_criteria_meso[i]] 
@@ -245,7 +258,7 @@ def spectrum_summary(fig=None,gs=None,lowlim=10**-14,titletext='undulations'):
 	clist = [(brewer2mpl.get_map('Set1', 'qualitative', 8).mpl_colors)[i] for i in [1,2,0,3,4,5,6,7,]]
 	#---plot undulations
 	extra_legend = []
-	for m in [analysis_names.index(aname) for aname	in plot_reord]:
+	for m in [analysis_names.index(aname) for aname in plot_reord]:
 		a = analysis_names[m]
 		shortname = (analysis_descriptors[a])['detail_name']
 		colord = clist[m]
@@ -412,10 +425,9 @@ def compute_undulation_residuals(simnames,thresh=0.3,specnum=0,view_resids=False
 		simname = simnames[s]
 		#---use simulation indices to check CGMD vs MESO
 		if (analysis_descriptors[simname])['simtype'] == 'md':
-			#---the master_spectrum_dict has lots of redundancy
-			#---? EXPLAIN
 			simname = [i for i in master_spectrum_dict.keys() if re.search(simname,i)][0]
 			subj[s] = master_spectrum_dict[simname]
+			#---? note that i changed cgmd to meso here because bug in the way it is saved
 			xdat[s] = collapse_spectrum(subj[s]['cgmd_qs'],subj[s]['cgmd_qs'])
 			ydat[s] = collapse_spectrum(subj[s]['cgmd_qs'],subj[s]['cgmd_t2d'][specnum])	
 		#---perform mesoscale simulation lookup
@@ -437,15 +449,19 @@ def compute_undulation_residuals(simnames,thresh=0.3,specnum=0,view_resids=False
 		plt.show()
 	return resid,resid_shift
 	
-def plotter_undulation_residuals(thresholds,comp,comp_cgmd,toptitle,a0,filename_descriptor):
+def plotter_undulation_residuals(thresholds,comp,comp_cgmd,toptitle,a0,filename_descriptor,figsize=None):
 	'''Plot a summary of the undulation residuals across systems.'''
-	fig = plt.figure(figsize=((4,3*len(thresholds)) if len(thresholds)>1 else (8,8)))
+	if figsize == None: figsize=((4,3*len(thresholds)) if len(thresholds)>1 else (8,8))
+	fig = plt.figure(figsize=figsize)
 	#---?need to generate meso_c0s or ordering from meso_keys here
 	sortvals_names = {
 		'C_0':r'$\mathrm{C_0}=$',
 		'kappa':r'$\mathrm{\kappa}=$',
+		'r_2':r'$\mathrm{\sigma^2}=$'
 		}
-	meso_names = [' '.join([sortvals_names[sortvals[j]]+str(i[1][j]) 
+	if 0: meso_names = [' '.join([sortvals_names[sortvals[j]]+str(i[1][j]) 
+		for j in range(len(sortvals))]) for i in reord]
+	meso_names = [','.join([str(i[1][j]) 
 		for j in range(len(sortvals))]) for i in reord]
 	gs = gridspec.GridSpec(len(thresholds),2,wspace=0.1,hspace=0.1,
 		width_ratios=[len(meso_keys),len(cgmd_list)])
@@ -497,14 +513,11 @@ def plotter_undulation_residuals(thresholds,comp,comp_cgmd,toptitle,a0,filename_
 		axl.set_ylabel(r'$\mathrm{mesoscale\:C_0\:({nm}^{-1})}$',fontsize=fsaxlabel)
 		axl.set_xlabel(r'$\mathrm{mesoscale\:C_0\:({nm}^{-1})}$',fontsize=fsaxlabel)
 	#---save
-	plt.savefig(pickles+'fig-bilayer-couple-meta-'+\
-		filename_descriptor+'-'+batchname+'.png',
+	plt.savefig(pickles+'fig-bilayer-couple-meta-'+batchname+'-'+\
+		filename_descriptor+'.png',
 		bbox_inches='tight',dpi=300)
 	if showplots: plt.show()
 	plt.close(fig)
-
-#---MAIN
-#-------------------------------------------------------------------------------------------------------------
 
 #---connect
 if 'conn' not in globals(): 
@@ -512,57 +525,14 @@ if 'conn' not in globals():
 	except: raise Exception('except: cannot connect to database')
 	cur = conn.cursor(cursor_factory=psycopg2.extras.DictCursor)
 	
-#---retrieve a set of experiments for comparison
-cur.execute('SELECT * from mesosims')
-select_mesosims = [dict(i) for i in cur.fetchall()]
-cur.execute('SELECT * from dataref_structure')
-select = [dict(i) for i in cur.fetchall()]
-#---note that I am filtering the table in python and not postgresql
-select = [i for i in select if all([
-	i[j] == select_criteria_meso[j] for j in select_criteria_meso.keys()])]
-#---populate analysis descriptors from the database
-for params in select:
-	ind = where([i['id']==params['parent_mesosims'] for i in select_mesosims])[0][0]
-	combo = dict(params.items() + select_mesosims[ind].items())
-	rundirnum = int(combo['rundir'])
-	key = params['callsign']+'-rundir-'+str(rundirnum)
-	#---always fix uppercase naming when importing to python
-	if 'c_0' in combo.keys(): combo['C_0'] = combo['c_0']
-	combo['detail_name'] = combo['shortname']
-	analysis_descriptors[key] = combo
+#---MAIN
+#-------------------------------------------------------------------------------------------------------------
 
-#---see if the coupling sweep has already been done
-master_spectrum_dict = unpickle(pickles+'pkl.bilayer-coupling-sweep.'+batchname+'.pkl')
-
-#---perform the sweep
-if master_spectrum_dict == None:
-	#---empty dictionary for cross-simulation comparisons
-	master_spectrum_dict = {}
-	#---loop over all comparisons
-	for batch_cgmd in cgmd_avail:
-		for batch_meso in [i for i in analysis_descriptors.keys() if i not in cgmd_avail]:
-			print '\n'
-			match_scales = analysis_names = plot_reord = [batch_cgmd,batch_meso]
-			status('status: comparing '+batch_cgmd+' '+batch_meso)
-			bigname = '-'.join(analysis_names)
-			execfile('script-coupling-adv.py')
-			del msets,mscs,collect_c0s
-	if master_spectrum_dict != {}:
-		pickledump(master_spectrum_dict,'pkl.bilayer-coupling-sweep.'+batchname+'.pkl',directory=pickles)
-
-#---residual sweep parameters
-cgmd_list = ['v550-300000-400000-200','v614-120000-220000-200','v616-210000-310000-200']
-qmagfilter = (analysis_descriptors[cgmd_avail[0]])['qmagfilter']
-#---note: using a threshold of 0.4 does a worse job of matching the kappas, which I can glean by eye
-thresholds = [qmagfilter[1],0.4,0.2,0.25][-1:]
-thresholds = [0.4,0.3,0.25,0.2][:1]
-shift_curves = False
-
-meso_keys = [i for i in analysis_descriptors.keys() 
-	if (analysis_descriptors[i]['simtype']=='meso')]
-a0 = 1./(master_spectrum_dict[meso_keys[0]])['lenscale']
 #---generate a list of curvatures in the mesoscale simulations
-if 0 or 'print_new_c0_vals' in routine:
+if 'print_new_c0_vals' in routine:
+	meso_keys = [i for i in analysis_descriptors.keys() 
+	if (analysis_descriptors[i]['simtype']=='meso')]
+	a0 = 1./(master_spectrum_dict[meso_keys[0]])['lenscale']
 	lister = [0.002, 0.004, 0.006, 0.008, 0.01, 0.015, 0.02, 0.022, 
 		0.025, 0.028, 0.03, 0.035, 0.04, 0.045, 0.05]
 	lister = [0.002, 0.004, 0.006, 0.008, 0.01, 0.011, 0.012, 0.013, 0.014, 0.015, 0.016, 0.017, 0.018, 
@@ -571,8 +541,60 @@ if 0 or 'print_new_c0_vals' in routine:
 	lister = [0.01,0.018,0.024,0.030]
 	print '( \''+'\' \''.join(['{0:.4f}'.format(round(i*a0,4)) for i in lister])+'\' )'
 
-#---loop over comparisons
-if 'comp' not in globals():
+#---compute and plot summary for a single batch
+if 'batchcalc' in routine:
+
+	#---retrieve a set of experiments for comparison
+	cur.execute('SELECT * from mesosims')
+	select_mesosims = [dict(i) for i in cur.fetchall()]
+	cur.execute('SELECT * from dataref_structure')
+	select = [dict(i) for i in cur.fetchall()]
+	#---note that I am filtering the table in python and not postgresql
+	select = [i for i in select if all([
+		i[j] == select_criteria_meso[j] for j in select_criteria_meso.keys()])]
+	#---populate analysis descriptors from the database
+	for params in select:
+		ind = where([i['id']==params['parent_mesosims'] for i in select_mesosims])[0][0]
+		combo = dict(params.items() + select_mesosims[ind].items())
+		rundirnum = int(combo['rundir'])
+		key = params['callsign']+'-rundir-'+str(rundirnum)
+		#---always fix uppercase naming when importing to python
+		if 'c_0' in combo.keys(): combo['C_0'] = combo['c_0']
+		combo['detail_name'] = combo['shortname']
+		analysis_descriptors[key] = combo
+	
+	#---see if the coupling sweep has already been done
+	master_spectrum_dict = unpickle(pickles+'pkl.bilayer-coupling-sweep.'+batchname+'.pkl')
+
+	#---debug
+	master_mscs = []
+
+	#---perform the sweep
+	if master_spectrum_dict == None:
+		#---empty dictionary for cross-simulation comparisons
+		master_spectrum_dict = {}
+		#---loop over all comparisons
+		for batch_cgmd in cgmd_avail:
+			for batch_meso in [i for i in analysis_descriptors.keys() if i not in cgmd_avail]:
+				match_scales = analysis_names = plot_reord = [batch_cgmd,batch_meso]
+				status('status: comparing '+batch_cgmd+' '+batch_meso)
+				bigname = '-'.join(analysis_names)
+				execfile('script-coupling-adv.py')
+				master_mscs.append(mscs)
+				del msets,mscs,collect_c0s
+		if master_spectrum_dict != {}:
+			pickledump(master_spectrum_dict,'pkl.bilayer-coupling-sweep.'+batchname+'.pkl',directory=pickles)
+
+	#---residual sweep parameters
+	cgmd_list = ['v550-300000-400000-200','v614-120000-220000-200','v616-210000-310000-200']
+	qmagfilter = (analysis_descriptors[cgmd_avail[0]])['qmagfilter']
+	#---note: using a threshold of 0.4 does a worse job of matching the kappas, which I can glean by eye
+	thresholds = [qmagfilter[1],0.4,0.2,0.25][-1:]
+	thresholds = [0.4,0.3,0.25,0.2][:]
+	thresholds = [0.25]
+	shift_curves = False
+
+	#---generate a meso-meso and meso-cgmd comparison plot
 	#---perform the fit for both undulations and height-curvature correlations
 	specnums = [0]
 	fnames = ['undulations','curvature_undulations']	
@@ -589,7 +611,8 @@ if 'comp' not in globals():
 			#---this assumes that the items in analysis_descriptors equal those in master_spectrum_dict
 			meso_keys = [i for i in analysis_descriptors.keys() 
 				if (analysis_descriptors[i]['simtype']=='meso')] # and analysis_descriptors[i]['C_0'] > 0
-			cgmd_keys = [i for i in analysis_descriptors.keys() if analysis_descriptors[i]['simtype']=='md']
+			cgmd_keys = [i for i in analysis_descriptors.keys() 
+				if analysis_descriptors[i]['simtype']=='md']
 			#---sorting the keys
 			sortvals = ['kappa','C_0']
 			valpairs = [[(analysis_descriptors[i])[j] for j in sortvals] for i in meso_keys]
@@ -619,4 +642,150 @@ if 'comp' not in globals():
 		plotter_undulation_residuals(thresholds,comp[sn],comp_cgmd[sn],toptitles[sn],
 			a0,fnames[sn]+('shifted-' if shift_curves else ''))
 
+#---compute and plot summary for all batches, assuming master_spectrum_dict pickles are available
+if 'megaplot' in routine:
 
+	#---retrieve a set of experiments for comparison
+	cur.execute('SELECT * from mesosims')
+	select_mesosims = [dict(i) for i in cur.fetchall()]
+	cur.execute('SELECT * from dataref_structure')
+	select = [dict(i) for i in cur.fetchall()]
+	#---populate analysis descriptors from the database
+	for params in select:
+		ind = where([i['id']==params['parent_mesosims'] for i in select_mesosims])[0][0]
+		combo = dict(params.items() + select_mesosims[ind].items())
+		rundirnum = int(combo['rundir'])
+		key = params['callsign']+'-rundir-'+str(rundirnum)
+		#---always fix uppercase naming when importing to python
+		if 'c_0' in combo.keys(): combo['C_0'] = combo['c_0']
+		combo['detail_name'] = combo['shortname']
+		analysis_descriptors[key] = combo
+
+	#---collect all master_spectrum_dict pickles from all batches
+	rootdir = os.path.expanduser(pickles)
+	pklfilenames = []
+	for (dirpath, dirnames, filenames) in os.walk(rootdir):
+		pklfilenames += filenames
+		break
+	batchnames = [i for i in filenames if re.match('pkl.bilayer-coupling-sweep.',i)]
+	master_spectrum_dict = dict()
+	for pklname in batchnames:
+		#---coallate two dictionaries
+		addition = unpickle(pickles+pklname)
+		for key in addition.keys(): 
+			#---older pickles used tuples instead of strings as the key and these are invalid
+			if type(key) == str: 
+				master_spectrum_dict[key] = addition[key]
+
+	#---residual sweep parameters
+	batchname = 'mega'
+	thresholds = [0.2,0.25,0.3,0.35,0.4]
+	thresholds = [0.25,0.30]
+	cgmd_list = ['v550-300000-400000-200','v614-120000-220000-200','v616-210000-310000-200']
+	shift_curves = False
+
+	#---generate a meso-meso and meso-cgmd comparison plot
+	#---perform the fit for both undulations and height-curvature correlations
+	specnums = [0,1]
+	fnames = ['undulations','curvature_undulations']	
+	toptitles = ['Undulation residuals','Curvature-undulation residuals']
+	#---loop
+	comp = [[[] for i in thresholds] for sn in specnums]
+	comp_cgmd = [[[] for i in thresholds] for sn in specnums]
+	#---loop over spectrum comparisons
+	for sn in range(len(specnums))[:1]:	
+		#---loop over desired thresholds for doing the spectrum comparisons
+		for thresh in thresholds:
+			status('status: threshold = '+str(thresh))
+			#---prepare the list of mesoscale simulations for comparison and sort them here
+			#---this assumes that the items in analysis_descriptors equal those in master_spectrum_dict
+			meso_keys = [i for i in analysis_descriptors.keys() 
+				if (analysis_descriptors[i]['simtype']=='meso') and
+				(specnums[sn] == 0 or ('c_0' in analysis_descriptors[i].keys() 
+				or 'c_0' in analysis_descriptors[i].keys()) and
+				(analysis_descriptors[i]['C_0'] > 0. if 'C_0' in analysis_descriptors[i].keys() else
+				analysis_descriptors[i]['c_0'] > 0.))]
+			cgmd_keys = [i for i in analysis_descriptors.keys() 
+				if analysis_descriptors[i]['simtype']=='md' and
+				(specnums[sn] == 0 or ('c_0' in analysis_descriptors[i].keys() 
+				or 'c_0' in analysis_descriptors[i].keys()) and
+				(analysis_descriptors[i]['C_0'] > 0. if 'C_0' in analysis_descriptors[i].keys() else
+				analysis_descriptors[i]['c_0'] > 0.))]
+			#---sorting the keys
+			sortvals = ['r_2','C_0','kappa']
+			valpairs = [[(analysis_descriptors[i])[j] for j in sortvals] for i in meso_keys]
+			reord = sorted(enumerate(valpairs),key=operator.itemgetter(1))
+			meso_keys = [meso_keys[i[0]] for i in reord]
+			#---compare mesoscale to itself			
+			residual_comparisons = zeros((len(meso_keys),len(meso_keys)))
+			for i in meso_keys:
+				status('status: undulation comparison '+i,i=meso_keys.index(i),looplen=len(meso_keys))
+				for j in meso_keys:
+					resid,resid_shift = compute_undulation_residuals([i,j],
+						thresh=thresh,specnum=sn)
+					residual_comparisons[meso_keys.index(i),meso_keys.index(j)] = \
+						(resid if not shift_curves else resid_shift)
+			#---compare CGMD to mesoscale
+			residual_comparisons_cgmd = zeros((len(meso_keys),len(cgmd_list)))
+			for i in meso_keys:
+				status('status: undulation comparison '+i,i=meso_keys.index(i),looplen=len(meso_keys))
+				for name in cgmd_list:
+					resid,resid_shift = compute_undulation_residuals([i,name],
+						thresh=thresh,specnum=sn)
+					residual_comparisons_cgmd[meso_keys.index(i),cgmd_list.index(name)] = \
+						(resid if not shift_curves else resid_shift)
+			comp[sn][thresholds.index(thresh)] = residual_comparisons
+			comp_cgmd[sn][thresholds.index(thresh)] = residual_comparisons_cgmd
+			#---previously in table form, now plotting separately
+			threshnum = thresholds.index(thresh)
+			a0 = 1./(master_spectrum_dict[meso_keys[0]])['lenscale']
+			plotter_undulation_residuals([thresholds[threshnum]],[comp[sn][threshnum]],
+				[comp_cgmd[sn][threshnum]],toptitles[sn],a0,
+				fnames[sn]+('shifted-' if shift_curves else '')+'-thresh-'+str(thresh),figsize=(24,24))	
+
+#---compute and plot summary for all batches, assuming master_spectrum_dict pickles are available
+if 'signatures' in routine:
+	
+	#---retrieve a set of experiments for comparison
+	cur.execute('SELECT * from mesosims')
+	select_mesosims = [dict(i) for i in cur.fetchall()]
+	cur.execute('SELECT * from dataref_structure')
+	select = [dict(i) for i in cur.fetchall()]
+	#---populate analysis descriptors from the database
+	for params in select:
+		ind = where([i['id']==params['parent_mesosims'] for i in select_mesosims])[0][0]
+		combo = dict(params.items() + select_mesosims[ind].items())
+		rundirnum = int(combo['rundir'])
+		key = params['callsign']+'-rundir-'+str(rundirnum)
+		#---always fix uppercase naming when importing to python
+		if 'c_0' in combo.keys(): combo['C_0'] = combo['c_0']
+		combo['detail_name'] = combo['shortname']
+		analysis_descriptors[key] = combo
+
+	#---collect all master_spectrum_dict pickles from all batches
+	rootdir = os.path.expanduser(pickles)
+	pklfilenames = []
+	for (dirpath, dirnames, filenames) in os.walk(rootdir):
+		pklfilenames += filenames
+		break
+	batchnames = [i for i in filenames if re.match('pkl.bilayer-coupling-sweep.',i)]
+	master_spectrum_dict = dict()
+	for pklname in batchnames:
+		#---coallate two dictionaries
+		addition = unpickle(pickles+pklname)
+		for key in addition.keys(): 
+			#---older pickles used tuples instead of strings as the key and these are invalid
+			if type(key) == str:
+				if key in analysis_descriptors.keys() and \
+					(analysis_descriptors[key])['simtype'] == 'md' and \
+					'meso_qs' in addition[key].keys():
+					print 'error '+key+' '+pklname
+				master_spectrum_dict[key] = addition[key]
+
+	#---residual sweep parameters
+	batchname = 'mega'
+	thresholds = [0.25]
+	cgmd_list = ['v550-300000-400000-200','v614-120000-220000-200','v616-210000-310000-200']
+	shift_curves = False
+	
+	
