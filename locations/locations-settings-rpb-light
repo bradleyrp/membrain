@@ -1,0 +1,23 @@
+#!/usr/bin/python
+
+basedir = '/home/rpb/worker/repo-membrane/'
+locations = '/home/rpb/worker/membrain/locations/locations-trajectory-rpb-light'	
+pickles = '/home/rpb/worker/repo-pickles/'
+plot_suppress = False
+if os.path.exists('plotter.py'): execfile('plotter.py')
+else: import matplotlib as mpl
+#---commands for sans-serif fonts on all plots
+mpl.rc('font',**{'family':'sans-serif','sans-serif':['Helvetica']})
+mpl.rc('text', usetex=True)
+if 0:
+	mpl.rc('text.latex', preamble='\usepackage{sfmath}')
+else:
+	#---hacks to allow "boldsymbol" on wispy kappas
+	mpl.rcParams['text.latex.preamble'] = [
+		r'\usepackage{sfmath}',r'\usepackage{amsmath}',r'\usepackage{siunitx}',r'\sisetup{detect-all}',
+		r'\usepackage{helvet}',r'\usepackage{sansmath}',r'\sansmath']  
+erase_when_finished = False
+fsaxtext = 18
+fsaxlabel = 18
+fsaxticks = 18
+fsaxtitle = 18

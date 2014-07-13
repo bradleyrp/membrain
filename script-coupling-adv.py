@@ -1,8 +1,7 @@
 #!/usr/bin/python
 
 #---allocate if empty
-if 'msets' not in globals(): msets = []; 
-if showplots and 'msets' not in globals(): plt.ion()
+if 'msets' not in globals(): msets = []
 if 'mscs' not in globals(): mscs = []
 if 'collect_c0s' not in globals(): collect_c0s = []
 
@@ -22,7 +21,9 @@ for a in analysis_names:
 			'len-'+str(params['lenscale'])+'-'+\
 			'rundir-'+str(int(params['rundir']))+\
 			'.pkl'
+		print 'unpickle '+str(pklname)
 		mset = unpickle(pickles+pklname)
+		print array(mset.surf[0]).max()
 		c0s = mset.getdata('c0map').data
 		collect_c0s.append(c0s)
 		msets.append(mset)
@@ -90,7 +91,7 @@ if match_scales != None:
 			#---getgrid is xyz points in nm
 			getgrid = array([[[i,j] for j in linspace(0,3*vecs[1]/mset.lenscale,3*n)] 
 				for i in linspace(0,3*vecs[0]/mset.lenscale,3*m)])
-			#---needs checked, "key step used to have a 0.5*hypo[0] here possible due to convention"
+			#---needs checked, "key step used to have a 0.5*hypo[0] here possibly due to convention"
 			params = [0,
 				hypo[0]*msets[1].lenscale/mset.lenscale,
 				vecs[0]*(1+hypo[1])/mset.lenscale,
@@ -117,20 +118,24 @@ hypo = (analysis_descriptors[batch_cgmd])['hypo']
 hypo[0] = c0ask
 if 'masterplot' not in routine and 'simple_summary' in routine: spectrum_summary()
 if 'batch_override' in globals() and batch_override:
-	if '-'.join(analysis_names) not in master_spectrum_dict.keys():
-		master_spectrum_dict['-'.join(analysis_names)] = {\
-			'c0ask':c0ask,
-			'cgmd_qs':mscs[0].qmagst,
-			'cgmd_t2d':mscs[0].t2d,
-			'lenscale':msets[0].lenscale,
-			}
-	if analysis_names[1] not in master_spectrum_dict.keys():
-		master_spectrum_dict[analysis_names[1]] = {\
-			'c0ask':c0ask,
-			'meso_qs':mscs[1].qmagst,
-			'meso_t2d':mscs[1].t2d,
-			'lenscale':msets[1].lenscale,
-			}
+	if 0:
+		if '-'.join(analysis_names) not in master_spectrum_dict.keys():
+			master_spectrum_dict['-'.join(analysis_names)] = {\
+				'c0ask':c0ask,
+				'cgmd_qs':mscs[0].qmagst,
+				'cgmd_t2d':mscs[0].t2d,
+				'lenscale':msets[0].lenscale,
+				}
+	for s in range(2):
+		if analysis_names[s] not in master_spectrum_dict.keys():
+			master_spectrum_dict[analysis_names[s]] = {\
+				'c0ask':c0ask,
+				('cgmd_qs' if analysis_descriptors[analysis_names[s]]['simtype']=='md' 
+					else 'meso_qs'):mscs[s].qmagst,
+				('cgmd_t2d' if analysis_descriptors[analysis_names[s]]['simtype']=='md' 
+					else 'meso_t2d'):mscs[s].t2d,
+				'lenscale':msets[s].lenscale,
+				}
 		
 #---comparison of curvature between MESO and CGMD methods
 #---plots height-curvature correlation alongsize structure and variations
@@ -161,7 +166,8 @@ ax.set_title('CGMD')
 ax = plt.subplot(gs[0,1])
 axeslist.append(ax)
 ax.set_title('MESO')
-im = ax.imshow(mean(mscs[1].c0s,axis=0).T,vmax=extrem,vmin=0.,cmap=mpl.cm.binary,
+#---choose only a single frame, since the curvature field may be somewhat mobile at mesosscale
+im = ax.imshow(mscs[1].c0s[0],vmax=extrem,vmin=0.,cmap=mpl.cm.binary,
 	interpolation='nearest',origin='lower')
 axins = inset_axes(ax,width="5%",height="100%",loc=3,
 	bbox_to_anchor=(1.,0.,1.,1.),
@@ -224,7 +230,6 @@ for m in [analysis_names.index(aname) for aname	in plot_reord]:
 		tickskip=int(round(mset.griddims[0]/6,-1)))
 axins = inset_axes(axr2,width="5%",height="100%",loc=3,
 	bbox_to_anchor=(1.,0.,1.,1.),
-	bbox_transform=axr2.transAxes,
 	borderpad=0)
 axeslist.append(axins)
 cbar = plt.colorbar(im,cax=axins,orientation="vertical")

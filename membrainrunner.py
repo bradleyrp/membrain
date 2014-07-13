@@ -21,6 +21,7 @@ if '-i' in sys.argv: interact = True
 if ('-i' in sys.argv or ('interact' in globals() and interact)) \
 	and 'logfile' in globals() and logfile != None: 
 	logfile = None
+interact_registered = False
 
 #---import the primary membrain library for which membrainrunner is only a wrapper
 from membrain import *
@@ -223,35 +224,37 @@ def checktime():
 This section handles incoming arguments, logging, error logging, and inducing a debug mode if desired.
 '''
 
-#---parser and logging
-parser = argparse.ArgumentParser(description='Membrain argument parser.',prog='Membrain')
-parser.add_argument('-viz',action='store_true',help='Set this to use mayavi 3D visualization.')
-parser.add_argument('-d','--debugmode',action='store_true',help='Set this to use mayavi 3D visualization.')
-parser.add_argument('-log',help='The log file. Standard output routes here. Error goes to a separate file.')
-parser.add_argument('-o','--operation',choices=['test'],help='Calculation to perform.')
-parser.add_argument('-i','--interactive',action='store_true',help='Run python in interactive mode.')
-args = parser.parse_args()
+#---completely override argument handling if it already exists
+if 'args' not in globals():
+	#---parser and logging
+	parser = argparse.ArgumentParser(description='Membrain argument parser.',prog='Membrain')
+	parser.add_argument('-viz',action='store_true',help='Set this to use mayavi 3D visualization.')
+	parser.add_argument('-d','--debugmode',action='store_true',help='Set this to use mayavi 3D visualization.')
+	parser.add_argument('-log',help='The log file. Standard output routes here. Error goes to a separate file.')
+	parser.add_argument('-o','--operation',choices=['test'],help='Calculation to perform.')
+	parser.add_argument('-i','--interactive',action='store_true',help='Run python in interactive mode.')
+	args = parser.parse_args()
 
-#---enable 3D visualization
-if args.viz == 'yes' or args.viz == True:
-	from mayavi import mlab
+	#---enable 3D visualization
+	if args.viz == 'yes' or args.viz == True:
+		from mayavi import mlab
 
-#---write stdout to a log 
-#---enable via the "-log" flag to either the script or membrainrunner
-#---enable also via setting the logfile variable to a string in the script
-if args.log != None or ('logfile' in globals() and logfile != None):
-	import sys
-	stdstderr = sys.stderr
-	if args.log != None: logfile = args.log
-	sys.stdout = sys.stderr = open(logfile,'w',1)
+	#---write stdout to a log 
+	#---enable via the "-log" flag to either the script or membrainrunner
+	#---enable also via setting the logfile variable to a string in the script
+	if args.log != None or ('logfile' in globals() and logfile != None):
+		import sys
+		stdstderr = sys.stderr
+		if args.log != None: logfile = args.log
+		sys.stdout = sys.stderr = open(logfile,'w',1)
 
-#---switching to interactive mode on error
-#---enable via the "-d" flag to either the script or membrainrunner
-#---enable also via setting the debugmode variable to True in the script
-if ('debugmode' in globals() and debugmode) or args.debugmode:
-	sys.excepthook = postmortem_debug
+	#---switching to interactive mode on error
+	#---enable via the "-d" flag to either the script or membrainrunner
+	#---enable also via setting the debugmode variable to True in the script
+	if ('debugmode' in globals() and debugmode) or args.debugmode:
+		sys.excepthook = postmortem_debug
 	
-#---call any function called when the operation flag is caught by the parser
-if __name__ == "__main__" and args.operation != None:
-	globals()[args.operation](args)
+	#---call any function called when the operation flag is caught by the parser
+	if __name__ == "__main__" and args.operation != None:
+		globals()[args.operation](args)
 

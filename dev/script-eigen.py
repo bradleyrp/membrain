@@ -25,11 +25,14 @@ for frameno in range(nframes):
 npts = shape(pts)[1]
 avg = mean(pts,axis=0)
 avg1 = ravel(avg)
-covmat = [[[] for j in range(len(avg1))] for i in range(len(avg1))]
-for i in range(len(avg1)):
-	for j in range(len(avg1)):
-		status('i = '+str(i))
-		covmat[i][j] = mean([(ravel(pts[fr])[i]-avg1[j])**2 for fr in range(len(pts))])
+if 'covmat' not in globals():
+	covmat = [[[] for j in range(len(avg1))] for i in range(len(avg1))]
+	for i in range(len(avg1)):
+		for j in range(len(avg1)):
+			status('i = '+str(i))
+			#covmat[i][j] = mean([(ravel(pts[fr])[i]-avg1[j]) for fr in range(len(pts))])
+			covmat[i][j] = mean([(ravel(pts[fr])[i]-avg1[i])*(ravel(pts[fr])[j]-avg1[j]) 
+				for fr in range(len(pts))])
 		
 #---plot covariance matrix
 plt.imshow(array(covmat),interpolation='nearest',cmap=mpl.cm.jet)

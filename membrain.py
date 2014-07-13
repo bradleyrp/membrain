@@ -22,6 +22,7 @@ import code
 import datetime
 import operator
 
+
 #---Set up visualization
 os.environ['ETS_TOOLKIT'] = 'qt4'
 

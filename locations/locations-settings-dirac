@@ -1,0 +1,7 @@
+#!/usr/bin/python
+
+basedir = '/media/store-pascal/ryb/membrane-v5xx/'
+locations = '/media/store-pascal/ryb/membrane-v5xx/trajectory-map-membrane-v5xx'
+pickles = '/media/store-pascal/ryb/worker/repo-pickles/'
+erase_when_finished = True
+plot_suppress = True
