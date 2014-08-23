@@ -126,6 +126,26 @@ analysis_descriptors = {
 		'headspan':'(name OP52 or name OP53 or name OP54 or name OP42 or name OP43 or name OP44)',
 		'headangle':'(name C2 or name P or name C14)',
 		},
+    'v532-40000-90000-50-bridge':{
+		'sysname':'membrane-v532',
+		'sysname_lookup':'membrane-v532-bridge',
+		'director':director_aamd_asymmetric,
+		'selector':selector_aamd_asymmetric,
+		'protein_select':None,
+		'residues':'infer',
+		'trajsel':'s5-sim-kraken-md.part0015.40000-90000-50.bridge.xtc',
+		'ions_sysname':'membrane-v532-ions',
+		'ions_trajsel':'s5-sim-kraken-md.part0015.pbcmol.40000-90000-50.ions.xtc',
+		'whichframes':None,
+		'ptdins_resname':'PI2P',
+		'ptdins_label':'PtdIns(4,5)P$_2$',
+		'ion_label':'Ca$^{2+}$',
+		'ion_name':'Cal',
+		'ion_name_alt':'CL',
+		'composition_name':'asymmetric'.capitalize(),
+		'headspan':'(name OP52 or name OP53 or name OP54 or name OP42 or name OP43 or name OP44)',
+		'headangle':'(name C2 or name P or name C14)',
+		},
 	#---symmetric bilayers
 	'v509-40000-90000-50':{
 		'sysname':'membrane-v509',
@@ -557,6 +577,18 @@ key_atom_selector = {
 	'DOPE':'name P',
 	'POPC':'name P',
 	'CHL1':'name C3',
+	}
+
+binding_atoms = {
+	#'P35P':'name P',
+	'PI2P':'(name OP52 or name OP53 or name OP54 or name OP42 or name OP43 or name OP44 or name O13 or name O14)',
+	#'PIPP':'name P',
+	#'PIPU':'name P',
+	#'DOPC':'name P',
+	#'DOPS':'name P',
+	#'DOPE':'name P',
+	#'POPC':'name P',
+	#'CHL1':'name C3',
 	}
 	
 #---quickly list ptdins resnames
