@@ -22,6 +22,8 @@ import code
 import datetime
 import operator
 
+#00000000000000000000000000000000000000TMP
+import matplotlib.pyplot as plt
 
 #---Set up visualization
 os.environ['ETS_TOOLKIT'] = 'qt4'
@@ -167,10 +169,12 @@ class MembraneSet:
 			self.time_total = self.universe.trajectory.totaltime
 		if hasattr(self.universe.trajectory,'dt'):
 			self.time_dt = self.universe.trajectory.dt
+		'''
 		if hasattr(self.universe,'trajectory'):
 			self.time_list = [self.universe.trajectory[i].time 
 				for i in range(len(self.universe.trajectory)) 
 				if hasattr(self.universe.trajectory[i],'time')]
+		'''
 		status('status: the trajectory file has '+str(self.nframes)+' frames')
 
 	def load_points(self,xyzdir,nbase=0,start=None,end=None,
@@ -467,8 +471,8 @@ class MembraneSet:
 			interpdata.append(rezip)
 		return interpdata
 			
-	def midplaner(self,selector,rounder=4.0,framecount=None,start=None,end=None,
-		skip=None,interp='best',protein_selection=None,residues=None,timeslice=None,thick=False):
+	def midplaner(self,selector,rounder=4.0,framecount=None,start=None,end=None,skip=None,
+		interp='best',protein_selection=None,residues=None,timeslice=None,thick=False,fine=None):
 		'''Interpolate the molecular dynamics bilayers.'''
 		self.rounder = rounder
 		if timeslice != None:
@@ -496,7 +500,7 @@ class MembraneSet:
 		for k in range(start,end,skip):
 			status('status: calculating midplane fr = '+str(k+1)+'/'+str(len(range(start,end,skip))))
 			self.calculate_midplane(selector,k,rounder=rounder,interp=interp,residues=residues,
-				thick=thick)
+				thick=thick,fine=fine)
 			if protein_selection != None:
 				self.protein.append(self.universe.selectAtoms(protein_selection).coordinates())
 				self.protein_index.append(k)
@@ -526,8 +530,10 @@ class MembraneSet:
 				self.protein_index.append(k)
 			
 	def calculate_midplane(self,selector,frameno,pbcadjust=1,rounder=4.0,interp='best',storexyz=True,
-		residues=None,thick=False):
+		residues=None,thick=False,fine=None):
 		'''Find the midplane of a molecular dynamics bilayer.'''
+		#---temporary
+		st = time.time()
 		lenscale = self.lenscale
 		self.gotoframe(frameno)
 		#---Use all residues
@@ -542,18 +548,25 @@ class MembraneSet:
 				for r in residues for i in self.monolayer_by_resid[0][self.resnames.index(r)]])
 			botxyz = array([mean(self.universe.residues[i].selectAtoms(selector).coordinates(),axis=0) 
 				for r in residues for i in self.monolayer_by_resid[1][self.resnames.index(r)]])
-		if storexyz:
-			self.xyzs.append([topxyz,botxyz])
+		#---new addition for sharp
+		#topxyz = topxyz - mean(topxyz)
+		#---new addition for sharp
+		#botxyz = botxyz - mean(botxyz)
+		if storexyz: self.xyzs.append([topxyz,botxyz])
 		#---First we wrap PBCs
 		topxyzwrap = self.wrappbc(topxyz,vecs=self.vec(frameno),mode='grow')
 		botxyzwrap = self.wrappbc(botxyz,vecs=self.vec(frameno),mode='grow')
 		#---Triangulate the surface on a regular grid
-		topmesh = self.makemesh(topxyzwrap,self.vec(frameno),self.griddims,method=interp)
-		botmesh = self.makemesh(botxyzwrap,self.vec(frameno),self.griddims,method=interp)
+		topmesh = self.makemesh(topxyzwrap,self.vec(frameno),self.griddims,method=interp,fine=fine)
+		botmesh = self.makemesh(botxyzwrap,self.vec(frameno),self.griddims,method=interp,fine=fine)
 		#---Take the average surface
 		#---Nb this is the location of the infamous transpose errors. Forgot to reverse order of list indices
 		topzip = self.rezipgrid(topmesh,frameno=frameno)
 		botzip = self.rezipgrid(botmesh,frameno=frameno)
+
+		#plt.imshow(tile(array(topzip).T,(3,3)),interpolation='nearest',origin='lower')
+		#plt.show()
+
 		#---Convert from points in 3-space to heights on a grid
 		self.monolayer1.append(array(topzip))
 		self.monolayer2.append(array(botzip))
@@ -568,7 +581,8 @@ class MembraneSet:
 		self.surf.append(surfz)
 		self.surf_index.append(frameno)
 		self.surf_time.append(self.universe.trajectory[frameno].time)
-			
+		print 1./60*(time.time()-st)
+
 	def triangulator(self,selector,start=None,end=None,skip=None,framecount=None,label=None,tesstype=None):
 		'''Triangulate the surface by lipid for the entire trajectory.'''
 		if framecount == None:
@@ -1074,7 +1088,7 @@ class MembraneSet:
 					binnedpts.append([ti1[i],ti2[j],mean(binner[i][j])])
 		return array(binnedpts)
 		
-	def makemesh(self,data,vecs,grid,method='best'):
+	def makemesh(self,data,vecs,grid,method='best',fine=None):
 		'''Approximates an unstructured mesh with a regular one.'''
 		if method == 'best': method = 'bilinear_cubic'
 		if method == 'bilinear_triangle_interpolation':
@@ -1089,7 +1103,7 @@ class MembraneSet:
 				height = scipy.interpolate.griddata(mytripts[:,0:2],mytripts[:,2],[xypts[i]],method='linear')
 				results.append([xypts[i][0],xypts[i][1],height])
 			return array(results)
-		if method == 'bilinear_triangle_interpolation_manual':
+		elif method == 'bilinear_triangle_interpolation_manual':
 			#---Manual bilinear interpolation. Same speed as griddata in method 1 (above).
 			dat1 = self.wrappbc(data,vecs,mode='grow')
 			dat2 = Delaunay(dat1[:,0:2])
@@ -1108,12 +1122,12 @@ class MembraneSet:
 				height = a*xypts[i][0]+b*xypts[i][1]+c
 				results.append([xypts[i][0],xypts[i][1],height])
 			return array(results)
-		if method == 'bilinear':
+		elif method == 'bilinear':
 			starttime = time.time()
 			xypts = array([[i,j] for i in linspace(0,vecs[0],grid[0]) for j in linspace(0,vecs[1],grid[1])])
 			interp = scipy.interpolate.LinearNDInterpolator(data[:,0:2],data[:,2],fill_value=0.0)
 			return array([[i[0],i[1],interp(i[0],i[1])] for i in xypts])
-		if method == 'bilinear_cubic':
+		elif method == 'bilinear_cubic':
 			starttime = time.time()
 			xypts = array([[i,j] for i in linspace(0,vecs[0],grid[0]) for j in linspace(0,vecs[1],grid[1])])
 			interp = scipy.interpolate.LinearNDInterpolator(data[:,0:2],data[:,2],fill_value=0.0)
@@ -1130,7 +1144,21 @@ class MembraneSet:
 			print 'status: surfacing on a regular grid'
 			ZI = rbfobj(XI,YI)
 			return self.unzipgrid(transpose(ZI),vecs=vecs,reverse=0)
-
+		elif method == 'sharp_cubic_spline':
+			'''
+			Added this method on 2014.08.14 in order to dramatically increase the resolution of the mesh.
+			Currently the sharpness parameter is hard-coded but this should eventually become an argument.
+			'''
+			if fine == None: fineness = 500*1j,500*1j
+			else: fine = fine*1j,fine*1j
+			
+			gridx,gridy = mgrid[0:vecs[0]:fine[0],0:vecs[1]:fine[1]]
+			points = data[:,:2]
+			values = data[:,2]
+			heights = scipy.interpolate.griddata(points,values,(gridx,gridy),method='cubic')
+			unzip = self.unzipgrid(transpose(heights),vecs=vecs,reverse=0)
+			return unzip
+		
 #---Transforming points in 3-space to heights in a grid, and vis-versa
 
 	def unzipgrid(self,surf,vecs=None,grid=None,rounder_vecs=[1.0,1.0],reverse=0):

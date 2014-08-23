@@ -1,4 +1,4 @@
-#!/usr/bin/python
+#!/usr/bin/python -i
 
 from membrainrunner import *
 execfile('locations.py')
