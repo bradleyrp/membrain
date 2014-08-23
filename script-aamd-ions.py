@@ -1,4 +1,4 @@
-#!/usr/bin/python
+#!/usr/bin/python -i
 
 logfile,interact,debugmode = [None,False,None]
 from membrainrunner import *
@@ -942,10 +942,7 @@ if 'load' in routine or 'ionspos' not in globals():
 		master_midz[anum] = midz
 		master_ionlist[anum] = ionlist
 
-#---example for doing the coordinate shift and the binning in the z-dimension
-if 'compute_z' in routine:
-	binedges,monobins = binlister('fixed',mset=mset_surf,binw=binwidth,monoz=master_monoz[anum])
-		
+	
 #---example for doing the coordinate shift and the binning relative to key phospholipids
 if 'compute_radial_binary' in routine:
 	aname = analysis_names[0]
@@ -976,3 +973,71 @@ if 'compute_radial_binary' in routine:
 #---example for doing the coordinate shift and the binning in the z-dimension
 if 'compute_z' in routine:
 	binedges,monobins = binlister('fixed',mset=mset_surf,binw=binwidth,monoz=master_monoz[anum])
+	
+	#---following codeblock taken from compute_z_deprecated2 above
+	binwidth = 1
+	fig = plt.figure(figsize=(10,6))
+	gs = gridspec.GridSpec(2,1,wspace=0.0,hspace=0.0)
+	ax = fig.add_subplot(gs[0])
+	ax2 = fig.add_subplot(gs[1])
+	axes = [ax,ax2]
+	lslist = ['-','-']
+	peakval = [0,0]
+	for aname in analysis_names:
+		for i in analysis_descriptors[aname]: vars()[i] = (analysis_descriptors[aname])[i]
+		anum = analysis_names.index(aname)
+		mset = msets[anum]
+		mset_surf = msets_surf[anum]
+		ionlist = master_ionlist[anum]
+		binedges,monobins = binlister('fixed',mset=mset_surf,binw=binwidth,monoz=master_monoz[anum])
+		valid_inds = where([len(i)==int(round(mean([len(i) 
+			for i in binedges]))) for i in binedges])[0]
+		binedges = list(array(binedges)[valid_inds])
+		for ionnum in range(len(ionlist)):
+			relpos = bilayer_shift(mset=mset,vecs=array([mset.vec(i) for i in range(mset.nframes)]),
+				ionspos=master_ionspos[anum][ionnum],midz=master_midz[anum])
+			disctraj = discretizer_z(binedges,array(relpos)[valid_inds])
+			counts,edges = plot_ion_distribution_deprecated2(disctraj,binedges,
+				cumsum=False,
+				ionname=ionlist[0],ionlist=ionlist,
+				label=proper_ion_labels[ionlist[ionnum]]+\
+					(' with '+proper_ion_labels[ionlist[0]] if ionnum>0 else ''),
+				bintype='fixed',fig=fig,thisax=axes[ionnum],ls=lslist[ionnum],
+				bulk_relative=norm_z_concentration)
+			if peakval[ionnum] < counts.max():
+				peakval[ionnum] = counts.max()
+	ax.legend(loc='upper left',fontsize=fsaxlegend)
+	ax2.legend(loc=('lower left' if 
+		(resname_group == 'protonation' and norm_z_concentration == False) else 'upper left'),
+		fontsize=fsaxlegend)
+
+	#---note that the following plot specs were originally in the function, but I moved them here
+	if norm_z_concentration == True:
+		if peakval[1] < 3: peakval[1] = 3
+		ax.set_yticks(list(arange(0,1.1*peakval[0],1))[:-1])
+		ax.set_yticklabels([str(int(i)) for i in list(arange(0,1.1*peakval[0],1))[:-1]])
+		if len(list(arange(0,1.1*peakval[0],1))[:-1]) > 10:
+			ax.set_yticks([1]+list(arange(4,1.1*peakval[0],4)))
+			ax.set_yticklabels([1]+list([str(int(i)) for i in  arange(4,1.1*peakval[0],4)]))
+		ax.set_ylim((0,1.1*peakval[0]))
+		ax2.set_yticks(list(arange(0,1.1*peakval[1],1))[:-1])
+		ax2.set_yticklabels([str(int(i)) for i in list(arange(0,1.1*peakval[1],1))[:-1]])
+		if len(list(arange(0,1.1*peakval[1],1))[:-1]) > 10:
+			ax2.set_yticks([1]+list(arange(4,1.1*peakval[1],4)))
+			ax2.set_yticklabels([1]+list([str(int(i)) for i in  arange(4,1.1*peakval[1],4)]))
+		ax2.set_ylim((0,1.1*peakval[1]))
+	else:
+		ax.get_yaxis().set_major_locator(mpl.ticker.MaxNLocator(prune='upper',nbins=6))
+		ax2.get_yaxis().set_major_locator(mpl.ticker.MaxNLocator(prune='upper',nbins=6))
+
+	ax.set_xlabel('')
+	ax.set_xticklabels([])
+	ax.set_title(composition_name+' bilayer',fontsize=fsaxtitle)
+	#---save
+	plt.savefig(pickles+'/PREPARE-FIGURES/'+'fig-ion_equilibrium_z-'+\
+		'cumulative-'+\
+		('not_normalized-' if norm_z_concentration == False else '')+\
+		'-'.join(analysis_names)+'.png',dpi=300)
+	if showplots: plt.show()
+	plt.close(fig)
+	

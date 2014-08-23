@@ -42,6 +42,9 @@ norm_z_concentration = False
 #---develop mode
 devmode = True
 
+#---binwidth for ion distributions
+binwidth = 1
+
 #---BATCH
 #-------------------------------------------------------------------------------------------------------------
 

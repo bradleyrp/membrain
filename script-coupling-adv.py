@@ -140,136 +140,137 @@ if 'batch_override' in globals() and batch_override:
 #---comparison of curvature between MESO and CGMD methods
 #---plots height-curvature correlation alongsize structure and variations
 
-#---fixed limits for making smooth gifs
-extremz_checkplot_global = -2.5,2.5
-extrems_checkplot_global = 2.0
-extremc0_checkplot_global = 0.03
-#---calculations
-mset = msets[0]
-vecs = mean(mset.vecs,axis=0)
-m,n = mset.griddims
-#---figure
-fig = plt.figure(figsize=(18,12))
-gs = gridspec.GridSpec(5,2,hspace=0.15)
-gs.update(left=0.0,right=0.3)
-gs2 = gridspec.GridSpec(1,2)
-gs2.update(left=0.4,right=1.0)
-axeslist = []
-#---plot curvature field
-extrem = max([max([j.max() for j in mscs[i].c0s]) for i in range(2)])
-if extremc0_checkplot_global != None: extrem = extremc0_checkplot_global
-ax = plt.subplot(gs[0,0])
-ax.imshow(mean(mscs[0].c0s,axis=0).T,vmax=extrem,vmin=0.,cmap=mpl.cm.binary,
-	interpolation='nearest',origin='lower')
-axeslist.append(ax)
-ax.set_title('CGMD')
-ax = plt.subplot(gs[0,1])
-axeslist.append(ax)
-ax.set_title('MESO')
-#---choose only a single frame, since the curvature field may be somewhat mobile at mesosscale
-im = ax.imshow(mscs[1].c0s[0],vmax=extrem,vmin=0.,cmap=mpl.cm.binary,
-	interpolation='nearest',origin='lower')
-axins = inset_axes(ax,width="5%",height="100%",loc=3,
-	bbox_to_anchor=(1.,0.,1.,1.),
-	bbox_transform=ax.transAxes,
-	borderpad=0)
-axeslist.append(axins)
-cbar = plt.colorbar(im,cax=axins,orientation="vertical")
-axins.set_ylabel(r'$\left\langle C_0 \right\rangle (\mathrm{{nm}^{-1}})$',
-	rotation=270)
-#---plot average structure
-vmax = max([mean(msets[i].surf,axis=0).max()/msets[i].lenscale for i in range(2)])
-vmin = min([mean(msets[i].surf,axis=0).min()/msets[i].lenscale for i in range(2)])
-extrem = max(abs(vmax),abs(vmin))
-vmax,vmin = extrem,-extrem
-if extremz_checkplot_global != None: vmin,vmax = extremz_checkplot_global
-ax = plt.subplot(gs[1,0])
-axeslist.append(ax)
-im = ax.imshow(mean(msets[0].surf,axis=0).T/msets[0].lenscale,vmin=vmin,vmax=vmax,cmap=mpl.cm.RdBu_r,
-	interpolation='nearest',origin='lower')
-ax = plt.subplot(gs[1,1])
-axeslist.append(ax)
-im = ax.imshow(mean(msets[1].surf,axis=0).T/msets[1].lenscale,vmin=vmin,vmax=vmax,cmap=mpl.cm.RdBu_r,
-	interpolation='nearest',origin='lower')
-axins = inset_axes(ax,width="5%",height="100%",loc=3,bbox_to_anchor=(1.,0.,1.,1.),
-	bbox_transform=ax.transAxes,borderpad=0)
-axeslist.append(axins)
-cbar = plt.colorbar(im,cax=axins,orientation="vertical")
-axins.set_ylabel(r'$\left\langle z(x,y)\right\rangle (\mathrm{nm})$',rotation=270)
-#---plot standard deviations
-extrem = max([std(msets[i].surf,axis=0).max()/msets[i].lenscale for i in range(2)])
-if extrems_checkplot_global != None: extrem = extrems_checkplot_global
-ax = plt.subplot(gs[2,0])
-axeslist.append(ax)
-ax.imshow((std(msets[0].surf,axis=0)/msets[0].lenscale).T,vmin=0.,vmax=extrem,cmap=mpl.cm.jet,
-	interpolation='nearest',origin='lower')
-ax = plt.subplot(gs[2,1])
-axeslist.append(ax)
-im = ax.imshow((std(msets[1].surf,axis=0)/msets[1].lenscale).T,vmin=0.,vmax=extrem,cmap=mpl.cm.jet,
-	interpolation='nearest',origin='lower')
-axins = inset_axes(ax,width="5%",height="100%",loc=3,
-	bbox_to_anchor=(1.,0.,1.,1.),
-	bbox_transform=ax.transAxes,
-	borderpad=0)
-axeslist.append(axins)
-cbar = plt.colorbar(im,cax=axins,orientation="vertical")
-axins.set_ylabel(r'$\left\langle \left(z-\overline{z}\right)^{2} \right\rangle (\mathrm{{nm}^2})$',
-	rotation=270)
-#---compare 2D energy spectra
-for m in [analysis_names.index(aname) for aname	in plot_reord]:
-	mset = msets[m]
-	axr2 = plt.subplot(gs[3,m])
-	cm,cn = [int(i/2) for i in shape(mscs[m].tsum2d)]
-	wid = 3
-	dat = mscs[m].tsum2d[cm-wid:cm+wid+1,cn-wid:cn+wid+1]
-	dat[shape(dat)[0]/2,shape(dat)[1]/2] = (vmin+vmax)/2.
-	im = plotter2d(axr2,mset,dat=dat,
-		cmap=mpl.cm.RdBu_r,inset=False,cmap_washout=1.0,
-		ticklabel_show=[1,1],tickshow=[1,1],centertick=False,
-		fs=10,label_style='q',lims=[0.1,10],
-		tickskip=int(round(mset.griddims[0]/6,-1)))
-axins = inset_axes(axr2,width="5%",height="100%",loc=3,
-	bbox_to_anchor=(1.,0.,1.,1.),
-	borderpad=0)
-axeslist.append(axins)
-cbar = plt.colorbar(im,cax=axins,orientation="vertical")
-axins.set_ylabel(
-	r'$\left\langle \mathscr{H}_{el}\right\rangle \left(\frac{k_{B}T}{2}\right)^{-1}$',
-	fontsize=fsaxlabel,rotation=270)
-#---compare height-curvature correlation in 2D
-for m in [analysis_names.index(aname) for aname	in plot_reord]:
-	mset = msets[m]
-	axr3 = plt.subplot(gs[4,m])
-	cm,cn = [int(i/2) for i in shape(mscs[m].t2d[1])]
-	wid = 3
-	dat = mscs[m].t2d[1][cm-wid:cm+wid+1,cn-wid:cn+wid+1]
-	dat[shape(dat)[0]/2,shape(dat)[1]/2] = (vmin+vmax)/2.
-	im = plotter2d(axr3,mset,dat=dat,
-		cmap=mpl.cm.RdBu_r,inset=False,cmap_washout=1.0,
-		ticklabel_show=[1,1],tickshow=[1,1],centertick=False,
-		fs=10,label_style='q',lims=[10**-5,10**-2],
-		tickskip=int(round(mset.griddims[0]/6,-1)))
-axins = inset_axes(axr3,width="5%",height="100%",loc=3,
-	bbox_to_anchor=(1.,0.,1.,1.),
-	bbox_transform=axr3.transAxes,
-	borderpad=0)
-axeslist.append(axins)
-cbar = plt.colorbar(im,cax=axins,orientation="vertical")
-axins.set_ylabel(
-	r'$\left\langle C_{0,q} h_{-q} \right\rangle $',
-	fontsize=fsaxlabel,rotation=270)
-axeslist.append(axins)
-for ax in axeslist:
-	plt.setp(ax.get_yticklabels(),fontsize=10)
-	plt.setp(ax.get_xticklabels(),fontsize=10)	
-#---spectrum plot
-spectrum_summary(fig=fig,gs=gs2,
-	titletext=r'$\mathrm{C_{0,hypo}}='+('{0:.3f}'.format(c0ask))+'a_0^{-1}'+\
-	'='+('{0:.3f}'.format(c0ask*msets[1].lenscale))+'\:\mathrm{({nm}^{-1})}$')
-#---save
-plt.savefig(pickles+'fig-bilayer-couple-'+bigname+'.png',bbox_inches='tight',dpi=300)
-if showplots: plt.show()
-plt.close(fig)
+if do_couple_plot:
+	#---fixed limits for making smooth gifs
+	extremz_checkplot_global = -2.5,2.5
+	extrems_checkplot_global = 2.0
+	extremc0_checkplot_global = 0.03
+	#---calculations
+	mset = msets[0]
+	vecs = mean(mset.vecs,axis=0)
+	m,n = mset.griddims
+	#---figure
+	fig = plt.figure(figsize=(18,12))
+	gs = gridspec.GridSpec(5,2,hspace=0.15)
+	gs.update(left=0.0,right=0.3)
+	gs2 = gridspec.GridSpec(1,2)
+	gs2.update(left=0.4,right=1.0)
+	axeslist = []
+	#---plot curvature field
+	extrem = max([max([j.max() for j in mscs[i].c0s]) for i in range(2)])
+	if extremc0_checkplot_global != None: extrem = extremc0_checkplot_global
+	ax = plt.subplot(gs[0,0])
+	ax.imshow(mean(mscs[0].c0s,axis=0).T,vmax=extrem,vmin=0.,cmap=mpl.cm.binary,
+		interpolation='nearest',origin='lower')
+	axeslist.append(ax)
+	ax.set_title('CGMD')
+	ax = plt.subplot(gs[0,1])
+	axeslist.append(ax)
+	ax.set_title('MESO')
+	#---choose only a single frame, since the curvature field may be somewhat mobile at mesosscale
+	im = ax.imshow(mscs[1].c0s[0],vmax=extrem,vmin=0.,cmap=mpl.cm.binary,
+		interpolation='nearest',origin='lower')
+	axins = inset_axes(ax,width="5%",height="100%",loc=3,
+		bbox_to_anchor=(1.,0.,1.,1.),
+		bbox_transform=ax.transAxes,
+		borderpad=0)
+	axeslist.append(axins)
+	cbar = plt.colorbar(im,cax=axins,orientation="vertical")
+	axins.set_ylabel(r'$\left\langle C_0 \right\rangle (\mathrm{{nm}^{-1}})$',
+		rotation=270)
+	#---plot average structure
+	vmax = max([mean(msets[i].surf,axis=0).max()/msets[i].lenscale for i in range(2)])
+	vmin = min([mean(msets[i].surf,axis=0).min()/msets[i].lenscale for i in range(2)])
+	extrem = max(abs(vmax),abs(vmin))
+	vmax,vmin = extrem,-extrem
+	if extremz_checkplot_global != None: vmin,vmax = extremz_checkplot_global
+	ax = plt.subplot(gs[1,0])
+	axeslist.append(ax)
+	im = ax.imshow(mean(msets[0].surf,axis=0).T/msets[0].lenscale,vmin=vmin,vmax=vmax,cmap=mpl.cm.RdBu_r,
+		interpolation='nearest',origin='lower')
+	ax = plt.subplot(gs[1,1])
+	axeslist.append(ax)
+	im = ax.imshow(mean(msets[1].surf,axis=0).T/msets[1].lenscale,vmin=vmin,vmax=vmax,cmap=mpl.cm.RdBu_r,
+		interpolation='nearest',origin='lower')
+	axins = inset_axes(ax,width="5%",height="100%",loc=3,bbox_to_anchor=(1.,0.,1.,1.),
+		bbox_transform=ax.transAxes,borderpad=0)
+	axeslist.append(axins)
+	cbar = plt.colorbar(im,cax=axins,orientation="vertical")
+	axins.set_ylabel(r'$\left\langle z(x,y)\right\rangle (\mathrm{nm})$',rotation=270)
+	#---plot standard deviations
+	extrem = max([std(msets[i].surf,axis=0).max()/msets[i].lenscale for i in range(2)])
+	if extrems_checkplot_global != None: extrem = extrems_checkplot_global
+	ax = plt.subplot(gs[2,0])
+	axeslist.append(ax)
+	ax.imshow((std(msets[0].surf,axis=0)/msets[0].lenscale).T,vmin=0.,vmax=extrem,cmap=mpl.cm.jet,
+		interpolation='nearest',origin='lower')
+	ax = plt.subplot(gs[2,1])
+	axeslist.append(ax)
+	im = ax.imshow((std(msets[1].surf,axis=0)/msets[1].lenscale).T,vmin=0.,vmax=extrem,cmap=mpl.cm.jet,
+		interpolation='nearest',origin='lower')
+	axins = inset_axes(ax,width="5%",height="100%",loc=3,
+		bbox_to_anchor=(1.,0.,1.,1.),
+		bbox_transform=ax.transAxes,
+		borderpad=0)
+	axeslist.append(axins)
+	cbar = plt.colorbar(im,cax=axins,orientation="vertical")
+	axins.set_ylabel(r'$\left\langle \left(z-\overline{z}\right)^{2} \right\rangle (\mathrm{{nm}^2})$',
+		rotation=270)
+	#---compare 2D energy spectra
+	for m in [analysis_names.index(aname) for aname	in plot_reord]:
+		mset = msets[m]
+		axr2 = plt.subplot(gs[3,m])
+		cm,cn = [int(i/2) for i in shape(mscs[m].tsum2d)]
+		wid = 3
+		dat = mscs[m].tsum2d[cm-wid:cm+wid+1,cn-wid:cn+wid+1]
+		dat[shape(dat)[0]/2,shape(dat)[1]/2] = (vmin+vmax)/2.
+		im = plotter2d(axr2,mset,dat=dat,
+			cmap=mpl.cm.RdBu_r,inset=False,cmap_washout=1.0,
+			ticklabel_show=[1,1],tickshow=[1,1],centertick=False,
+			fs=10,label_style='q',lims=[0.1,10],
+			tickskip=int(round(mset.griddims[0]/6,-1)))
+	axins = inset_axes(axr2,width="5%",height="100%",loc=3,
+		bbox_to_anchor=(1.,0.,1.,1.),
+		borderpad=0)
+	axeslist.append(axins)
+	cbar = plt.colorbar(im,cax=axins,orientation="vertical")
+	axins.set_ylabel(
+		r'$\left\langle \mathscr{H}_{el}\right\rangle \left(\frac{k_{B}T}{2}\right)^{-1}$',
+		fontsize=fsaxlabel,rotation=270)
+	#---compare height-curvature correlation in 2D
+	for m in [analysis_names.index(aname) for aname	in plot_reord]:
+		mset = msets[m]
+		axr3 = plt.subplot(gs[4,m])
+		cm,cn = [int(i/2) for i in shape(mscs[m].t2d[1])]
+		wid = 3
+		dat = mscs[m].t2d[1][cm-wid:cm+wid+1,cn-wid:cn+wid+1]
+		dat[shape(dat)[0]/2,shape(dat)[1]/2] = (vmin+vmax)/2.
+		im = plotter2d(axr3,mset,dat=dat,
+			cmap=mpl.cm.RdBu_r,inset=False,cmap_washout=1.0,
+			ticklabel_show=[1,1],tickshow=[1,1],centertick=False,
+			fs=10,label_style='q',lims=[10**-5,10**-2],
+			tickskip=int(round(mset.griddims[0]/6,-1)))
+	axins = inset_axes(axr3,width="5%",height="100%",loc=3,
+		bbox_to_anchor=(1.,0.,1.,1.),
+		bbox_transform=axr3.transAxes,
+		borderpad=0)
+	axeslist.append(axins)
+	cbar = plt.colorbar(im,cax=axins,orientation="vertical")
+	axins.set_ylabel(
+		r'$\left\langle C_{0,q} h_{-q} \right\rangle $',
+		fontsize=fsaxlabel,rotation=270)
+	axeslist.append(axins)
+	for ax in axeslist:
+		plt.setp(ax.get_yticklabels(),fontsize=10)
+		plt.setp(ax.get_xticklabels(),fontsize=10)	
+	#---spectrum plot
+	spectrum_summary(fig=fig,gs=gs2,
+		titletext=r'$\mathrm{C_{0,hypo}}='+('{0:.3f}'.format(c0ask))+'a_0^{-1}'+\
+		'='+('{0:.3f}'.format(c0ask*msets[1].lenscale))+'\:\mathrm{({nm}^{-1})}$')
+	#---save
+	plt.savefig(pickles+'fig-bilayer-couple-'+bigname+'.png',bbox_inches='tight',dpi=300)
+	if showplots: plt.show()
+	plt.close(fig)
 
 '''
 Note: make cool gifs with the following commands on light.site
