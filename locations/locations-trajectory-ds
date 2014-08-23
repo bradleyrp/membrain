@@ -38,10 +38,6 @@ name=membrane-v531-atomP
 struct=membrane-v531/a7-headspan/system.atomP.gro
 membrane-v531/a7-headspan/s4-sim-trestles-md.part0007.20000-62000-100.atomP.xtc
 
-name=membrane-v532-ions
-struct=membrane-v532/a4-ions/system.ions.gro
-membrane-v532/a4-ions/s4-sim-trestles-md.part0007.20000-58000-100.ions.xtc
-
 name=membrane-v532-atomP
 struct=membrane-v532/a5-surfacer/system.atomP.gro
 membrane-v532/a5-surfacer/s4-sim-trestles-md.part0007.20000-58000-100.atomP.xtc
@@ -105,3 +101,15 @@ membrane-v534/a1-spanangle/s4-sim-kraken-md.part0013.40000-60000-100.spanangle.x
 name=membrane-v534-atomP
 struct=membrane-v534/a1-spanangle/system.atomP.gro
 membrane-v534/a1-spanangle/s4-sim-kraken-md.part0013.40000-60000-100.atomP.xtc
+
+name=membrane-v532-keys
+struct=membrane-v532/a6-structure/system.keylipidatoms.gro
+membrane-v532/a6-structure/s5-sim-kraken-md.part0015.40000-90000-50.keylipidatoms.xtc
+
+name=membrane-v532-bridge
+struct=membrane-v532/a6-structure/system.bridge.gro
+membrane-v532/a6-structure/s5-sim-kraken-md.part0015.40000-90000-50.bridge.xtc
+
+name=membrane-v532-ions
+struct=membrane-v532/a7-ions/system.ions.gro
+membrane-v532/a7-ions/s5-sim-kraken-md.part0015.pbcmol.40000-90000-50.ions.xtc

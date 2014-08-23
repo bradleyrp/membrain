@@ -1,6 +1,7 @@
 #!/usr/bin/python
 
-basedir = '/home/davids/membrane-v5xx/'
+#basedir = '/home/davids/membrane-v5xx/'
+basedir = '/home/davids/DELTA-transfer/'
 locations = '/home/davids/membrain/locations/locations-trajectory-ds'
 pickles = '/home/davids/repo-pickles/'
 plot_suppress = False

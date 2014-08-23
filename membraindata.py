@@ -41,6 +41,11 @@ master_datatypes = {
 		'struct_opts':None,
 		'description':'stores the angles along a polymer chain',
 		},
+    'bridge':{
+		'struct':{'frame':0,'monolayer':1,'lipid':2},
+		'struct_opts':None,
+		'description':'Holds the output of ion-lipid bridge calculations. Particle specs are in the pkl name and the notes.',
+		},
 	}
 
 #---MEMBRANEDATA CLASS
