@@ -21,7 +21,6 @@ if '-i' in sys.argv: interact = True
 if ('-i' in sys.argv or ('interact' in globals() and interact)) \
 	and 'logfile' in globals() and logfile != None: 
 	logfile = None
-interact_registered = False
 
 #---import the primary membrain library for which membrainrunner is only a wrapper
 from membrain import *

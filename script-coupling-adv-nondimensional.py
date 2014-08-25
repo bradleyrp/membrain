@@ -1,5 +1,12 @@
 #!/usr/bin/python
 
+'''
+Notes:
+	run this script after script-coupling-adv-batch.py
+	if it can't find kappa_app then you need to rerun the sim
+	
+'''
+
 from scipy.optimize import leastsq
 
 qrange = [0.2,0.4]
@@ -126,7 +133,6 @@ if 1 or 'mesospec_collect' not in globals():
 				color=color,alpha=alpha,zorder=zorder,lw=lw,label=label)
 			ax4.plot(array(xdat)[inds],array(ydat)[inds],
 				color=color,alpha=alpha,zorder=zorder,lw=lw,label=label)
-
 
 	#---plot the average mesoscale simulation after non-dimensionalizing by kappa	
 	ax1.plot(mean(mesospec_collect_q,axis=0),mean(mesospec_collect,axis=0)*mean(meso_kappas),'k-',lw=4)
