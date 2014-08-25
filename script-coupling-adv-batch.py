@@ -14,6 +14,7 @@ cgmd_avail = [
 batch_override = True
 routine = ['print_new_c0_vals','batchcalc','megaplot','signatures'][-1:]
 showplots = False
+do_couple_plot = True
 
 #---parser and logging overrides the standard in membrainrunner
 import argparse
