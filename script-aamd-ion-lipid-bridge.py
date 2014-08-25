@@ -76,6 +76,7 @@ if 'calc_lipid_ion' in routine:
 			# result_data = MembraneData('bridge',label='-'.join(pair))
 			num_ions_binding = []  # Binding to at least one lipid
 			num_ions_bridging = [] # Binding to at least two lipids
+			num_lipids_ion_binding = [] # This array simply holds a list of the number of lipids a given ion is binding
 			# Loop over the lipid and the ion selections
 			for lnum in range(2):
 				if pair[lnum] == 'ion':
@@ -172,35 +173,44 @@ if 'calc_lipid_ion' in routine:
 
 					num_ions_binding.append(sum(binding_truth_table))
 					num_ions_bridging.append(sum(bridging_truth_table))
+					this_frame = [] # This array holds a list of the number of lipids an ion is binding /per frame/
+					for k in range(4):
+						num_lipids_binding = [len(where([i < binding_cutoff for i in min_ion_to_lipid[j]])[0]) == k \
+						                      for j in range(num_ions)]
+						# num_lipids_ion_binding.append([k,sum(num_lipids_binding)])
+						binding = [k, sum(num_lipids_binding)]
+						this_frame.append(binding)
+				num_lipids_ion_binding.append(this_frame)
+			# Sanity check:
+			debug = 0
+			if debug:
+				import itertools as it
+				d = [[max([y - x for x, y in it.combinations(ion_to_lipid[i][j][:], 2)]) \
+					 for j in range(num_lipids)] \
+				     for i in range(num_ions)]
+				print "The maximum difference between the distance of all oxygen atoms of a specific lipid " \
+				      "to given ion can be checked by accessing d[ion][lipid] and this difference should " \
+				      "be relatively small (probably less than 10 A)."
+				# For each ion, how far away is nearest lipid binding oxygen?
+				# distance_matrix.min(axis=0)
+				# For each ion, how far away are the /two/ nearest lipid binding oxygens?
+				# distance_matrix[distance_matrix[:,i].argsort()[0:2],i]
+				# For each lipid binding oxygen, how far away is nearest ion?
+				# distance_matrix.min(axis=1)
+				# Minimum distance from ion to any lipid binding oxygen:
+				distance_to_lipid = [distance_matrix[:,i].min() for i in range(shape(distance_matrix)[1])]
+				# Check if a given ion is binding to /any/ oxygen atom:
+				[distance_to_lipid[i]<binding_cutoff for i in range(len(distance_to_lipid))]
 
+			# Keep this in mind for later:
+			cutoff = sqrt(sum((vecs[:]/2.)**2))
+			cutoff = mean(vecs[:])/2.
+			system_area = pi*cutoff**2
+			scan_range = arange(0,int(cutoff),binsizeabs)
 
-					# Sanity check:
-					sanity_check = 0
-					if sanity_check:
-						import itertools as it
-						d = [[max([y - x for x, y in it.combinations(ion_to_lipid[i][j][:], 2)]) \
-							 for j in range(num_lipids)] \
-						     for i in range(num_ions)]
-						print "The maximum difference between the distance of all oxygen atoms of a specific lipid " \
-						      "to given ion can be checked by accessing d[ion][lipid] and this difference should " \
-							  "be relatively small (probably less than 10 A)."
-						# For each ion, how far away is nearest lipid binding oxygen?
-						# distance_matrix.min(axis=0)
-						# For each ion, how far away are the /two/ nearest lipid binding oxygens?
-						# distance_matrix[distance_matrix[:,i].argsort()[0:2],i]
-						# For each lipid binding oxygen, how far away is nearest ion?
-						# distance_matrix.min(axis=1)
-						# Minimum distance from ion to any lipid binding oxygen:
-						distance_to_lipid = [distance_matrix[:,i].min() for i in range(shape(distance_matrix)[1])]
-						# Check if a given ion is binding to /any/ oxygen atom:
-						[distance_to_lipid[i]<binding_cutoff for i in range(len(distance_to_lipid))]
-
-					# Keep this in mind for later:
-					cutoff = sqrt(sum((vecs[:]/2.)**2))
-					cutoff = mean(vecs[:])/2.
-					system_area = pi*cutoff**2
-					scan_range = arange(0,int(cutoff),binsizeabs)
-
+if 'plot' in routine:
+	for aname in analysis_names:
+		status('status: Plotting = '+str(pairings_lipid_ion[0])+' system = '+aname+'\n')
 
 
 '''
