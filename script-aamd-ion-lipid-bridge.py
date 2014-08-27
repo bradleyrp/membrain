@@ -230,79 +230,17 @@ if 'calculate' in routine:
 							# 5: OP44
 							# 6: O13
 							# 7: O14
-							'''
-							locations = [(where([i < binding_cutoff for i in ion_to_lipid_min_dists[j]])[0]) \
-						                for j in range(num_ions)]
-							# Loop through the locations list and match the position of the minimum distance with the
-							# oxygen number for that particular lipid that we've pre-computed. For example:
-							# In [12]: shape(ion_to_lipid_index_of_min)
-							# Out[12]: (308, 40)
-							# In [13]: shape(locations)
-							# Out[13]: (308,)
-							list = []
-							big_list = []
-							for i in range(num_ions):
-								if len(locations[i]): # Not an empty array
-									if len(locations[i]) != k:
-										print 'For ion number '+str(i)+' and frame nunmber ' +str(frameno)+' there are '+\
-									      str(len(locations[i]))+ ' binding oxygens '+'but there should be '+str(k)
-									print i
-									#print locations[i]
-									list.append(locations[i])
-							big_list = list.flatten()
+							D = {'OP52':0, 'OP53':1, 'OP54':2, 'OP42':3,'OP43':4, 'OP44':5, 'O13':6, 'O14':7}
+							if interactive == 1:
+								oxygen_count = dict((i,which_oxygens.count(i)) for i in which_oxygens)
+								plt.bar([i for i in range(len(oxygen_count))],[oxygen_count[i] for i in range(len(oxygen_count))], align='center')
 
-							'''
-
-						'''
-						if k != 0:
-							locations = where([i < binding_cutoff for i in ion_to_lipid_min_dists[0]])
-							if len(locations) != num_lipids_binding:
-									print "I have not found all of the oxygens this lipid is binding"
-							for j in range(len(locations)):
-								which_oxygens.append(ion_to_lipid_index_of_min[0][locations[0][j]])
-						else: which_oxygens = []
-						# At this point, which_oxygens should be which oxygens on a lipid are within the cutoff for a
-						# single lipid.
-						'''
-						'''
-						# Keep track of which oxygen ion binds /alone/
-						if k == 1:
-							print 'There should be '+str(len(where(num_lipids_binding)[0]))+' single oxygen-ion ' \
-							       'interactions in this frame.'
-							ions_of_interest = where(num_lipids_binding)[0]
-							# These are "interesting" because they bind only /k/ oxygens
-							index_of_minimum_dists = [where(ion_to_lipid_min_dists[ions_of_interest[j]][k] < binding_cutoff) \
-							                          for k in range(num_lipids) \
-							                          for j in range(len(ions_of_interest))]
+								# This is wrong because D.keys() returns the items UNSORTED!
+								plt.xticks(range(len(D)), D.keys())
 
 
-
-
-							# oxygen = ion_to_lipid_index_of_min[j][q] where q is the index of the place where dist < k
-
-						'''
-						'''
-						# Find all the pairs!
-						if k == 2:
-							print 'There should be '+str(len(where(num_lipids_binding)[0]))+' pairs of oxygens for this frame.'
-							# where(num_lipids_binding)[0] gives which ions (of the e.g, 308) are binding to k number
-							# of lipids.
-							ions_of_interest = where(num_lipids_binding)[0]
-							asdf = ion_to_lipid_min_dists[ions_of_interest[j]]
-
-							# Then find all the places asdf is less than cutoff. And then, once you have those places, look
-							# up which oxygen using index of min array.
-
-							locations = [(where(num_lipids_binding) == k for j in range(num_ions)]
-
-							locations = where([[i < binding_cutoff for i in ion_to_lipid_min_dists[j]] for j in range(num_ions)])
-							if len(locations[0]) > 0:
-								for j in range(len(locations)):
-									oxygen_pair_list.append(ion_to_lipid_index_of_min[0][locations[0][j]])
-							'''
-
-
-
+								plt.title('Distribution of oxygens binding to calcium ions which only bind one oxygen')
+								plt.show()
 
 
 						# num_lipids_ion_binding.append([k,sum(num_lipids_binding)])
