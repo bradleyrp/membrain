@@ -22,7 +22,7 @@ if 'batch_override' not in globals():
 		                 'v511-40000-90000-50',
 		                 'v533-40000-90000-50',
 		                 'v534-40000-90000-50',
-	                 ][2:3]
+	                 ][1:3]
 
 	routine = [
 		          'calculate',
@@ -35,7 +35,7 @@ if 'batch_override' not in globals():
 	                     ][:]
 
 	# Binding distance in Angstrom, angle dependence not coded yet.
-	binding_cutoff = 3.0
+	binding_cutoff = 4.0
 
 	fast_pbc = True  # I'm not even sure what fast_pbc = False does
 
@@ -235,14 +235,20 @@ if 'calculate' in routine:
 				which_o_pairs.append(which_o_pairs_frame)
 
 			oxygen_pairs = [item for sublist in which_o_pairs for item in sublist]
-			pair_count = Counter()
+			from collections import Counter
+			pair_sorted = []
 			for pair in oxygen_pairs:
+				# Sorting the entries should get rid of the double (x,y) and (y,x) counts
+				pair_sorted.append(tuple(sort(pair)))
+			count = Counter()
+			for pair in pair_sorted:
 				count[pair] += 1
 
 
 			# Using a dictionary would be nice, but D.keys() returns items in a random unsorted way.
 			# D = {'OP52':0, 'OP53':1, 'OP54':2, 'OP42':3,'OP43':4, 'OP44':5, 'O13':6, 'O14':7}
 			D = ['OP52', 'OP53', 'OP54', 'OP42', 'OP43', 'OP44', 'O13', 'O14']
+			Descriptors = ['P5', 'P5', 'P5', 'P4', 'P4', 'P4', 'P1', 'P1']
 			interactive = 1
 		if interactive == 1:
 			checktime()
@@ -253,7 +259,21 @@ if 'calculate' in routine:
 			plt.bar([i for i in range(len(oxygen_count))],
 			        [float(oxygen_count[i]) / len(big_list) for i in range(len(oxygen_count))], align='center')
 			plt.xticks(range(len(D)), [D[i] for i in range(len(D))])
-			plt.title('Distribution of oxygens binding to calcium ions which only bind one oxygen')
+			plt.title('Distribution of oxygens binding to '+str(ion_name)+' ions which only bind one oxygen')
+			plt.show()
+
+			# Can do some more data de-duplication by collecting all P5/P4/P1 pairs together.
+
+			most_common = count.most_common()[0:10]
+			plt.bar([x for x in range(len(most_common))], [float(most_common[i][1])/sum(count.values()) for i in range(len(most_common))])
+			plt.xticks([x for x in range(len(most_common))], \
+			           [D[most_common[i][0][0]]+str('-')+D[most_common[i][0][1]] for i in range(len(most_common))] )
+			#plt.xticks([x for x in range(len(most_common))], \
+			#           [Descriptors[most_common[i][0][0]]+str('-')+Descriptors[most_common[i][0][1]] for i in range(len(most_common))] )
+
+			plt.xticks(rotation=45)
+			plt.ylabel('Fraction of all '+str(ion_name)+' bridges')
+			plt.title('Distribution of oxygen pairs coordinated by '+str(ion_name)+ ' ions binding two lipids')
 			plt.show()
 
 		# The following bits help figure out what's going wrong when the results are donkey bonkers...
