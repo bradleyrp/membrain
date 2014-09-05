@@ -74,11 +74,11 @@ if 'calculate' in routine:
 			# Unwrap ions
 			fast_pbc = True
 			# This is probably going to be overidden in a batch script, so hack it for now:
-			pair = pairings_lipid_ion[0]
+			analysis_pair = pairings_lipid_ion[0]
 
 			# Results data
 			###########################################################
-			result_data = MembraneData('bridge', label='-'.join(pair))
+			result_data = MembraneData('bridge', label='-'.join(analysis_pair))
 			num_ions_binding = []  # Binding to at least one lipid
 			num_ions_bridging = []  # Binding to at least two lipids
 			num_lipids_ion_binding = []  # This array holds a list of the number of lipids all ions are binding
@@ -90,7 +90,7 @@ if 'calculate' in routine:
 
 			# Loop over the lipid and the ion selections
 			for lnum in range(2):
-				if pair[lnum] == 'ion':
+				if analysis_pair[lnum] == 'ion':
 					# Choosing only cation for analysis, set by ion_name in header-aamd.py dictionary
 					# Heads up: this nomenclature is confusing because allselect_lipids is used for /ions/.
 					allselect_lipids = mset_ions.universe.selectAtoms('name ' + str(ion_name))
@@ -102,12 +102,8 @@ if 'calculate' in routine:
 					# Make a new entry in header-aamd.py dictionary for this;
 					# keylipidatoms becomes binding_atoms in the dictionary
 					# To use non-PtdIns, need to make new time-slices.
-					if pair[lnum] == 'ptdins':
+					if analysis_pair[lnum] == 'ptdins':
 						lipid_selector = 'resname ' + ptdins_resname + ' and ' + binding_atoms[ptdins_resname]
-					elif pair[lnum] == 'ions':
-						lipid_selector = 'name ' + str(ion_name)
-					else:
-						lipid_selector = 'resname ' + pair[lnum] + ' and ' + binding_atoms[pair[lnum]]
 					phosphodiester_check = list(mset.universe.selectAtoms('resname ' + ptdins_resname + \
 					                                                      ' and (name O14 or name O13)'))
 					if len(phosphodiester_check) == 0:
@@ -254,88 +250,94 @@ if 'calculate' in routine:
 			most_common = count.most_common()[0:10]
 			#################################################################
 
-	# Store the parameters and the results in membraindata and a pickle
-	points_counts = [shape(pts1), shape(pts2)]
-	# pair_selects = pair[0:2]
-	# pair_name = '-'.join(pair)
-	pair_name = pair[0]+'-'+ion_name
-	savelist = ['pair_name', 'points_counts', 'binding_cutoff', 'D']
-	for item in savelist:
-		result_data.addnote([item, globals()[item]])
-	result_data.data = [oxygens, oxygen_count, oxygen_pairs, pair_sorted, count]
-	result_data.label = ['Index of oxygens binding to ion per frame, see notes for corresponding Dictionary', \
-	                     'Counter() object tracking index of oxygens binding to ion', \
-	                     'Index of oxygen pairs binding to ion per frame', \
-	                     'Sorted index of oxygen pairs binding to ion', \
-                         'Counter() object tracking index of oxygen pairs binding to ion'
-	]
-	mset.store = [result_data]
-	pairnames = [(i if i != 'ptdins' else ptdins_resname) for i in pair]
-	# ---modify names if the frame selection doesn't perfectly match the original gmx timeslice
-	if '-'.join(aname.split('-')[1:]) != '-'.join(specname_pickle(sysname, trajfile[0]).split('.')[-1:]):
-		specname_mod = '.'.join(specname_pickle(sysname, traj).split('.')[:-1]) + '.' + '-'.join(aname.split('-')[1:])
-	else:
-		specname_mod = specname_pickle(sysname, traj)
-	pickledump(mset.store[0], 'pkl.bridge.' + '-'.join(pairnames) + '.' + specname_mod + '.pkl', directory=pickles)
-	checktime()
 
-	# Debugging
-	#################################################################
-	debug = 0
-	if debug:
-		import itertools as it
-		d = [[max([y - x for x, y in it.combinations(ion_to_lipid[i][j][:], 2)]) \
-		      for j in range(num_lipids)] \
-		     for i in range(num_ions)]
-		print "The maximum difference between the distance of all oxygen atoms of a specific lipid " \
-		      "to given ion can be checked by accessing d[ion][lipid] and this difference should " \
-		      "be relatively small (probably less than 10 A)."
-		# For each ion, how far away is nearest lipid binding oxygen?
-		# distance_matrix.min(axis=0)
-		# For each ion, how far away are the /two/ nearest lipid binding oxygens?
-		# distance_matrix[distance_matrix[:,i].argsort()[0:2],i]
-		# For each lipid binding oxygen, how far away is nearest ion?
-		# distance_matrix.min(axis=1)
-		# Minimum distance from ion to any lipid binding oxygen:
-		distance_to_lipid = [distance_matrix[:, i].min() for i in range(shape(distance_matrix)[1])]
-		# Check if a given ion is binding to /any/ oxygen atom:
-		[distance_to_lipid[i] < binding_cutoff for i in range(len(distance_to_lipid))]
+			#################################################################
+			# Calculate minimum lipid-lipid distances for normalization
+			tmp = scipy.spatial.distance.squareform(scipy.spatial.distance.pdist(pts1))
+			# First 8 elements are the oxygens on the same lipid, then other oxygens
+			tmp[0][points_per_lipid::]
+			#################################################################
+
+
+		# Store the parameters and the results in membraindata and a pickle
+		points_counts = [shape(pts1), shape(pts2)]
+		# pair_selects = pair[0:2]
+		# pair_name = '-'.join(pair)
+		pair_name = analysis_pair[0]+'-'+ion_name
+		savelist = ['pair_name', 'points_counts', 'binding_cutoff', 'D']
+		for item in savelist:
+			result_data.addnote([item, globals()[item]])
+		result_data.data = [oxygens, oxygen_count, oxygen_pairs, pair_sorted, count]
+		result_data.label = ['Index of oxygens binding to ion per frame, see notes for corresponding Dictionary', \
+		                     'Counter() object tracking index of oxygens binding to ion', \
+		                     'Index of oxygen pairs binding to ion per frame', \
+		                     'Sorted index of oxygen pairs binding to ion', \
+	                         'Counter() object tracking index of oxygen pairs binding to ion'
+		]
+		mset.store = [result_data]
+		pairnames = [(i if i != 'ptdins' else ptdins_resname) for i in analysis_pair]
+		# ---modify names if the frame selection doesn't perfectly match the original gmx timeslice
+		if '-'.join(aname.split('-')[1:]) != '-'.join(specname_pickle(sysname, trajfile[0]).split('.')[-1:]):
+			specname_mod = '.'.join(specname_pickle(sysname, traj).split('.')[:-1]) + '.' + '-'.join(aname.split('-')[1:])
+		else:
+			specname_mod = specname_pickle(sysname, traj)
+		pickledump(mset.store[0], 'pkl.bridge.' + '-'.join(pairnames) + '.' + specname_mod + '.pkl', directory=pickles)
+		checktime()
+
+		# Debugging
 		#################################################################
+		debug = 0
+		if debug:
+			import itertools as it
+			d = [[max([y - x for x, y in it.combinations(ion_to_lipid[i][j][:], 2)]) \
+			      for j in range(num_lipids)] \
+			     for i in range(num_ions)]
+			print "The maximum difference between the distance of all oxygen atoms of a specific lipid " \
+			      "to given ion can be checked by accessing d[ion][lipid] and this difference should " \
+			      "be relatively small (probably less than 10 A)."
+			# For each ion, how far away is nearest lipid binding oxygen?
+			# distance_matrix.min(axis=0)
+			# For each ion, how far away are the /two/ nearest lipid binding oxygens?
+			# distance_matrix[distance_matrix[:,i].argsort()[0:2],i]
+			# For each lipid binding oxygen, how far away is nearest ion?
+			# distance_matrix.min(axis=1)
+			# Minimum distance from ion to any lipid binding oxygen:
+			distance_to_lipid = [distance_matrix[:, i].min() for i in range(shape(distance_matrix)[1])]
+			# Check if a given ion is binding to /any/ oxygen atom:
+			[distance_to_lipid[i] < binding_cutoff for i in range(len(distance_to_lipid))]
+			#################################################################
 
-	del mset
-	del mset_ions
-	del result_data
+		del mset
+		del mset_ions
+		del result_data
 
 if 'plot' in routine:
-	'''
+	if 'compute' not in routine:
+		# Try to load a pickle
+		checktime()
+	elif 'compute' in routine:
+		checktime()
+		status('Plotting most recent calculation.')
+		fig = plt.figure(figsize=(8, 6))
+		gs = mpl.gridspec.GridSpec(1, 1)
+		ax = fig.add_subplot(gs[0])
 
-		interactive = 1
-		if interactive == 1:
-			checktime()
-			#print 'Counting oxygens'
-			#big_list = [item for sublist in which_oxygens for item in sublist]
-			# This really ought to be replaced because it's so slow...
-			#oxygen_count = dict((i, big_list.count(i)) for i in big_list)
-			plt.bar([i for i in range(len(oxygen_count))],
+		plt.bar([i for i in range(len(oxygen_count))],
 			        [float(oxygen_count[i]) / len(oxygen_count) for i in range(len(oxygen_count))], align='center')
-			plt.xticks(range(len(D)), [D[i] for i in range(len(D))])
-			plt.title('Oxygens binding to '+str(ion_name)+' ions binding exactly 1 residue (cutoff ='+str(binding_cutoff)+')' )
-			plt.show()
+		plt.xticks(range(len(D)), [D[i] for i in range(len(D))])
+		plt.title('Oxygens binding to '+str(ion_name)+' ions binding exactly 1 residue (cutoff = '+str(binding_cutoff)+')' )
+		plt.show()
 
-			# Can do some more data de-duplication by collecting all P5/P4/P1 pairs together.
-			plt.bar([x for x in range(len(most_common))], [float(most_common[i][1])/sum(count.values()) for i in range(len(most_common))])
-			plt.xticks([x for x in range(len(most_common))], \
+		plt.bar([x for x in range(len(most_common))], [float(most_common[i][1])/sum(count.values()) for i in range(len(most_common))])
+		plt.xticks([x for x in range(len(most_common))], \
 			           [D[most_common[i][0][0]]+str('-')+D[most_common[i][0][1]] for i in range(len(most_common))] )
-			#plt.xticks([x for x in range(len(most_common))], \
-			#           [Descriptors[most_common[i][0][0]]+str('-')+Descriptors[most_common[i][0][1]] for i in range(len(most_common))] )
+		plt.xticks(rotation=45)
+		plt.ylabel('Fraction of all '+str(ion_name)+' bridges')
+		plt.title('Oxygen pairs coordinated by '+str(ion_name)+ ' ions binding exactly 2 residues (cutoff ='+str(binding_cutoff)+')')
+		plt.show()
 
-			plt.xticks(rotation=45)
-			plt.ylabel('Fraction of all '+str(ion_name)+' bridges')
-			plt.title('Oxygen pairs coordinated by '+str(ion_name)+ ' ions binding exactly 2 residues (cutoff ='+str(binding_cutoff)+')')
-			plt.show()
-
-
-	'''
+	else:
+		print 'No data to plot.'
 
 
 
