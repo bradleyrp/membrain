@@ -122,6 +122,10 @@ def trajectory_lookup(analysis_descriptors,aname,globs,
 	structures = globs['structures']
 	systems = globs['systems']
 	trajectories = globs['trajectories']
+	# Assign these to none, so that if no trajectories fit (esp. for trajfile) the function can return None
+	# instead of "local variable reference before assignment"
+	grofile = None
+	trajfile = None
 	#---Also lookup entries from the dictionary
 	if keysysname not in analysis_descriptors[aname].keys(): sysname_lookup = None
 	else: sysname_lookup = (analysis_descriptors[aname])[keysysname]
@@ -138,7 +142,7 @@ def trajectory_lookup(analysis_descriptors,aname,globs,
 	elif type(trajsel) == str:
 		pat = re.compile('(.+)'+re.sub(r"/",r"[/-]",trajsel))
 		for fname in trajectories[systems.index(sysname_lookup)]:
-			if pat.match(fname): trajfile = [fname]
+			if pat.match(fname) or pat.match(str(fname)): trajfile = [fname]
 	elif type(trajsel) == list:
 		trajfile = []
 		for trajfilename in trajsel:
@@ -149,6 +153,13 @@ def trajectory_lookup(analysis_descriptors,aname,globs,
 	else:
 		trajfile = None
 		grofile = None
+
+	if grofile == None:
+			print "There was a problem finding the system gro file."
+	elif trajfile == None:
+		print "There was a problem finding the trajectory file(s)." \
+			  "It seems like this can happen when the dictionary in header-aamd.py does not match the  " \
+			  "files listed in locations-trajectory."
 	return grofile,trajfile
 	
 def specname_from_pickle(basename):
