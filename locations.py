@@ -1,15 +1,19 @@
 #!/usr/bin/python -i
 
+import os
+from membrainrunner import *
+
 #---match hostname with a location script in the locations folder
 #---if this is executed from a directory not called "membrain", then it must be a subdirectory
-if '__file__' in globals() and os.path.dirname(os.path.realpath(__file__)).split('/')[-1] != 'membrain':
+if '__file__' in globals() and \
+	os.path.abspath(os.path.curdir).split('/')[-1] != 'membrain':
 	dir_prefix = '../'
 else: dir_prefix = './'
 location_scripts = {
-	'dark.site':'./locations/locations-settings-rpb-dark',
-	'light.site':'./locations/locations-settings-rpb-light',
-	'dirac':'./locations/locations-settings-dirac',
-	'arctic':'./locations/locations-settings-ds',
+	'dark.site':dir_prefix+'locations/locations-settings-rpb-dark',
+	'light.site':dir_prefix+'./locations/locations-settings-rpb-light',
+	'dirac':dir_prefix+'./locations/locations-settings-dirac',
+	'arctic':dir_prefix+'./locations/locations-settings-ds',
 	}
 
 #---MAIN
@@ -25,7 +29,7 @@ if 'location' not in globals() or location == '' or location == None:
 		# This does not always work when running in certain terminals. Stack says this is better. http://goo.gl/tcNpKc
 		import socket
 		if socket.gethostname() == key:
-			print('status: Loading site-specific ' + key + ' location files.')
+			print('status: loading site-specific ' + key + ' location files.')
 			execfile(location_scripts[key])
 			not_barebones = True
 			break

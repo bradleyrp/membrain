@@ -178,3 +178,7 @@ name=membrane-v532-ions
 struct=/home/rpb/compbio/membrane-v532/a7-ions/system.ions.gro
 /home/rpb/compbio/membrane-v532/a7-ions/s4-sim-trestles-md.part0007.20000-90000-100.ions.xtc
 
+name=membrane-v620
+struct=/home/rpb/compbio/membrane-v620/s3-equil/system-input.gro
+/home/rpb/compbio/membrane-v620/s4-sim/md.part0003.50000-80000-50.xtc
+
