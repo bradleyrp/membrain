@@ -2,6 +2,10 @@
 
 from ModeCouple import *
 
+#---? COMMON FILES
+execfile('header.py')
+execfile('script_header.py')
+
 #---connect
 if 'conn' not in globals(): 
 	conn = psycopg2.connect("dbname='membrain_simbank' user='rpb' host='localhost' password=''")

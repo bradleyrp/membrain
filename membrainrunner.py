@@ -66,14 +66,14 @@ def postmortem_debug(type,value,tb):
 		pdb.pm()
 
 def postmortem(scriptglobals=None,banner=None):
-	'''Post-mortem clean-up function which supplies a prompt via atexit and locations.py.
-	
+	'''Post-mortem clean-up function which supplies a prompt via atexit and locations.py.\n
 	This supplies an interactive prompt.
 	It receives the globals via the atexit.register function.
 	Seemingly impossible to pass globals back to an imported module.
 	So instead we just call atexit.register(postmortem,scriptglobals=globals()) from locations.py.
 	Which is always called via execfile in the script. 
-	This trick works well enough.
+	This trick works well enough.\n
+	Note however that this is incompatible with the more Pythonic import styles.
 	'''
 	code.interact(local=scriptglobals,banner=banner)
 

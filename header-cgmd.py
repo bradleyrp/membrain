@@ -94,6 +94,16 @@ analysis_descriptors = {
 		'label_text':'8xENTH(close)',
 		'nprots':8,
 		},
+	'v620-50000-80000-50': {
+		'sysname':'membrane-v620','sysname_lookup':None,
+		'director':director_cgmd,'selector':selector_cgmd,'protein_select':None,
+		'trajsel':'s4-sim/md.part0003.50000-80000-50.xtc',
+		'label':r'$\mathrm{PIP_2,\:physio}$',
+		'label_text':'PIP2_physio',
+		'nprots':0,
+		'residues':'infer',
+		'whichframes':slice(40,80),
+		},
 	}
 	
 #---choose default midplane resolution
