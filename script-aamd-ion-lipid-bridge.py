@@ -242,8 +242,10 @@ if 'calculate' in routine:
 						if lipid_coords[i,j] < binding_cutoff:
 							if i / points_per_lipid != j / points_per_lipid:
 									if tuple(sort([i/points_per_lipid,j/points_per_lipid])) not in residues_within_cutoff_frame:
-										# I am so wary this is working... 
+										# I am so wary this is working...
 										residues_within_cutoff_frame.add(tuple(sort([i/points_per_lipid,j/points_per_lipid])))
+										# from mayavi import mlab
+										# mlab.points3d(pts1[:,0],pts1[:,1],pts1[:,2],scale_factor=0.7)
 										# print 'Residue '+str(i/points_per_lipid)+' is close to residue '+str(j/points_per_lipid)
 				#################################################################
 
