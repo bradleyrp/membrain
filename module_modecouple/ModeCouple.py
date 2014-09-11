@@ -1,14 +1,7 @@
 #!/usr/bin/python
 
-interact = True
-import sys,os
-sys.path.insert(0, os.path.abspath('../'))
 from membrainrunner import *
-execfile('../locations.py')
-
-import sys,os,re
-import time,datetime
-import psycopg2,psycopg2.extras
+from numpy import *
 
 #---FUNCTIONS
 #-------------------------------------------------------------------------------------------------------------
@@ -57,7 +50,7 @@ def gauss2dgrid(params,x,y):
 #---CLASS
 #-------------------------------------------------------------------------------------------------------------
 
-class ModeCouple():
+class ModeCouple:
 	'''Class object for holding undulation-curvature coupling data.'''
 	def __init__(self):
 		self.t2d = [array([]) for i in range(4)]
@@ -71,53 +64,54 @@ class ModeCouple():
 		self.scalefac = 0.0
 		self.area = 0.0
 		self.c0s = array([])
-	def calculate_mode_coupling(self,mset,c0s):
+	def calculate_mode_coupling(self,mset,c0s,**kwargs):
 		'''Moved the entire mode-coupling calculation to a single function so it can be repeated easily.'''
 		#---compute dimensions
-		mset.calculate_undulations(removeavg=removeavg,fitlims=fitlims,
-			forcekappa=forcekappa,qmagfilter=qmagfilter)
+		mset.calculate_undulations(removeavg=kwargs['removeavg'],fitlims=kwargs['fitlims'],
+			forcekappa=kwargs['forcekappa'],qmagfilter=kwargs['qmagfilter'])
 		grid = mset.griddims
 		m,n = grid[0]-1,grid[1]-1
 		#---if no curvature field, use zeros
 		if c0s == []: c0s = zeros((m,n))
 		#---units of hqs are unspecified here but then set by autocorr
-		print 'calculating hqs'
-		
+		print 'status: calculating hqs'
 		#hqs = [fftwrap(mset.surf[i])/double(m*n) for i in range(len(mset.surf))]
 		hqs = []
-		for i in range(len(mset.surf)):
-			print i
-			hqs.append(fftwrap(mset.surf[i])/double(m*n))
+		for i in range(len(mset.surf)): hqs.append(fftwrap(mset.surf[i])/double(m*n))
 		#del mset.surf
 		#---units of incoming c0s must be in the units specified by mset.lenscale
-		print 'calculating cqs'
+		#---? units need checked
+		print 'status: calculating cqs'
 		cqs = [fftwrap(mset.lenscale*array(c0s[i]))/double(m*n) for i in range(len(c0s))]
-		print 2
+		#print 2
 		Lx,Ly = mean(mset.vecs,axis=0)[0:2]
-		print 3
+		#print 3
 		cm,cn = [int(round(i/2.-1)) for i in shape(hqs[0])]
-		print 4
+		#print 4
 		qmags = mset.lenscale*array([[sqrt(((i-cm)/((Lx)/1.)*2*pi)**2+((j-cn)/((Ly)/1.)*2*pi)**2) 
 			for j in range(0,n)] for i in range(0,m)])
-		print 5
+		#print 5
 		hqsa = autocorr(hqs,direct=0,lenscale=mset.lenscale)
-		print 6
+		#print 6
 		hqsb = autocorr(hqs,direct=1,lenscale=mset.lenscale)
-		print 7
+		#print 7
 		center = [cm,cn]
-		print 8
+		#print 8
 		cqsa = autocorr(cqs,direct=0,lenscale=1.0)
-		print 9
+		#print 9
 		cqsb = autocorr(cqs,direct=1,lenscale=1.0)
-		print 10
+		#print 10
 		qmagst = qmags[0:(-1 if m%2==0 else None),0:(-1 if n%2==0 else None)]
-		print 11
+		#print 11
 		mt,nt = shape(hqsa[0])
-		print 12
+		#print 12
 		area = double(mean([mset.vec(i)[0]*mset.vec(i)[1] for i in mset.surf_index])/mset.lenscale**2)
-		print 13
+		#print 13
 		scalefac = mset.undulate_kappa*area
-		print 14
+		#print 14
+		#---added raw storage of hqs here
+		self.hqs = array(hqs)
+		self.cqs = array(cqs)
 		#---compute terms which contribute to the elastic energy in 2D
 		self.t2d[0] = mean((abs(array(hqsa)))**2,axis=0)
 		self.t2d[1] = mean(abs(hqsa)*abs(cqsb),axis=0)
@@ -151,7 +145,7 @@ class ModeCouple():
 			(qmagst[i,j]**2*self.t2de[2][i,j])**2+
 			(self.t2de[3][i,j])**2) 
 			for j in range(nt)] for i in range(mt)])
-		print 16
+		#print 16
 		self.tsum1de = array([[qmagst[i,j],
 			scalefac*sqrt((self.t2de[0][i,j]*qmagst[i,j]**4)**2+
 			(qmagst[i,j]**2*self.t2de[1][i,j])**2+
@@ -222,7 +216,7 @@ def equipart_resid(freeparams,both=False):
 		ydat = collapse_spectrum(mscs[m].qmagst,tsum2d)
 		return [abs(ydat[i]-1)*(1./xdat[i])**1.0 for i in range(len(ydat)) if xdat[i] < 1.0]
 		
-def construct_hypofield(c0ask):
+def construct_hypofield_deprecated(c0ask):
 	#---here we set the hypothetical curvature equal to the induced curvature at the mesoscale
 	hypo[0] = c0ask
 	#---reset the hypothetical C0 field according to the new scaling (replaces the calculation above)
@@ -252,6 +246,68 @@ def construct_hypofield(c0ask):
 			collect_c0s[anum] = [c0hypo for i in range(len(mset.surf))]
 	return [c0hypo for i in range(len(mset.surf))]
 	
+def construct_hypofield(fieldspecs,mset=None):
+	'''
+	Construct a hypothetical curvature field.
+	Note that this function feeds the field specification to the gauss2d function in the correct order.
+	'''
+	#---unpack the box size and lenscale (relative to nm) of the mset object
+	if mset != None:
+		lenscale = mset.lenscale
+		vecs = mean(mset.vecs,axis=0)
+		m,n = mset.griddims
+	else: raise Exception('except: need to set lenscales in construct_hypofield')
+	if 'center_x' not in fieldspecs.keys(): center_x = 0.5
+	if 'center_y' not in fieldspecs.keys(): center_y = 0.5
+	#---order the specs for gauss2d
+	params = [0,
+		fieldspecs['C_0'],
+		vecs[0]*(1+center_x)/lenscale,
+		vecs[1]*(1+center_y)/lenscale,
+		fieldspecs['sigma_a'],
+		fieldspecs['sigma_b'],
+		0]
+	#---getgrid is xyz points in nm
+	getgrid = array([[[i,j] for j in linspace(0,3*vecs[1]/mset.lenscale,3*n)] 
+		for i in linspace(0,3*vecs[0]/mset.lenscale,3*m)])
+	c0hypo_nopbc = array([[gauss2d(params,getgrid[i,j,0],getgrid[i,j,1]) 
+		for j in range(3*n)] for i in range(3*m)])
+	c0hypo = [[max([c0hypo_nopbc[i+sh[0]*m,j+sh[1]*n] for sh in [[k,l] 
+		for k in range(3) for l in range(3)]]) for j in range(n)] for i in range(m)]
+	return c0hypo
+	
+def construct_kappafield(fieldspecs,mset=None):
+	'''
+	Generate a hypothetical kappa (bending rigidity) field according to a dictionary description.
+	'''
+	#---unpack the box size and lenscale (relative to nm) of the mset object
+	if mset != None:
+		lenscale = mset.lenscale
+		vecs = mean(mset.vecs,axis=0)
+		m,n = mset.griddims
+	else: raise Exception('except: need to set lenscales')
+	if 'center_x' not in fieldspecs.keys(): center_x = 0.5
+	if 'center_y' not in fieldspecs.keys(): center_y = 0.5
+	cxr,cyr = vecs[0]*(1+center_x)/lenscale,vecs[1]*(1+center_y)/lenscale
+
+	if fieldspecs['type'] == 'disc':
+		#---unpack
+		fore = fieldspecs['fore']
+		back = fieldspecs['back']
+		radius = fieldspecs['radius']
+		#---function for the disc
+		ic = lambda x,y: fore if (x-cxr)**2+(y-cyr)**2 < radius else back
+		#---getgrid is xyz points in nm
+		getgrid = array([[[i,j] for j in linspace(0,3*vecs[1]/mset.lenscale,3*n)] 
+			for i in linspace(0,3*vecs[0]/mset.lenscale,3*m)])
+		c0hypo_nopbc = array([[ic(getgrid[i,j,0],getgrid[i,j,1]) 
+			for j in range(3*n)] for i in range(3*m)])
+		c0hypo = [[max([c0hypo_nopbc[i+sh[0]*m,j+sh[1]*n] for sh in [[k,l] 
+			for k in range(3) for l in range(3)]]) for j in range(n)] for i in range(m)]
+		return c0hypo
+	else: raise Exception('except: cannot make that field')
+
+
 def bigresid(freeparams):
 	newkappa,newsigma,c0ask,extent = freeparams
 	hypo = [abs(c0ask),0.5,0.5,extent,extent,0]

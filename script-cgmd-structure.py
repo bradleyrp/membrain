@@ -1,6 +1,6 @@
 #!/usr/bin/python
 
-logfile,interact,debugmode = [None,False,None]
+logfile,interact,debugmode = [None,True,None]
 from membrainrunner import *
 execfile('locations.py')
 
@@ -24,6 +24,7 @@ analysis_names = [[
 	'v612-10000-80000-200',
 	'v616-210000-310000-200',
 	'v616-110000-209900-200',
+	'v620-50000-80000-50',
 	][i] for i in [-1]]
 
 #---MAIN
@@ -53,10 +54,10 @@ for aname in analysis_names:
 			else: tslicepos = -2
 			timeslice = [int(i) for i in trajsel.split('.')[tslicepos].split('-')]
 		if protein_select == None:
-			mset.midplaner(selector,skip=skip,rounder=float(rounder),
-				framecount=framecount,timeslice=timeslice)
+			mset.midplaner(selector,rounder=float(rounder),
+				framecount=None,timeslice=timeslice)
 		else:
-			mset.midplaner(selector,skip=skip,rounder=float(rounder),framecount=framecount,
+			mset.midplaner(selector,rounder=float(rounder),framecount=None,
 				protein_selection=protein_select,timeslice=timeslice)
 		mset.calculate_undulations()
 		#---save the data

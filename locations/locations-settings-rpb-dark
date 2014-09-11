@@ -25,3 +25,6 @@ fsaxlegend_small = 12
 #---distinct from plot_suppress rpb added this for remote plotting on a specific set of scripts
 plotviewflag = True
 showplots = False
+
+#---database connect
+dbconnect_string = "dbname='membrain_simbank' user='rpb' host='localhost' password=''"
