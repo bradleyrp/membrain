@@ -23,7 +23,7 @@ if 'batch_override' not in globals():
 		                 'v511-40000-90000-50-bridge',
 		                 'v533-40000-90000-50',
 		                 'v534-40000-90000-50',
-	                 ][1:6]
+	                 ][1:2]
 
 	routine = [
 		          'calculate',
@@ -85,6 +85,7 @@ if 'calculate' in routine:
 			# by frame. The range is set by variable k.
 			which_oxygens = [] # Array containing which oxygens bind to given ion
 			which_o_pairs = [] # Array containing which two oxygens are bridged by ion
+			residues_within_cutoff = [] # Array containing the number of residues within binding_cutoff
 			total_oxygens = 0 # Error checking code to make sure we catch all interacting oxygens
 			############################################################
 
@@ -195,6 +196,7 @@ if 'calculate' in routine:
 				this_frame = []  # This array holds a list of the number of lipids an ion is binding /per frame/
 				which_oxygens_frame = []  # This array holds a list of which oxygens an ion is binding /per frame/
 				which_o_pairs_frame = []  # This array holds a list of oxygen pairs an ion is binding /per frame/
+				residues_within_cutoff_frame = set() # This set holds how many residues are within binding cutoff /per frame/
 
 				# I think this is already calculated:
 				# ion_to_lipid_min_dists = [[row[1] for row in min_index_and_value[j]] for j in range(num_ions)]
@@ -228,11 +230,30 @@ if 'calculate' in routine:
 								min_indices[1]]
 							which_o_pairs_frame.append(these_oxygens)
 					this_frame.append(sum(num_lipids_binding))
+
+				#################################################################
+				# Calculate minimum lipid-lipid distances for normalization
+				# There *must* be a much faster way to do this, but I can't figure it out right now.
+				# One speedup would be not wasting memory on squareform, but then it's more challenging
+				# to check if two elements come from the same residue.
+				lipid_coords = scipy.spatial.distance.squareform(scipy.spatial.distance.pdist(pts1))
+				for i in range(len(lipid_coords)):
+					for j in range(len(lipid_coords)):
+						if lipid_coords[i,j] < binding_cutoff:
+							if i / points_per_lipid != j / points_per_lipid:
+									if tuple(sort([i/points_per_lipid,j/points_per_lipid])) not in residues_within_cutoff_frame:
+										# I am so wary this is working... 
+										residues_within_cutoff_frame.add(tuple(sort([i/points_per_lipid,j/points_per_lipid])))
+										# print 'Residue '+str(i/points_per_lipid)+' is close to residue '+str(j/points_per_lipid)
+				#################################################################
+
+				residues_within_cutoff.append(len(residues_within_cutoff_frame))
 				num_lipids_ion_binding.append(this_frame)
 				which_oxygens.append(which_oxygens_frame)
 				which_o_pairs.append(which_o_pairs_frame)
 
 			#################################################################
+			# Post-processing each trajectory
 			# Single lipid "binding"
 			oxygens = [item for sublist in which_oxygens for item in sublist]
 			oxygen_count = Counter()
@@ -248,14 +269,6 @@ if 'calculate' in routine:
 			for pair in pair_sorted:
 				count[pair] += 1
 			most_common = count.most_common()[0:10]
-			#################################################################
-
-
-			#################################################################
-			# Calculate minimum lipid-lipid distances for normalization
-			tmp = scipy.spatial.distance.squareform(scipy.spatial.distance.pdist(pts1))
-			# First 8 elements are the oxygens on the same lipid, then other oxygens
-			tmp[0][points_per_lipid::]
 			#################################################################
 
 
