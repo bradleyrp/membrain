@@ -4,7 +4,9 @@
 #-------------------------------------------------------------------------------------------------------------
 
 #---Basic libraries
-execfile('/etc/pythonstart')
+import os
+if os.path.isfile('/etc/pythonstart'):
+	execfile('/etc/pythonstart')
 import time
 import argparse
 import string
@@ -21,14 +23,15 @@ import re
 import code
 import datetime
 import operator
-
-#00000000000000000000000000000000000000TMP
-import matplotlib.pyplot as plt
+try: import h5py
+except: status('status: no binarysave available')
 
 #---Set up visualization
+#---? this is likely required for Mayavi, so consider moving to plotter.py
 os.environ['ETS_TOOLKIT'] = 'qt4'
 
 #---MDAnalysis functions
+#---note that 
 from MDAnalysis import *
 
 #---Mathematics libraries
@@ -479,6 +482,7 @@ class MembraneSet:
 			start = int((float(timeslice[0])-self.time_start)/timeslice[2])
 			end = int((float(timeslice[1])-self.time_start+self.time_dt)/self.time_dt)
 			skip = int(float(timeslice[2])/self.time_dt)
+			skip = 1 if skip < 1 else skip
 			print 'status: starting midplaner with [start,end,skip] = ['+\
 				str(start)+','+str(end)+','+str(skip)+']'
 			if end > len(self.universe.trajectory):
@@ -581,7 +585,7 @@ class MembraneSet:
 		self.surf.append(surfz)
 		self.surf_index.append(frameno)
 		self.surf_time.append(self.universe.trajectory[frameno].time)
-		print 1./60*(time.time()-st)
+		#print 1./60*(time.time()-st)
 
 	def triangulator(self,selector,start=None,end=None,skip=None,framecount=None,label=None,tesstype=None):
 		'''Triangulate the surface by lipid for the entire trajectory.'''
@@ -1222,8 +1226,9 @@ def pickledump(obj,filename,directory=''):
 				os.rename(directory+filename,latestfile)
 				print 'status: backing up a pre-existing pickle file with the same name to number '+str(i)
 				break
-	#if hasattr(obj,'universe') == True: obj.universe = []
-	#if hasattr(obj,'xyzs') == True: obj.xyzs = []
+	#---clear bulky data automatically before writing
+	if hasattr(obj,'universe') == True: obj.universe = []
+	if hasattr(obj,'xyzs') == True: obj.xyzs = []
 	fp = open(directory+filename, 'w')
 	pickle.dump(obj,fp)
 	fp.close()
@@ -1234,13 +1239,39 @@ def unpickle(filename):
 	if os.path.isfile(filename):
 		fp = open(filename, 'r')
 		x = pickle.load(fp)
-		if hasattr(x,'picklename') == False and type(x) != list and type(x) != dict:
+		if hasattr(x,'picklename') == False and \
+			type(x) != list and type(x) != ndarray and type(x) != dict:
 			x.picklename = filename.strip('pkl.').strip('.pkl')
-		elif type(x) != list and type(x) != dict:
+		elif type(x) != list and type(x) != ndarray and type(x) != dict:
 			if x.picklename == '': 
 				x.picklename = filename.strip('pkl.').strip('.pkl')
 		fp.close()
 		return x
+	else:
+		status('status: file does not exist')
+		return
+		
+def binarysave(obj,filename,directory=''):
+	'''Pickles an object to a text file.'''
+	if os.path.isfile(directory+filename):
+		for i in range(1,100):
+			latestfile = directory+'#'+filename+'.'+('%02d' % i)+'#'
+			if not os.path.isfile(directory+'#'+filename+'.'+('%02d' % i)+'#'):
+				os.rename(directory+filename,latestfile)
+				print 'status: backing up a pre-existing h5 binary file with the same name to number '+str(i)
+				break
+	h5f = h5py.File(directory+filename,'w')
+	h5f.create_dataset('data',data=obj)
+	h5f.close()
+
+def unbinary(filename):
+	'''Un-pickles an object from a text file.'''
+	status('status: seeking or loading '+filename)
+	if os.path.isfile(filename):
+		h5f = h5py.File(filename,'r')
+		data = h5f['data'][:]
+		h5f.close()
+		return data
 	else:
 		status('status: file does not exist')
 		return
