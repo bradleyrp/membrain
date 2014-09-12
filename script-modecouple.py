@@ -16,7 +16,7 @@ callsign = [
 	'v550-300000-400000-200',
 	'v614-120000-220000-200',
 	'v616-210000-310000-200',
-	][0]
+	][-1]
 	
 hypothesis_calc = {
 	'curvature':{
@@ -38,7 +38,7 @@ hypothesis_default = {
 		'type':'disc',
 		'back':20,
 		'fore':24,
-		'radius':30,
+		'radius':20,
 		},
 	'gamma':0.0,
 	}
@@ -165,14 +165,6 @@ if 'plot' in routine:
 		hqs_h0qps=termlist[1],
 		h0qs_hqps=termlist[2],
 		h0qs_h0qps=termlist[3])
-
-	if 0:
-		import matplotlib as mpl
-		fullans = ms.fullans
-		n2,m2 = ms.m2,ms.n2
-		rowcombo = mean([array([[fullans[1][fr][i+(j-1)*m2] for j in range(n2)] for i in range(m2)])*fullans[0][fr]**2 for fr in range(m2*n2)],axis=0)
-		plt.imshow(abs(rowcombo).T,interpolation='nearest',origin='lower',norm=(mpl.colors.LogNorm() if 0 else None),cmap=mpl.cm.binary);plt.show()
-
 
 
 
