@@ -24,7 +24,7 @@ import code
 import datetime
 import operator
 try: import h5py
-except: status('status: no binarysave available')
+except: pass
 
 #---Set up visualization
 #---? this is likely required for Mayavi, so consider moving to plotter.py
