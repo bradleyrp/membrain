@@ -122,7 +122,8 @@ if 'calculate' in routine:
 				frameslice = range(len(mset.universe.trajectory))
 			else:
 				frameslice = [i for i in range(len(mset.universe.trajectory)) if i in whichframes]
-			for frameno in frameslice:
+			#for frameno in frameslice:
+			for framno in range(999,1000):
 				status('status: frame = ' + str(frameno + 1) + '/' + str(len(frameslice)))
 				mset.gotoframe(frameno)
 				mset_ions.gotoframe(frameno)
@@ -201,7 +202,7 @@ if 'calculate' in routine:
 				# I think this is already calculated:
 				# ion_to_lipid_min_dists = [[row[1] for row in min_index_and_value[j]] for j in range(num_ions)]
 				ion_to_lipid_min_dists = min_ion_to_lipid
-				# Assumption: no ion is coordinating more than 4 lipids
+				# Assumption: no ion is coordinating more than 3 lipids
 				for k in range(4):
 					num_lipids_binding = [len(where([i < binding_cutoff for i in min_ion_to_lipid[j]])[0])
 					                      == k for j in range(num_ions)]
@@ -226,8 +227,9 @@ if 'calculate' in routine:
 						for i in which_ions_binding_two_lipids[0]:
 							this_ion = ion_to_lipid_min_dists[i]
 							min_indices = argsort(ion_to_lipid_min_dists[i])[0:2]
-							these_oxygens = ion_to_lipid_index_of_min[i][min_indices[0]], ion_to_lipid_index_of_min[i][
-								min_indices[1]]
+							print 'Ion '+str(i)+' is bridging residues '+str(min_indices)
+							these_oxygens = ion_to_lipid_index_of_min[i][min_indices[0]], \
+							                ion_to_lipid_index_of_min[i][min_indices[1]]
 							which_o_pairs_frame.append(these_oxygens)
 					this_frame.append(sum(num_lipids_binding))
 
@@ -236,17 +238,19 @@ if 'calculate' in routine:
 				# There *must* be a much faster way to do this, but I can't figure it out right now.
 				# One speedup would be not wasting memory on squareform, but then it's more challenging
 				# to check if two elements come from the same residue.
+				# We really only need the upper triangular part, sigh.
 				lipid_coords = scipy.spatial.distance.squareform(scipy.spatial.distance.pdist(pts1))
 				for i in range(len(lipid_coords)):
 					for j in range(len(lipid_coords)):
 						if lipid_coords[i,j] < binding_cutoff:
-							if i / points_per_lipid != j / points_per_lipid:
+							if i / points_per_lipid != j / points_per_lipid: # This integer division should check if
+								# they are coming from the same residue.
 									if tuple(sort([i/points_per_lipid,j/points_per_lipid])) not in residues_within_cutoff_frame:
 										# I am so wary this is working...
 										residues_within_cutoff_frame.add(tuple(sort([i/points_per_lipid,j/points_per_lipid])))
 										# from mayavi import mlab
 										# mlab.points3d(pts1[:,0],pts1[:,1],pts1[:,2],scale_factor=0.7)
-										# print 'Residue '+str(i/points_per_lipid)+' is close to residue '+str(j/points_per_lipid)
+										print 'Residue '+str(i/points_per_lipid)+' is close to residue '+str(j/points_per_lipid)
 				#################################################################
 
 				residues_within_cutoff.append(len(residues_within_cutoff_frame))
@@ -282,12 +286,13 @@ if 'calculate' in routine:
 		savelist = ['pair_name', 'points_counts', 'binding_cutoff', 'D']
 		for item in savelist:
 			result_data.addnote([item, globals()[item]])
-		result_data.data = [oxygens, oxygen_count, oxygen_pairs, pair_sorted, count]
+		result_data.data = [oxygens, oxygen_count, oxygen_pairs, pair_sorted, count, residues_within_cutoff]
 		result_data.label = ['Index of oxygens binding to ion per frame, see notes for corresponding Dictionary', \
 		                     'Counter() object tracking index of oxygens binding to ion', \
 		                     'Index of oxygen pairs binding to ion per frame', \
 		                     'Sorted index of oxygen pairs binding to ion', \
-	                         'Counter() object tracking index of oxygen pairs binding to ion'
+	                         'Counter() object tracking index of oxygen pairs binding to ion', \
+		                     'Array containing the number of residues within binding_cutoff for each frame'
 		]
 		mset.store = [result_data]
 		pairnames = [(i if i != 'ptdins' else ptdins_resname) for i in analysis_pair]
@@ -350,6 +355,8 @@ if 'plot' in routine:
 		plt.ylabel('Fraction of all '+str(ion_name)+' bridges')
 		plt.title('Oxygen pairs coordinated by '+str(ion_name)+ ' ions binding exactly 2 residues (cutoff ='+str(binding_cutoff)+')')
 		plt.show()
+
+		# Plot fraction of all potential bridges occupied over time, histogrammed...
 
 	else:
 		print 'No data to plot.'
