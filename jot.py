@@ -19,9 +19,28 @@ if 0:
 if 0:
 	inds = array([[[int(u/n2)-int(v/n2),u%n2-v%n2] for v in range(m2*n2)] for u in range(m2*n2)])
 	inds = array([[[int(u/n2)-int(v/n2),u%n2-v%n2] for v in range(m2*n2)] for u in range(m2*n2)])
+if 0:
+	kqs = zeros((m2,n2));kqs[cm,cn]=43;
+	inds = array([[[int(u/n2)-int(v/n2),u%n2-v%n2] for v in range(m2*n2)] for u in range(m2*n2)])
+	((1*(inds[...,0]>0)+1*(inds[...,1]>0)+1*(inds[...,0]<m2)+1*(inds[...,1]<n2))==4)
+	plt.imshow(inds[...,1],interpolation='nearest',origin='lower');plt.show()
+	plt.imshow(inds[...,0],interpolation='nearest',origin='lower');plt.show()
+#---note sure what I was using the above code for
+	
+#---demo that outer is the same as multiplication i.e. outer(h_q,h_q')_i*n2+j,k*n2+l == h_q_i,j*h_q'_k,l
+self = ms
+a = ms.hqs[0]
+b = ms.cqs[0]
+m2,n2 = shape(self.hqs)[1:]
+print
+i,j = 12,34
+k,l = 23,46
+print a[i,j]*b[k,l]
+print outer(reshape(a,-1),reshape(b,-1))[i*n2+j,k*n2+l]
+print outer(a,b)[i*n2+j,k*n2+l]
 
-kqs = zeros((m2,n2));kqs[cm,cn]=43;
-inds = array([[[int(u/n2)-int(v/n2),u%n2-v%n2] for v in range(m2*n2)] for u in range(m2*n2)])
-((1*(inds[...,0]>0)+1*(inds[...,1]>0)+1*(inds[...,0]<m2)+1*(inds[...,1]<n2))==4)
-plt.imshow(inds[...,1],interpolation='nearest',origin='lower');plt.show()
-plt.imshow(inds[...,0],interpolation='nearest',origin='lower');plt.show()
+#---demo that reshape strings things up by row, then column
+i = 145
+print i,i/n2,i%n2
+print reshape(a,-1)[i]
+print a[i/n2,i%n2]
