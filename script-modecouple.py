@@ -76,7 +76,7 @@ for topkey in sweep.keys():
 routine = [
 	'calc',
 	'plot',
-	][-1:]
+	][:1]
 
 #---FUNCTIONS
 #-------------------------------------------------------------------------------------------------------------
@@ -133,7 +133,7 @@ if 'calc' in routine:
 
 if 'plot' in routine:
 
-	hypothesis = hypotheses[3]
+	hypothesis = hypotheses[0]
 
 	#---create an interface to the database
 	df = DataFace(**allsets)
