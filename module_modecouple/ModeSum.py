@@ -118,24 +118,47 @@ class ModeSum:
 		status('status: computing term = '+term)
 		st = time.time()
 		termdat = zeros((m2*n2,m2*n2))
-		if term == 'hqs_hqps':
-			for fr in range(len(self.hqs)):
-				status('fr = '+str(fr),start=st,i=fr,looplen=len(self.hqs))
-				termdat += real(outer(self.hqs[fr],self.hqs[fr]))
-			termdat = termdat / float(len(self.hqs))
-		elif term == 'hqs_c0qps':
-			for fr in range(len(self.hqs)):
-				status('fr = '+str(fr),start=st,i=fr,looplen=len(self.hqs))
-				termdat += real(outer(self.hqs[fr],self.cqs[fr]))
-			termdat = termdat / float(len(self.hqs))
-		elif term == 'c0qs_hqps':
-			for fr in range(len(self.hqs)):
-				status('fr = '+str(fr),start=st,i=fr,looplen=len(self.hqs))
-				termdat += real(outer(self.cqs[fr],self.hqs[fr]))
-			termdat = termdat / float(len(self.hqs))
-		elif term == 'c0qs_c0qps':
-			#---assumes static field
-			termdat = real(outer(self.cqs[0],self.cqs[0]))
+		
+		if 1:
+			if term == 'hqs_hqps':
+			
+				cm,cn = [int(round(i/2.-1)) for i in shape(self.hqs[0])]
+			
+				qs = array(meshgrid(arange(m2),arange(n2))).T
+				us = qs.copy()[arange(m2*n2)/n2,arange(m2*n2)%n2]
+				usshift = us-1*(us>array([cm,cn]))*array([m2,n2])
+				vs = qs.copy()[arange(m2*n2)/n2,arange(m2*n2)%n2]
+				vsshift = vs-1*(vs>array([cm,cn]))*array([m2,n2])
+				biginds = array(meshgrid(arange(m2*n2),arange(m2*n2))).T
+				monster = usshift[biginds[...,0]]+vsshift[biginds[...,1]]
+			
+				for fr in range(len(self.hqs)):
+					status('fr = '+str(fr),start=st,i=fr,looplen=len(self.hqs))
+					termdat += real(tile(self.hqs[fr],(3,3))[monster[...,0]+m2,monster[...,1]+n2])
+					
+				termdat = termdat / float(len(self.hqs))
+		
+
+		#---DEPRECATED
+		if 0:
+			if term == 'hqs_hqps':
+				for fr in range(len(self.hqs)):
+					status('fr = '+str(fr),start=st,i=fr,looplen=len(self.hqs))
+					termdat += real(outer(self.hqs[fr],self.hqs[fr]))
+				termdat = termdat / float(len(self.hqs))
+			elif term == 'hqs_c0qps':
+				for fr in range(len(self.hqs)):
+					status('fr = '+str(fr),start=st,i=fr,looplen=len(self.hqs))
+					termdat += real(outer(self.cqs[fr],self.hqs[fr]))
+				termdat = termdat / float(len(self.hqs))
+			elif term == 'c0qs_hqps':
+				for fr in range(len(self.hqs)):
+					status('fr = '+str(fr),start=st,i=fr,looplen=len(self.hqs))
+					termdat += real(outer(self.hqs[fr],self.cqs[fr]))
+				termdat = termdat / float(len(self.hqs))
+			elif term == 'c0qs_c0qps':
+				#---assumes static field
+				termdat = real(outer(self.cqs[0],self.cqs[0]))
 		else: raise Exception('requested an unclear term')
 		status('\nstatus: duration = '+'{0:.1f}'.format(1.*(time.time()-st)/60.)+' minutes')
 		status('status: saving term as h5 binary')
@@ -159,15 +182,21 @@ class ModeSum:
 			self.hfield = construct_hypofield(self.hypothesis['curvature'],mset=self.mset)
 
 		#---compute mode coupling
-		if self.msc == None:
-			msc = ModeCouple()
-			self.msc = msc
-			self.msc.calculate_mode_coupling(self.mset,
-				[self.hfield for i in range(len(self.mset.surf))],
-				**self.sets['analysis_descriptors'][self.callsign])
+		if 0:
+			#---deprecated method from bloated ModeCouple code
+			if self.msc == None:
+				msc = ModeCouple()
+				self.msc = msc
+				self.msc.calculate_mode_coupling(self.mset,
+					[self.hfield for i in range(len(self.mset.surf))],
+					**self.sets['analysis_descriptors'][self.callsign])
+			m2,n2 = shape(self.msc.hqs)[1:]
+		else:
+			self.cmc_replace([self.hfield for i in range(len(self.mset.surf))])
+			m2,n2 = shape(self.hqs)[1:]
 
 		#---parameters
-		m2,n2 = shape(self.msc.hqs)[1:]
+		m2,n2 = shape(self.hqs)[1:]
 		self.m2,self.n2 = m2,n2
 		cm,cn = [int(round(i/2.-1)) for i in shape(self.msc.t2d[0])]
 		Lx,Ly = mean(self.mset.vecs,axis=0)[0:2]
@@ -281,8 +310,6 @@ class ModeSum:
 		self.bigkqs = tile(self.kqs,(3,3))
 		#---transformed kappa is looked up in the order of combos
 		self.kqqp = self.bigkqs[self.cs[...,0],self.cs[...,1]]
-
-
 
 		status('status: constructing matrix')
 		self.full_matrix = ((qmags*qmags)*(qmags*qmags)*hqs_hqps+(qmags*qmags)*hqs_c0qps+\

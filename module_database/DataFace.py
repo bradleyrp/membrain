@@ -192,7 +192,7 @@ class DataFace:
 					(str(row['id']) if row['pklname'] == None else row['pklname']))
 				status('status: removing row ---> '+str(row))
 				rows_to_delete.append(row['id'])
-		if rows_to_delete != []: raw_input('warning: anything to continue but beware row deletions')
+		if rows_to_delete != []: raw_input('warning: press any key to continue but beware row deletions')
 		for rowid in rows_to_delete:
 			self.ec('DELETE FROM dataref_'+self.storename+' WHERE id='+str(rowid))
 			

@@ -110,7 +110,7 @@ if 'calc' in routine:
 
 		#---find or compute the required terms and save to the datastore
 		ms = ModeSum(hypothesis,callsign,**allsets)
-		for termname in ['hqs_hqps','hqs_h0qps','h0qs_hqps','h0qs_h0qps']:
+		for termname in ['hqs_hqps','hqs_c0qps','c0qs_hqps','c0qs_c0qps']:
 			specifier = {
 				'term':termname,
 				'callsign':callsign,
@@ -148,7 +148,7 @@ if 'plot' in routine:
 	
 	#---load computed terms
 	termlist = []
-	for termname in ['hqs_hqps','hqs_h0qps','h0qs_hqps','h0qs_h0qps']:
+	for termname in ['hqs_hqps','hqs_c0qps','c0qs_hqps','c0qs_c0qps']:
 		specifier = {
 			'term':termname,
 			'callsign':callsign,
@@ -162,9 +162,9 @@ if 'plot' in routine:
 	#---compute the sum
 	ms.summer(
 		hqs_hqps=termlist[0],
-		hqs_h0qps=termlist[1],
-		h0qs_hqps=termlist[2],
-		h0qs_h0qps=termlist[3])
+		hqs_c0qps=termlist[1],
+		c0qs_hqps=termlist[2],
+		c0qs_c0qps=termlist[3])
 
 
 
