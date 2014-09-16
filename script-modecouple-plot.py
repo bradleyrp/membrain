@@ -49,7 +49,7 @@ if 1:
 			[ms.full_matrix,'full_matrix'],
 			[fullans[1],'fullans'],
 			[rowcombo,'rowcombo1'],
-			][1:]:
+			][:]:
 			print 'data = '+data[1]+' logplot = '+str(logplot)
 			tmpspecplotter(data[0],callsign+'-term-'+data[1]+'-homog',logplot=logplot,show=False)
 
