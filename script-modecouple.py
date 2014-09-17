@@ -12,12 +12,14 @@ import copy
 #---SETTINGS
 #-------------------------------------------------------------------------------------------------------------
 
+#---select a simulation system
 callsign = [
 	'v550-300000-400000-200',
 	'v614-120000-220000-200',
 	'v616-210000-310000-200',
-	][0]
+	][-1]
 	
+#---hypothesis for the calculation section which is only a subset of the full hypothesis
 hypothesis_calc = {
 	'curvature':{
 		'type':'dimple',
@@ -27,6 +29,7 @@ hypothesis_calc = {
 		}
 	}
 	
+#---the default hypothesis around which we sweep parameters
 hypothesis_default = {
 	'curvature':{
 		'type':'dimple',
@@ -38,25 +41,29 @@ hypothesis_default = {
 		'type':'disc',
 		'back':20,
 		'fore':24,
-		'radius':30,
+		'radius':20,
 		},
 	'gamma':0.0,
 	}
 
+#---sweep over curvatures
 sweep_curv = {
 	'curvature':{
 		'C_0':[0.001,0.005,0.01,0.018,0.02,0.022,0.024,0.03,0.035,0.04,0.05]
 		},
 	}
 
+#---sweep over bending rigidity
 sweep_kappa = {
 	'kappa':{
 		'fore':[20,22,24,28,32],
 		},
 	}
 	
+#---combine sweeps
 sweep = dict(sweep_curv.items()+sweep_kappa.items())
 	
+#---construct hypotheses from sweep variables and the default hypothesis
 hypotheses = []
 for topkey in sweep.keys():
 	if type(sweep[topkey]) == dict:
@@ -73,10 +80,11 @@ for topkey in sweep.keys():
 			hypotheses.append(newhypo)
 			del newhypo
 
+#---choose what to do
 routine = [
 	'calc',
-	'plot',
-	][-1:]
+	'hypothesize',
+	][:1]
 
 #---FUNCTIONS
 #-------------------------------------------------------------------------------------------------------------
@@ -94,6 +102,13 @@ def specfilter_calc(specs):
 #-------------------------------------------------------------------------------------------------------------
 
 if 'calc' in routine:
+
+	'''
+	Since parts of the hypothesis, such as the bending rigidity field, are easy to compute, the calculation
+	section doesn't require a full hypothesis. Instead, it computes the terms which contribute to the final
+	Helfrich sum and depend on a minimal hypothesis, in this case consisting only of the curvature field. 
+	These results are then stored in hd5f binaries which are unpacked during the "hypothesize" stage.
+	'''
 	
 	for hypothesis in hypotheses:
 	
@@ -110,7 +125,7 @@ if 'calc' in routine:
 
 		#---find or compute the required terms and save to the datastore
 		ms = ModeSum(hypothesis,callsign,**allsets)
-		for termname in ['hqs_hqps','hqs_h0qps','h0qs_hqps','h0qs_h0qps']:
+		for termname in ['hqs_hqps','hqs_c0qps','c0qs_hqps','c0qs_c0qps']:
 			specifier = {
 				'term':termname,
 				'callsign':callsign,
@@ -128,12 +143,13 @@ if 'calc' in routine:
 		if 'ms' in globals(): del ms
 		df.refresh_dataref(**dataspecs)
 
-#---PLOT
+#---HYPOTHESIS TESTING
 #-------------------------------------------------------------------------------------------------------------
 
-if 'plot' in routine:
+if 'hypothesize' in routine:
 
-	hypothesis = hypotheses[3]
+	#---select a hypothesis
+	hypothesis = hypotheses[0]
 
 	#---create an interface to the database
 	df = DataFace(**allsets)
@@ -148,7 +164,7 @@ if 'plot' in routine:
 	
 	#---load computed terms
 	termlist = []
-	for termname in ['hqs_hqps','hqs_h0qps','h0qs_hqps','h0qs_h0qps']:
+	for termname in ['hqs_hqps','hqs_c0qps','c0qs_hqps','c0qs_c0qps']:
 		specifier = {
 			'term':termname,
 			'callsign':callsign,
@@ -162,17 +178,14 @@ if 'plot' in routine:
 	#---compute the sum
 	ms.summer(
 		hqs_hqps=termlist[0],
-		hqs_h0qps=termlist[1],
-		h0qs_hqps=termlist[2],
-		h0qs_h0qps=termlist[3])
-
-	if 0:
-		import matplotlib as mpl
-		fullans = ms.fullans
-		n2,m2 = ms.m2,ms.n2
-		rowcombo = mean([array([[fullans[1][fr][i+(j-1)*m2] for j in range(n2)] for i in range(m2)])*fullans[0][fr]**2 for fr in range(m2*n2)],axis=0)
-		plt.imshow(abs(rowcombo).T,interpolation='nearest',origin='lower',norm=(mpl.colors.LogNorm() if 0 else None),cmap=mpl.cm.binary);plt.show()
-
+		hqs_c0qps=termlist[1],
+		c0qs_hqps=termlist[2],
+		c0qs_c0qps=termlist[3])
+		
+	plt.imshow(real(ms.kqs).T,interpolation='nearest',origin='lower');plt.show()
+		
+	#---continue
+	status('status: continue with script-modecouple-plot.py')
 
 
 
