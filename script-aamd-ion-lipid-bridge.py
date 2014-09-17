@@ -9,7 +9,6 @@ execfile('header-aamd.py')
 
 # TODO:
 # - Add angle dependency
-# - Add this to a batch run script
 # - Split up plot/compute, save pickle, work on plot code and batch
 
 if 'batch_override' not in globals():
@@ -41,12 +40,67 @@ if 'batch_override' not in globals():
 
 	fast_pbc = True  # I'm not even sure what fast_pbc = False does
 
-
 	# Using a dictionary would be nice, but D.keys() returns items in a random unsorted way.
 	# D = {'OP52':0, 'OP53':1, 'OP54':2, 'OP42':3,'OP43':4, 'OP44':5, 'O13':6, 'O14':7}
 	D = ['OP52', 'OP53', 'OP54', 'OP42', 'OP43', 'OP44', 'O13', 'O14']
 	Descriptors = ['P5', 'P5', 'P5', 'P4', 'P4', 'P4', 'P1', 'P1']
 
+
+def get_lipid_ion_coords (frameno):
+	pts1 = array(mset.get_points(frameno, selection_index=0))
+	pts2 = array(mset_ions.get_points(frameno, selection_index=0))
+	# There are len(pts1)/num_lipids oxygens per lipid
+	distance_x = scipy.spatial.distance.cdist(array([[i]
+	                                                 for i in pts1[:, 0]]),
+	                                          array([[i] for i in pts2[:, 0]]))
+	distance_y = scipy.spatial.distance.cdist(array([[i]
+	                                                 for i in pts1[:, 1]]),
+	                                          array([[i] for i in pts2[:, 1]]))
+	distance_z = scipy.spatial.distance.cdist(array([[i]
+	                                                 for i in pts1[:, 2]]),
+	                                          array([[i] for i in pts2[:, 2]]))
+	unwrapped_x = distance_x - 1 * (distance_x > vecs[0] / 2.) * vecs[0]
+	unwrapped_y = distance_y - 1 * (distance_y > vecs[1] / 2.) * vecs[1]
+	unwrapped_z = distance_z - 1 * (distance_z > vecs[2] / 2.) * vecs[2]
+	distance_matrix = sqrt(unwrapped_x ** 2 + unwrapped_y ** 2 + unwrapped_z ** 2)
+	points_per_lipid = len(pts1) / num_lipids
+	num_binding_sites = len(pts1)
+	num_ions = len(pts2)
+
+	return (pts1, pts2, points_per_lipid, distance_matrix, num_binding_sites, num_ions)
+
+def distance_to_lipids (distance_matrix, points_per_lipid, num_binding_sites):
+	# i is ion number (e.g 308), j is atom number for all binding sites in all lipids (e.g. 240),
+	ion_to_lipid = [[distance_matrix[:, i][j:j + points_per_lipid] \
+	                 for j in arange(0, num_binding_sites, points_per_lipid)] \
+	                for i in range(num_ions)]
+
+	# min_ion_to_lipid[ion][:] shows the minimum distance between a given ion and any binding site
+	# on a given lipid
+	# In [9]: shape(min_ion_to_lipid)
+	# Out[9]: (308, 40) = (num_ions, num_lipids)
+
+	min_ion_to_lipid = [[ion_to_lipid[i][j][:].min() \
+	                     for j in range(num_lipids)] \
+	                    for i in range(num_ions)]
+
+	# If we keep track of *where* the minimum is, then we can also keep track of which oxygen
+	# is doing the binding. And if we keep track of both minima, then we know which two oxygens
+	# are being bridged by the ion. This assumes two factors:
+	# a) That SelectAtoms() outputs coordinates in the same order as inputs
+	# b) That cdist stores the distance between input i and input j in the ij'th entry in output matrix
+
+	min_index_and_value = [[min(enumerate(ion_to_lipid[i][j]), key=operator.itemgetter(1)) \
+	                        for j in range(num_lipids)] \
+	                       for i in range(num_ions)]
+
+	return (ion_to_lipid, min_ion_to_lipid, min_index_and_value)
+
+
+
+def binding_number ():
+	# Stuff
+	print 'Not implemented'
 
 if type(routine) == str: routine = [routine]
 
@@ -59,6 +113,7 @@ if 'calculate' in routine:
 		grofile, trajfile = trajectory_lookup(analysis_descriptors, aname, globals())
 
 		for traj in trajfile:
+
 			# Load lipids and split into monolayers
 			mset = MembraneSet()
 			mset.load_trajectory((basedir + '/' + grofile, basedir + '/' + traj), resolution='aamd')
@@ -123,62 +178,14 @@ if 'calculate' in routine:
 			else:
 				frameslice = [i for i in range(len(mset.universe.trajectory)) if i in whichframes]
 			#for frameno in frameslice:
-			for framno in range(999,1000):
+			for frameno in range(999,1000):
 				status('status: frame = ' + str(frameno + 1) + '/' + str(len(frameslice)))
 				mset.gotoframe(frameno)
 				mset_ions.gotoframe(frameno)
 				vecs = mset.vec(frameno)
-				# Not sure what selection_index is doing in the get_points() function
-				# mset.selections has two elements, not sure what second entry (0.0) is:
-				# In [19]: mset.selections
-				# Out[19]: [<AtomGroup with 40 atoms>, 0.0]
-				pts1 = array(mset.get_points(frameno, selection_index=0))
-				pts2 = array(mset_ions.get_points(frameno, selection_index=0))
-				# There are len(pts1)/num_lipids oxygens per lipid
-				distance_x = scipy.spatial.distance.cdist(array([[i]
-				                                                 for i in pts1[:, 0]]),
-				                                          array([[i] for i in pts2[:, 0]]))
-				distance_y = scipy.spatial.distance.cdist(array([[i]
-				                                                 for i in pts1[:, 1]]),
-				                                          array([[i] for i in pts2[:, 1]]))
-				distance_z = scipy.spatial.distance.cdist(array([[i]
-				                                                 for i in pts1[:, 2]]),
-				                                          array([[i] for i in pts2[:, 2]]))
-				unwrapped_x = distance_x - 1 * (distance_x > vecs[0] / 2.) * vecs[0]
-				unwrapped_y = distance_y - 1 * (distance_y > vecs[1] / 2.) * vecs[1]
-				unwrapped_z = distance_z - 1 * (distance_z > vecs[2] / 2.) * vecs[2]
-				distance_matrix = sqrt(unwrapped_x ** 2 + unwrapped_y ** 2 + unwrapped_z ** 2)
-				# Since we know the number of oxygens per lipid for this analysis, we can now
-				# *quickly* group the distances by lipid instead of writing a wrapper loop to do
-				# by residue analysis
-				# The following bits allow us to step through the distance_matrix by lipid once we know how many entries
-				# to skip, which is points_per_lipid
-				points_per_lipid = len(pts1) / num_lipids
-				num_binding_sites = len(pts1)
-				num_ions = len(pts2)
-				# i is ion number (e.g 308), j is atom number for all binding sites in all lipids (e.g. 240),
-				ion_to_lipid = [[distance_matrix[:, i][j:j + points_per_lipid] \
-				                 for j in arange(0, num_binding_sites, points_per_lipid)] \
-				                for i in range(num_ions)]
 
-				# min_ion_to_lipid[ion][:] shows the minimum distance between a given ion and any binding site
-				# on a given lipid
-				# In [9]: shape(min_ion_to_lipid)
-				# Out[9]: (308, 40) = (num_ions, num_lipids)
-
-				min_ion_to_lipid = [[ion_to_lipid[i][j][:].min() \
-				                     for j in range(num_lipids)] \
-				                    for i in range(num_ions)]
-
-				# If we keep track of *where* the minimum is, then we can also keep track of which oxygen
-				# is doing the binding. And if we keep track of both minima, then we know which two oxygens
-				# are being bridged by the ion. This assumes two factors:
-				# a) That SelectAtoms() outputs coordinates in the same order as inputs
-				# b) That cdist stores the distance between input i and input j in the ij'th entry in output matrix
-
-				min_index_and_value = [[min(enumerate(ion_to_lipid[i][j]), key=operator.itemgetter(1)) \
-				                        for j in range(num_lipids)] \
-				                       for i in range(num_ions)]
+				pts1, pts2, points_per_lipid, distance_matrix, num_binding_sites, num_ions = get_lipid_ion_coords(frameno)
+				ion_to_lipid, min_ion_to_lipid, min_index_and_value = distance_to_lipids(distance_matrix, points_per_lipid, num_binding_sites)
 
 
 				# Check if a given ion is binding to a single lipid:
@@ -278,6 +285,9 @@ if 'calculate' in routine:
 			#################################################################
 
 
+
+		''' Skip pickles for now
+
 		# Store the parameters and the results in membraindata and a pickle
 		points_counts = [shape(pts1), shape(pts2)]
 		# pair_selects = pair[0:2]
@@ -302,6 +312,7 @@ if 'calculate' in routine:
 		else:
 			specname_mod = specname_pickle(sysname, traj)
 		pickledump(mset.store[0], 'pkl.bridge.' + '-'.join(pairnames) + '.' + specname_mod + '.pkl', directory=pickles)
+		'''
 		checktime()
 
 		# Debugging
