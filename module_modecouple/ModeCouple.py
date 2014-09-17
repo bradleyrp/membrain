@@ -9,10 +9,12 @@ from numpy import *
 #---note that these functions were pulled directly from script-coupling-adv-batch.py
 #---note that we may wish to streamline this matching procedure from the script-coupling-adv-batch.py version
 
-def fftwrap(dat,redundant=1):
+def fftwrap(dat,redundant=1,shift=True):
 	'''This function wraps the standard discrete FFT for a system with possible-redundant rows.'''
 	trim = -1 if redundant == 1 else None 
-	return fft.fftshift(fft.fft2(array(dat)[:trim,:trim]))
+	transformed = fft.fft2(array(dat)[:trim,:trim])
+	if shift: return fft.fftshift(fft.fft2(array(dat)[:trim,:trim]))
+	else: return fft.fft2(array(dat)[:trim,:trim])
 
 def ifftwrap(dat,redundant=1):
 	'''This function wraps the standard discrete IFFT for a system with possible-redundant rows.'''
