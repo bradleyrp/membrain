@@ -84,7 +84,7 @@ for topkey in sweep.keys():
 routine = [
 	'calc',
 	'hypothesize',
-	][1:]
+	][:1]
 
 #---FUNCTIONS
 #-------------------------------------------------------------------------------------------------------------
@@ -110,7 +110,7 @@ if 'calc' in routine:
 	These results are then stored in hd5f binaries which are unpacked during the "hypothesize" stage.
 	'''
 	
-	for hypothesis in hypotheses[:1]:
+	for hypothesis in hypotheses:
 	
 		status('status: INVESTIGATING HYPOTHESIS')
 		status('status: '+str(hypothesis))
