@@ -141,8 +141,6 @@ class ModeSum:
 		self.m2,self.n2 = m2,n2
 		cm,cn = [int(round(i/2.-1)) for i in shape(self.hqs[0])]
 		Lx,Ly = mean(self.mset.vecs,axis=0)[0:2]
-		qmags = self.mset.lenscale*array([ (i-cm)/((Lx)/1.)*2*pi+1j*(j-cn)/((Ly)/1.)*2*pi 
-			for j in range(0,n2) for i in range(0,m2)])
 
 		#---make the bending rigidity field
 		if self.kfield == None:
@@ -163,8 +161,8 @@ class ModeSum:
 		vsshift = vs-1*(vs>array([cm,cn]))*array([m2,n2])
 		biginds = array(meshgrid(arange(m2*n2),arange(m2*n2))).T
 		monster = usshift[biginds[...,0]]+vsshift[biginds[...,1]]
-		self.kqqp = tile(self.kqs,(3,3))[monster[...,0]+m2,monster[...,1]+n2]	
-		
+		self.kqqp = tile(self.kqs,(3,3))[monster[...,0]+m2,monster[...,1]+n2]
+
 		#---show the computation steps
 		#---? DEBUG
 		self.vs = vs
@@ -173,11 +171,22 @@ class ModeSum:
 		self.usshift = usshift
 		self.vsshift = vsshift
 		self.biginds = biginds
-		self.monster =  monster
+		self.monster = monster		
+
+		#---? WORKING ON QMAGS
+		if 0:
+			qmags = self.mset.lenscale*array([ (i-cm)/((Lx)/1.)*2*pi+1j*(j-cn)/((Ly)/1.)*2*pi 
+				for j in range(0,n2) for i in range(0,m2)])
+		qmagshift = sqrt(sum((self.usshift/(array([Lx,Ly])*self.mset.lenscale/pi))**2,axis=1))
+		qmags = scipy.spatial.distance.squareform(scipy.spatial.distance.pdist(array([qmagshift]).T))
+		self.qmags = qmags
+
+		#---ADD DEMONDEX TO THE CODE AS A DEMO
+		#---FINAL CHECK THAT THE QMAGS ARE CORRECT UNDER THE UNIFIED NAMING SCHEME !!!
 		
 		#---construct the full Helfrich with curvature in matrix form
 		status('status: constructing matrix')
-		self.full_matrix = ((qmags*qmags)*(qmags*qmags)*hqs_hqps+(qmags*qmags)*hqs_c0qps+\
+		self.full_matrix = ((qmags*qmags)*(qmags*qmags)*hqs_hqps-(qmags*qmags)*hqs_c0qps-\
 			(qmags*qmags)*c0qs_hqps+c0qs_c0qps)*real(self.kqqp)
 
 		#---iterate to larger matrix sizes as a speed test and then diagonlize the final result
@@ -187,4 +196,12 @@ class ModeSum:
 			self.fullans = linalg.eig(abs(self.full_matrix)[:lim,:lim])
 			if lim != None: del self.fullans
 			status('status: size = '+str(lim)+' duration = '+str(1./60*(time.time()-st))+' minutes')
+'''
+m3,n3=m2-1,n2-1
+inds = array(where(ms.kqqp>1)).T[1]
+[ms.qs[(i)/n3,(i)%n3] for i in inds]
+ms.usshift[inds[0]],ms.usshift[inds[1]]
+[ms.qs[i/n2,i%n2] for i in j for j in [[1386,2970][1539,2883]]]
+sqrt(sum((ms.usshift/(array([Lx,Ly])*ms.mset.lenscale))**2,axis=1))
+'''
 

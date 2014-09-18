@@ -84,7 +84,7 @@ for topkey in sweep.keys():
 routine = [
 	'calc',
 	'hypothesize',
-	][:1]
+	][1:]
 
 #---FUNCTIONS
 #-------------------------------------------------------------------------------------------------------------
@@ -186,15 +186,4 @@ if 'hypothesize' in routine:
 		
 	#---continue
 	status('status: continue with script-modecouple-plot.py')
-
-
-
-
-
-
-
-
-
-
-
 
