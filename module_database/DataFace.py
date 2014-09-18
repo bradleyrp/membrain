@@ -192,9 +192,16 @@ class DataFace:
 					(str(row['id']) if row['pklname'] == None else row['pklname']))
 				status('status: removing row ---> '+str(row))
 				rows_to_delete.append(row['id'])
-		if rows_to_delete != []: raw_input('warning: press any key to continue but beware row deletions')
-		for rowid in rows_to_delete:
-			self.ec('DELETE FROM dataref_'+self.storename+' WHERE id='+str(rowid))
+		if rows_to_delete != []: 
+			status('status: found rows not linked to data but the system may be computing now')
+			status('status: please double-confirm row deletions')
+			shall = True if raw_input("%s (y/N) " % 'status: okay to delete?').lower() == 'y' else False
+			confirmed = True if raw_input("%s (y/N) " % 'status: confirmed?').lower() == 'y' else False
+			if shall and confirmed:
+				status('status: removing rows')
+				for rowid in rows_to_delete:
+					self.ec('DELETE FROM dataref_'+self.storename+' WHERE id='+str(rowid))
+			else: status('status: no modifications to database')
 			
 	def new(self,specs,extras=None):
 	

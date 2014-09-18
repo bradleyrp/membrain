@@ -89,7 +89,7 @@ name=membrane-v530-director
 struct=/home/rpb/compbio/membrane-v530/a6-surfacer/system.director.gro
 /home/rpb/compbio/membrane-v530/a6-surfacer/u5-sim-trestles-md.part0006.30000-100000-100.director.xtc
 
-name=membrane-v531-ions
+name=membrane-v531-ions-original
 struct=/home/rpb/compbio/membrane-v531/b1-ions/system.ions.gro
 /home/rpb/compbio/membrane-v531/b1-ions/s5-sim-kraken-md.part0016.pbcmol.40000-90000-50.ions.xtc
 
@@ -181,4 +181,12 @@ struct=/home/rpb/compbio/membrane-v532/a7-ions/system.ions.gro
 name=membrane-v620
 struct=/home/rpb/compbio/membrane-v620/s3-equil/system-input.gro
 /home/rpb/compbio/membrane-v620/s4-sim/md.part0003.50000-80000-50.xtc
+
+name=membrane-v531-bridge
+struct=/home/rpb/worker/repo-membrane/membrane-v531/a9-structure/system.bridge.gro
+/home/rpb/worker/repo-membrane/membrane-v531/a9-structure/s5-sim-kraken-md.part0016.40000-90000-50.bridge.xtc
+
+name=membrane-v531-ions
+struct=/home/rpb/worker/repo-membrane/membrane-v531/a5-ions/system.ions.gro
+/home/rpb/worker/repo-membrane/membrane-v531/a5-ions/s5-sim-kraken-md.part0016.pbcmol.40000-90000-50.ions.xtc
 

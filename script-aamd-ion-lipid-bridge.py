@@ -46,6 +46,23 @@ if 'batch_override' not in globals():
 	Descriptors = ['P5', 'P5', 'P5', 'P4', 'P4', 'P4', 'P1', 'P1']
 
 
+def pbc_unwrap(pts1, pts2):
+	distance_x = scipy.spatial.distance.cdist(array([[i]
+	                                                 for i in pts1[:, 0]]),
+	                                          array([[i] for i in pts2[:, 0]]))
+	distance_y = scipy.spatial.distance.cdist(array([[i]
+	                                                 for i in pts1[:, 1]]),
+	                                          array([[i] for i in pts2[:, 1]]))
+	distance_z = scipy.spatial.distance.cdist(array([[i]
+	                                                 for i in pts1[:, 2]]),
+	                                          array([[i] for i in pts2[:, 2]]))
+	unwrapped_x = distance_x - 1 * (distance_x > vecs[0] / 2.) * vecs[0]
+	unwrapped_y = distance_y - 1 * (distance_y > vecs[1] / 2.) * vecs[1]
+	unwrapped_z = distance_z - 1 * (distance_z > vecs[2] / 2.) * vecs[2]
+	distance_matrix = sqrt(unwrapped_x ** 2 + unwrapped_y ** 2 + unwrapped_z ** 2)
+	
+	return distance_matrix
+
 def get_lipid_ion_coords (frameno):
 	pts1 = array(mset.get_points(frameno, selection_index=0))
 	pts2 = array(mset_ions.get_points(frameno, selection_index=0))
@@ -246,10 +263,11 @@ if 'calculate' in routine:
 				# One speedup would be not wasting memory on squareform, but then it's more challenging
 				# to check if two elements come from the same residue.
 				# We really only need the upper triangular part, sigh.
-				lipid_coords = scipy.spatial.distance.squareform(scipy.spatial.distance.pdist(pts1))
+				# lipid_coords = scipy.spatial.distance.squareform(scipy.spatial.distance.pdist(pts1))
+				lipid_coords = pbc_unwrap(pts1, pts1)
 				for i in range(len(lipid_coords)):
 					for j in range(len(lipid_coords)):
-						if lipid_coords[i,j] < binding_cutoff:
+						if lipid_coords[i,j] < 2*binding_cutoff:
 							if i / points_per_lipid != j / points_per_lipid: # This integer division should check if
 								# they are coming from the same residue.
 									if tuple(sort([i/points_per_lipid,j/points_per_lipid])) not in residues_within_cutoff_frame:
