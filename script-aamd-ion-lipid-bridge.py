@@ -22,7 +22,7 @@ if 'batch_override' not in globals():
 		                 'v511-40000-90000-50-bridge',
 		                 'v533-40000-90000-50',
 		                 'v534-40000-90000-50',
-	                 ][1:2]
+	                 ][1:6]
 
 	routine = [
 		          'calculate',
@@ -66,25 +66,11 @@ def pbc_unwrap(pts1, pts2):
 def get_lipid_ion_coords (frameno):
 	pts1 = array(mset.get_points(frameno, selection_index=0))
 	pts2 = array(mset_ions.get_points(frameno, selection_index=0))
-	# There are len(pts1)/num_lipids oxygens per lipid
-	distance_x = scipy.spatial.distance.cdist(array([[i]
-	                                                 for i in pts1[:, 0]]),
-	                                          array([[i] for i in pts2[:, 0]]))
-	distance_y = scipy.spatial.distance.cdist(array([[i]
-	                                                 for i in pts1[:, 1]]),
-	                                          array([[i] for i in pts2[:, 1]]))
-	distance_z = scipy.spatial.distance.cdist(array([[i]
-	                                                 for i in pts1[:, 2]]),
-	                                          array([[i] for i in pts2[:, 2]]))
-	unwrapped_x = distance_x - 1 * (distance_x > vecs[0] / 2.) * vecs[0]
-	unwrapped_y = distance_y - 1 * (distance_y > vecs[1] / 2.) * vecs[1]
-	unwrapped_z = distance_z - 1 * (distance_z > vecs[2] / 2.) * vecs[2]
-	distance_matrix = sqrt(unwrapped_x ** 2 + unwrapped_y ** 2 + unwrapped_z ** 2)
+	distance_matrix = pbc_unwrap(pts1,pts2)
 	points_per_lipid = len(pts1) / num_lipids
 	num_binding_sites = len(pts1)
-	num_ions = len(pts2)
 
-	return (pts1, pts2, points_per_lipid, distance_matrix, num_binding_sites, num_ions)
+	return (pts1, pts2, points_per_lipid, distance_matrix, num_binding_sites)
 
 def distance_to_lipids (distance_matrix, points_per_lipid, num_binding_sites):
 	# i is ion number (e.g 308), j is atom number for all binding sites in all lipids (e.g. 240),
@@ -114,10 +100,63 @@ def distance_to_lipids (distance_matrix, points_per_lipid, num_binding_sites):
 	return (ion_to_lipid, min_ion_to_lipid, min_index_and_value)
 
 
+def load(structure, gro, traj, lipids):
+	structure.load_trajectory((basedir + '/' + gro, basedir + '/' + traj), resolution='aamd')
+	if lipids:
+		structure.identify_monolayers(director)
+		residues = list(set(structure.universe.residues.resnames()))
+		structure.identify_residues(residues)
+		lipid_selector = 'resname ' + ptdins_resname + ' and ' + binding_atoms[ptdins_resname]
+		phosphodiester_check = list(structure.universe.selectAtoms('resname ' + ptdins_resname + \
+	                                                      ' and (name O14 or name O13)'))
+		if len(phosphodiester_check) == 0:
+			status('status: Atoms O13 and O14 are not in the structure file. You are probably " \
+			"using a structure file from /keylipidatoms/ which does not have them included. You can " \
+			"only check for binding to inositol phosphate groups and not the phosphodiester.')
+		selection = structure.universe.selectAtoms(lipid_selector)
+		num = structure.universe.selectAtoms(lipid_selector).numberOfResidues()
+	else:
+		ion_selector = 'name ' + str(ion_name)
+		selection = structure.universe.selectAtoms(ion_selector)
+		num = structure.universe.selectAtoms(ion_selector).numberOfResidues()
+	structure.selections.append(selection)
+	return (structure, num)
+
+def define_binding ():
+	if str(ion_name) == 'MG':
+		binding_cutoff = 4.0
+	elif str(ion_name) == 'Cal':
+		binding_cutoff = 3.0
+	else:
+		binding_cutoff = 4.0
+		print 'Check sodium binding range.'
+	return(binding_cutoff)
 
 def binding_number ():
 	# Stuff
 	print 'Not implemented'
+
+def save_data (result_data, oxygens, oxygen_count, oxygen_pairs, pair_sorted, count, pairs_within_cutoff):
+	pair_name = ptdins_resname +'-' + ion_name
+	savelist = ['pair_name', 'binding_cutoff', 'D'] # These are metadata.
+	for item in savelist:
+		result_data.addnote([item, globals()[item]])
+	result_data.data = [oxygens, oxygen_count, oxygen_pairs, pair_sorted, count, pairs_within_cutoff]
+	result_data.label = ['Index of oxygens binding to ion per frame, see notes for corresponding Dictionary', \
+	                     'Counter() object tracking index of oxygens binding to ion', \
+	                     'Index of oxygen pairs binding to ion per frame', \
+	                     'Sorted index of oxygen pairs binding to ion', \
+                         'Counter() object tracking index of oxygen pairs binding to ion', \
+	                     'Array containing the number of pairs within binding_cutoff for each frame'
+	]
+	mset.store = [result_data]
+	pairnames = [(i if i != 'ptdins' else ptdins_resname) for i in analysis_pair]
+	# ---modify names if the frame selection doesn't perfectly match the original gmx timeslice
+	if '-'.join(aname.split('-')[1:]) != '-'.join(specname_pickle(sysname, lipid_trajfile[0]).split('.')[-1:]):
+		specname_mod = '.'.join(specname_pickle(sysname, lipid_trajfile[0]).split('.')[:-1]) + '.' + '-'.join(aname.split('-')[1:])
+	else:
+		specname_mod = specname_pickle(sysname, lipid_trajfile[0])
+	pickledump(mset.store[0], 'pkl.bridge.' + '-'.join(pairnames) + '.' + specname_mod + '.pkl', directory=pickles)
 
 if type(routine) == str: routine = [routine]
 
@@ -127,28 +166,18 @@ if 'calculate' in routine:
 		status('status: Pairing = ' + str(pairings_lipid_ion[0]) + ' system = ' + aname + '\n')
 
 		for i in analysis_descriptors[aname]: vars()[i] = (analysis_descriptors[aname])[i]
-		grofile, trajfile = trajectory_lookup(analysis_descriptors, aname, globals())
-
-		for traj in trajfile:
-
-			# Load lipids and split into monolayers
-			mset = MembraneSet()
-			mset.load_trajectory((basedir + '/' + grofile, basedir + '/' + traj), resolution='aamd')
-			mset.identify_monolayers(director)
-			if residues == 'infer':
-				residues = list(set(mset.universe.residues.resnames()))
-			mset.identify_residues(residues)
-			# Load ions
-			mset_ions = MembraneSet()
-			grofile, trajfile = trajectory_lookup(analysis_descriptors, aname, globals(),
+		lipid_grofile, lipid_trajfile = trajectory_lookup(analysis_descriptors, aname, globals())
+		ion_grofile, ion_trajfile =  trajectory_lookup(analysis_descriptors, aname, globals(),
 			                                      keytrajsel='ions_trajsel', keysysname='ions_sysname')
-			mset_ions.load_trajectory((basedir + '/' + grofile, basedir + '/' + trajfile[0]), resolution='aamd')
-			# Unwrap ions
-			fast_pbc = True
+		for traj in lipid_trajfile:
+			mset, num_lipids = load(MembraneSet(), lipid_grofile, lipid_trajfile[0], lipids=True)
+			mset_ions, num_ions = load(MembraneSet(), ion_grofile, ion_trajfile[0], lipids=False)
+			binding_cutoff = define_binding()
+
 			# This is probably going to be overidden in a batch script, so hack it for now:
 			analysis_pair = pairings_lipid_ion[0]
 
-			# Results data
+			# Containers
 			###########################################################
 			result_data = MembraneData('bridge', label='-'.join(analysis_pair))
 			num_ions_binding = []  # Binding to at least one lipid
@@ -157,53 +186,24 @@ if 'calculate' in routine:
 			# by frame. The range is set by variable k.
 			which_oxygens = [] # Array containing which oxygens bind to given ion
 			which_o_pairs = [] # Array containing which two oxygens are bridged by ion
-			residues_within_cutoff = [] # Array containing the number of residues within binding_cutoff
+			pairs_within_cutoff = [] # Array containing the number of residues within binding_cutoff
 			total_oxygens = 0 # Error checking code to make sure we catch all interacting oxygens
 			############################################################
 
-			# Loop over the lipid and the ion selections
-			for lnum in range(2):
-				if analysis_pair[lnum] == 'ion':
-					# Choosing only cation for analysis, set by ion_name in header-aamd.py dictionary
-					# Heads up: this nomenclature is confusing because allselect_lipids is used for /ions/.
-					allselect_lipids = mset_ions.universe.selectAtoms('name ' + str(ion_name))
-					mset_ions.selections.append(allselect_lipids)
-				else:
-					# For this analysis:
-					# a) restrict to PtdIns
-					# b) use phosphate oxygen atoms, not phosphate phosphorus
-					# Make a new entry in header-aamd.py dictionary for this;
-					# keylipidatoms becomes binding_atoms in the dictionary
-					# To use non-PtdIns, need to make new time-slices.
-					if analysis_pair[lnum] == 'ptdins':
-						lipid_selector = 'resname ' + ptdins_resname + ' and ' + binding_atoms[ptdins_resname]
-					phosphodiester_check = list(mset.universe.selectAtoms('resname ' + ptdins_resname + \
-					                                                      ' and (name O14 or name O13)'))
-					if len(phosphodiester_check) == 0:
-						status('status: Atoms O13 and O14 are not in the structure file. You are probably " \
-						"using a structure file from /keylipidatoms/ which does not have them included. You can " \
-						"only check for binding to inositol phosphate groups and not the phosphodiester.')
-
-					allselect_lipids = mset.universe.selectAtoms(lipid_selector)
-					# Instead of doing this loop residue-by-residue, this will tell us how to group the array pts1
-					num_lipids = mset.universe.selectAtoms(lipid_selector).numberOfResidues()
-					# N.B. There is no need to do this calculation by monolayer, so I removed that code
-					mset.selections.append(allselect_lipids)
 			# Select the frames for analysis (default = all)
 			if whichframes == None:
 				frameslice = range(len(mset.universe.trajectory))
 			else:
 				frameslice = [i for i in range(len(mset.universe.trajectory)) if i in whichframes]
-			#for frameno in frameslice:
-			for frameno in range(999,1000):
+			for frameno in frameslice:
+			#for frameno in range(999,1000):
 				status('status: frame = ' + str(frameno + 1) + '/' + str(len(frameslice)))
 				mset.gotoframe(frameno)
 				mset_ions.gotoframe(frameno)
 				vecs = mset.vec(frameno)
 
-				pts1, pts2, points_per_lipid, distance_matrix, num_binding_sites, num_ions = get_lipid_ion_coords(frameno)
+				pts1, pts2, points_per_lipid, distance_matrix, num_binding_sites = get_lipid_ion_coords(frameno)
 				ion_to_lipid, min_ion_to_lipid, min_index_and_value = distance_to_lipids(distance_matrix, points_per_lipid, num_binding_sites)
-
 
 				# Check if a given ion is binding to a single lipid:
 				binding_truth_table = [any([i < binding_cutoff for i in min_ion_to_lipid[j]]) \
@@ -221,7 +221,7 @@ if 'calculate' in routine:
 				this_frame = []  # This array holds a list of the number of lipids an ion is binding /per frame/
 				which_oxygens_frame = []  # This array holds a list of which oxygens an ion is binding /per frame/
 				which_o_pairs_frame = []  # This array holds a list of oxygen pairs an ion is binding /per frame/
-				residues_within_cutoff_frame = set() # This set holds how many residues are within binding cutoff /per frame/
+				pairs_within_cutoff_frame = set() # This set holds how many pairs (40*39/2) are within binding cutoff /per frame/
 
 				# I think this is already calculated:
 				# ion_to_lipid_min_dists = [[row[1] for row in min_index_and_value[j]] for j in range(num_ions)]
@@ -251,7 +251,7 @@ if 'calculate' in routine:
 						for i in which_ions_binding_two_lipids[0]:
 							this_ion = ion_to_lipid_min_dists[i]
 							min_indices = argsort(ion_to_lipid_min_dists[i])[0:2]
-							print 'Ion '+str(i)+' is bridging residues '+str(min_indices)
+							#print 'Ion '+str(i)+' is bridging residues '+str(min_indices)
 							these_oxygens = ion_to_lipid_index_of_min[i][min_indices[0]], \
 							                ion_to_lipid_index_of_min[i][min_indices[1]]
 							which_o_pairs_frame.append(these_oxygens)
@@ -270,15 +270,15 @@ if 'calculate' in routine:
 						if lipid_coords[i,j] < 2*binding_cutoff:
 							if i / points_per_lipid != j / points_per_lipid: # This integer division should check if
 								# they are coming from the same residue.
-									if tuple(sort([i/points_per_lipid,j/points_per_lipid])) not in residues_within_cutoff_frame:
+									if tuple(sort([i/points_per_lipid,j/points_per_lipid])) not in pairs_within_cutoff_frame:
 										# I am so wary this is working...
-										residues_within_cutoff_frame.add(tuple(sort([i/points_per_lipid,j/points_per_lipid])))
+										pairs_within_cutoff_frame.add(tuple(sort([i/points_per_lipid,j/points_per_lipid])))
 										# from mayavi import mlab
 										# mlab.points3d(pts1[:,0],pts1[:,1],pts1[:,2],scale_factor=0.7)
-										print 'Residue '+str(i/points_per_lipid)+' is close to residue '+str(j/points_per_lipid)
+										#print 'Residue '+str(i/points_per_lipid)+' is close to residue '+str(j/points_per_lipid)
 				#################################################################
 
-				residues_within_cutoff.append(len(residues_within_cutoff_frame))
+				pairs_within_cutoff.append(len(pairs_within_cutoff_frame))
 				num_lipids_ion_binding.append(this_frame)
 				which_oxygens.append(which_oxygens_frame)
 				which_o_pairs.append(which_o_pairs_frame)
@@ -303,58 +303,9 @@ if 'calculate' in routine:
 			#################################################################
 
 
-
-		''' Skip pickles for now
-
-		# Store the parameters and the results in membraindata and a pickle
-		points_counts = [shape(pts1), shape(pts2)]
-		# pair_selects = pair[0:2]
-		# pair_name = '-'.join(pair)
-		pair_name = analysis_pair[0]+'-'+ion_name
-		savelist = ['pair_name', 'points_counts', 'binding_cutoff', 'D']
-		for item in savelist:
-			result_data.addnote([item, globals()[item]])
-		result_data.data = [oxygens, oxygen_count, oxygen_pairs, pair_sorted, count, residues_within_cutoff]
-		result_data.label = ['Index of oxygens binding to ion per frame, see notes for corresponding Dictionary', \
-		                     'Counter() object tracking index of oxygens binding to ion', \
-		                     'Index of oxygen pairs binding to ion per frame', \
-		                     'Sorted index of oxygen pairs binding to ion', \
-	                         'Counter() object tracking index of oxygen pairs binding to ion', \
-		                     'Array containing the number of residues within binding_cutoff for each frame'
-		]
-		mset.store = [result_data]
-		pairnames = [(i if i != 'ptdins' else ptdins_resname) for i in analysis_pair]
-		# ---modify names if the frame selection doesn't perfectly match the original gmx timeslice
-		if '-'.join(aname.split('-')[1:]) != '-'.join(specname_pickle(sysname, trajfile[0]).split('.')[-1:]):
-			specname_mod = '.'.join(specname_pickle(sysname, traj).split('.')[:-1]) + '.' + '-'.join(aname.split('-')[1:])
-		else:
-			specname_mod = specname_pickle(sysname, traj)
-		pickledump(mset.store[0], 'pkl.bridge.' + '-'.join(pairnames) + '.' + specname_mod + '.pkl', directory=pickles)
-		'''
 		checktime()
-
-		# Debugging
-		#################################################################
-		debug = 0
-		if debug:
-			import itertools as it
-			d = [[max([y - x for x, y in it.combinations(ion_to_lipid[i][j][:], 2)]) \
-			      for j in range(num_lipids)] \
-			     for i in range(num_ions)]
-			print "The maximum difference between the distance of all oxygen atoms of a specific lipid " \
-			      "to given ion can be checked by accessing d[ion][lipid] and this difference should " \
-			      "be relatively small (probably less than 10 A)."
-			# For each ion, how far away is nearest lipid binding oxygen?
-			# distance_matrix.min(axis=0)
-			# For each ion, how far away are the /two/ nearest lipid binding oxygens?
-			# distance_matrix[distance_matrix[:,i].argsort()[0:2],i]
-			# For each lipid binding oxygen, how far away is nearest ion?
-			# distance_matrix.min(axis=1)
-			# Minimum distance from ion to any lipid binding oxygen:
-			distance_to_lipid = [distance_matrix[:, i].min() for i in range(shape(distance_matrix)[1])]
-			# Check if a given ion is binding to /any/ oxygen atom:
-			[distance_to_lipid[i] < binding_cutoff for i in range(len(distance_to_lipid))]
-			#################################################################
+		save_data (result_data, oxygens, oxygen_count, oxygen_pairs, pair_sorted, count, pairs_within_cutoff)
+		checktime()
 
 		del mset
 		del mset_ions
@@ -363,7 +314,8 @@ if 'calculate' in routine:
 if 'plot' in routine:
 	if 'compute' not in routine:
 		# Try to load a pickle
-		checktime()
+		# data = unpickle()
+		print 'Not implemented.'
 	elif 'compute' in routine:
 		checktime()
 		status('Plotting most recent calculation.')
@@ -389,11 +341,6 @@ if 'plot' in routine:
 
 	else:
 		print 'No data to plot.'
-
-
-
-
-
 
 	pair = pairings_lipid_ion[0]
 	pairnames = [(i if i != 'ptdins' else ptdins_resname) for i in pair]
