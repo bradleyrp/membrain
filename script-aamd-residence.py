@@ -13,7 +13,7 @@ from mpl_toolkits.axes_grid1.inset_locator import inset_axes
 analysis_names = ['v531-40000-90000-50-bridge','v532-40000-90000-50-bridge']
 target_atomsel_via_regex = 'O'
 splitter = 4
-routine = ['plot_residence_time_distn']
+routine = ['plot_residence_time_distn','plot_number_bridged_distn']
 
 #---FUNCTIONS
 #-------------------------------------------------------------------------------------------------------------
@@ -132,7 +132,7 @@ if 'mset' not in globals():
 		all_counts.append(counts)
 
 #---combined residence time plot
-if 'plot_residence_time_distn' in routine and 0:
+if 'plot_residence_time_distn' in routine:
 	cutoff = where(mids<500)[0][-1]
 	ax = plt.subplot(111)
 	ax.set_title(r'$\:'+'{:.1f}'.format(splitter)+'\:\mathrm{\AA}$'+' to Phosphorus residence times',
@@ -155,24 +155,26 @@ if 'plot_residence_time_distn' in routine and 0:
 	plt.savefig(pickles+'fig-residence-'+'-'.join(analysis_names)+'.png',dpi=300)
 	plt.show()
 
-ax = plt.subplot(111)
-ax.set_title(r'$\:'+'{:.1f}'.format(splitter)+'\:\mathrm{\AA}$'+' to Phosphorus residence times',
-	fontsize=fsaxlabel)
-for anum in range(len(analysis_names)):
-	aname = analysis_names[anum]
-	ion_name = analysis_descriptors[aname]['ion_name']
-	nbridged = array([len(i) for i in all_bridged[anum]])
-	c,edges = histogram(nbridged,range=(0,nbridged.max()),bins=nbridged.max())
-	mids = (edges[1:]+edges[:-1])/2.
-	color = color_dictionary_aamd(ionname=ion_name,comparison='ions')
-	label = analysis_descriptors[aname]['composition_name']+', '+analysis_descriptors[aname]['ion_label']
-	ax.plot(mids,c,label=label,color=color,lw=3)
-	ax.legend(loc='upper right',fontsize=fsaxlabel)
-	ax.set_ylabel('frequency',fontsize=fsaxlabel)
-	ax.set_xlabel('number of bridged ions',fontsize=fsaxlabel)
-	ax.grid(True)
-plt.savefig(pickles+'fig-bridge_number-'+'-'.join(analysis_names)+'.png',dpi=300)
-plt.show()
+#---plot distribution of bridged ion counts
+if 'plot_number_bridged_distn' in routine:
+	ax = plt.subplot(111)
+	ax.set_title(r'$\:'+'{:.1f}'.format(splitter)+'\:\mathrm{\AA}$'+' to Phosphorus residence times',
+		fontsize=fsaxlabel)
+	for anum in range(len(analysis_names)):
+		aname = analysis_names[anum]
+		ion_name = analysis_descriptors[aname]['ion_name']
+		nbridged = array([len(i) for i in all_bridged[anum]])
+		c,edges = histogram(nbridged,range=(0,nbridged.max()),bins=nbridged.max())
+		mids = (edges[1:]+edges[:-1])/2.
+		color = color_dictionary_aamd(ionname=ion_name,comparison='ions')
+		label = analysis_descriptors[aname]['composition_name']+', '+analysis_descriptors[aname]['ion_label']
+		ax.plot(mids,c,label=label,color=color,lw=3)
+		ax.legend(loc='upper right',fontsize=fsaxlabel)
+		ax.set_ylabel('frequency',fontsize=fsaxlabel)
+		ax.set_xlabel('number of bridged ions',fontsize=fsaxlabel)
+		ax.grid(True)
+	plt.savefig(pickles+'fig-bridge_number-'+'-'.join(analysis_names)+'.png',dpi=300)
+	plt.show()
 
 
 if 0:
