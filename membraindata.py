@@ -49,10 +49,10 @@ master_datatypes = {
 		'description':'stores the angles along a polymer chain',
 		},
     'bridge':{
-		'struct':{'num_lipid_ion_binding':0},
-		'struct_opts':None,
-		'description':'Holds the output of ion-lipid bridge calculations. Particle specs are in the pkl '+\
-		'name and the notes.',
+		'struct':{'frame':1,'type':0},
+		'struct_opts':{'type':{
+		'oxygens':0,'oxygen_count':1,'oxygen_pairs':2,'pair_sorted':3,'count':4, 'pairs_within_cutoff':5]}},
+		'description':'Holds the output of ion-lipid bridge calculations. Particle specs are in the pkl name and the notes.',
 		},
 	}
 
