@@ -968,8 +968,6 @@ if 'compute_radial_binary' in routine:
 		plot_ion_residence_radial_binary(disctraj,'radial_binary',scale_by_time=False,cumulative=True)
 		plot_ion_residence_radial_binary_dev(disctraj,'radial_binary',normed=False,residence_exact=True)
 
-
-
 #---example for doing the coordinate shift and the binning in the z-dimension
 if 'compute_z' in routine:
 	binedges,monobins = binlister('fixed',mset=mset_surf,binw=binwidth,monoz=master_monoz[anum])
@@ -1041,3 +1039,8 @@ if 'compute_z' in routine:
 	if showplots: plt.show()
 	plt.close(fig)
 	
+#---code additions from 2014.09.22 to handle residence time in a general way
+if 'general_residence_times' in routine:
+	print 'welcome'
+
+

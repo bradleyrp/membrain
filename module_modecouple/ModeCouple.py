@@ -9,10 +9,9 @@ from numpy import *
 #---note that these functions were pulled directly from script-coupling-adv-batch.py
 #---note that we may wish to streamline this matching procedure from the script-coupling-adv-batch.py version
 
-def fftwrap(dat,redundant=1,shift=True):
+def fftwrap_special(dat,redundant=1,shift=True):
 	'''This function wraps the standard discrete FFT for a system with possible-redundant rows.'''
 	trim = -1 if redundant == 1 else None 
-	transformed = fft.fft2(array(dat)[:trim,:trim])
 	if shift: return fft.fftshift(fft.fft2(array(dat)[:trim,:trim]))
 	else: return fft.fft2(array(dat)[:trim,:trim])
 
@@ -68,23 +67,33 @@ class ModeCouple:
 		self.c0s = array([])
 	def calculate_mode_coupling(self,mset,c0s,**kwargs):
 		'''Moved the entire mode-coupling calculation to a single function so it can be repeated easily.'''
+		
+		#---added flat for redundant trim here, so the original method requires nort = False
+		nort = False
+		doshift = False
+		
 		#---compute dimensions
 		mset.calculate_undulations(removeavg=kwargs['removeavg'],fitlims=kwargs['fitlims'],
 			forcekappa=kwargs['forcekappa'],qmagfilter=kwargs['qmagfilter'])
 		grid = mset.griddims
-		m,n = grid[0]-1,grid[1]-1
+		if nort: m,n = grid[0]-1,grid[1]-1
+		else: m,n = grid
 		#---if no curvature field, use zeros
 		if c0s == []: c0s = zeros((m,n))
 		#---units of hqs are unspecified here but then set by autocorr
 		print 'status: calculating hqs'
 		#hqs = [fftwrap(mset.surf[i])/double(m*n) for i in range(len(mset.surf))]
 		hqs = []
-		for i in range(len(mset.surf)): hqs.append(fftwrap(mset.surf[i])/double(m*n))
+		#---added shift=False to fix ModeSum 2014.09.18
+		for i in range(len(mset.surf)): hqs.append(fftwrap_special(mset.surf[i],
+			shift=doshift,
+			redundant=nort,
+			)/double(m*n))
 		#del mset.surf
 		#---units of incoming c0s must be in the units specified by mset.lenscale
 		#---? units need checked
 		print 'status: calculating cqs'
-		cqs = [fftwrap(mset.lenscale*array(c0s[i]))/double(m*n) for i in range(len(c0s))]
+		cqs = [fftwrap_special(mset.lenscale*array(c0s[i]))/double(m*n) for i in range(len(c0s))]
 		#print 2
 		Lx,Ly = mean(mset.vecs,axis=0)[0:2]
 		#print 3

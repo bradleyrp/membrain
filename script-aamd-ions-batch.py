@@ -1,4 +1,4 @@
-#!/usr/bin/python
+#!/usr/bin/python -i
 
 from membrainrunner import *
 execfile('locations.py')
@@ -31,7 +31,8 @@ all_batches = [
 	'symmetric',
 	'compare_phosphate_position',
 	'compare_protonation',
-	][:1]
+	'residence',
+	][-1:]
 	
 #---interpolation size 
 rounder = 4
@@ -106,6 +107,13 @@ for batch in all_batches:
 			r' $\mathrm{PIP_2^{-4}}$',
 			r' $\mathrm{PIP_2^{-5}}$',
 			r' $\mathrm{PIP_2^{-3}}$',
+			]
+	elif batch == 'residence':
+		#---code additions from 2014.09.22 to handle residence time in a general way
+		routine = ['general_residence_times']
+		get_ion_alt = True
+		analysis_names = [
+			'v509-40000-90000-50',
 			]
 	else: raise Exception('except: not in batchlist')
 	status('status: analysis_names = '+str(analysis_names))
