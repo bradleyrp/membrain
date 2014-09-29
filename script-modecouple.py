@@ -12,6 +12,12 @@ import copy
 #---SETTINGS
 #-------------------------------------------------------------------------------------------------------------
 
+#---choose what to do
+routine = [
+	'calc',
+	'hypothesize',
+	][1:]
+
 #---select a simulation system
 callsign = [
 	'v550-300000-400000-200',
@@ -33,7 +39,7 @@ hypothesis_calc = {
 hypothesis_default = {
 	'curvature':{
 		'type':'dimple',
-		'C_0':0.001,
+		'C_0':0.000,
 		'sigma_a':10,
 		'sigma_b':10,
 		},
@@ -49,7 +55,7 @@ hypothesis_default = {
 #---sweep over curvatures
 sweep_curv = {
 	'curvature':{
-		'C_0':[0.001,0.005,0.01,0.018,0.02,0.022,0.024,0.03,0.035,0.04,0.05]
+		'C_0':[0.000,0.001,0.005,0.01,0.018,0.02,0.022,0.024,0.03,0.035,0.04,0.05]
 		},
 	}
 
@@ -79,12 +85,6 @@ for topkey in sweep.keys():
 			newhypo[topkey] = val
 			hypotheses.append(newhypo)
 			del newhypo
-
-#---choose what to do
-routine = [
-	'calc',
-	'hypothesize',
-	][1:]
 
 #---FUNCTIONS
 #-------------------------------------------------------------------------------------------------------------
@@ -148,8 +148,8 @@ if 'calc' in routine:
 
 if 'hypothesize' in routine:
 
-	#---select a hypothesis
-	hypothesis = hypotheses[0]
+	#---select a hypothesis via the pass-through argument to the script
+	hypothesis = hypotheses[int(args.passed)]
 
 	#---create an interface to the database
 	df = DataFace(**allsets)
@@ -180,9 +180,10 @@ if 'hypothesize' in routine:
 		hqs_hqps=termlist[0],
 		hqs_c0qps=termlist[1],
 		c0qs_hqps=termlist[2],
-		c0qs_c0qps=termlist[3])
+		c0qs_c0qps=termlist[3],
+		do_diag=False)
 		
-	plt.imshow(real(ms.kqs).T,interpolation='nearest',origin='lower');plt.show()
+	if 0: plt.imshow(real(ms.kqs).T,interpolation='nearest',origin='lower');plt.show()
 		
 	#---continue
 	status('status: continue with script-modecouple-plot.py')

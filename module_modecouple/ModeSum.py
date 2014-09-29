@@ -93,21 +93,21 @@ class ModeSum:
 		if term == 'hqs_hqps':
 			for fr in range(len(self.hqs)):
 				status('fr = '+str(fr),start=st,i=fr,looplen=len(self.hqs))
-				termdat += real(outer(self.hqs[fr],self.hqs[fr]))
+				termdat += abs(outer(self.hqs[fr],self.hqs[fr]))
 			termdat = termdat / float(len(self.hqs))
 		elif term == 'hqs_c0qps':
 			for fr in range(len(self.hqs)):
 				status('fr = '+str(fr),start=st,i=fr,looplen=len(self.hqs))
-				termdat += real(outer(self.hqs[fr],self.cqs[fr]))
+				termdat += abs(outer(self.hqs[fr],self.cqs[fr]))
 			termdat = termdat / float(len(self.hqs))
 		elif term == 'c0qs_hqps':
 			for fr in range(len(self.hqs)):
 				status('fr = '+str(fr),start=st,i=fr,looplen=len(self.hqs))
-				termdat += real(outer(self.cqs[fr],self.hqs[fr]))
+				termdat += abs(outer(self.cqs[fr],self.hqs[fr]))
 			termdat = termdat / float(len(self.hqs))
 		elif term == 'c0qs_c0qps':
 			#---assumes static field
-			termdat = real(outer(self.cqs[0],self.cqs[0]))
+			termdat = abs(outer(self.cqs[0],self.cqs[0]))
 		else: raise Exception('requested an unclear term')
 		status('\nstatus: duration = '+'{0:.1f}'.format(1.*(time.time()-st)/60.)+' minutes')
 		status('status: saving term as h5 binary')
@@ -116,7 +116,7 @@ class ModeSum:
 		binarysave(termdat,pklname,directory=self.sets['pickles'])
 		return 1
 		
-	def summer(self,hqs_hqps=None,hqs_c0qps=None,c0qs_hqps=None,c0qs_c0qps=None):
+	def summer(self,hqs_hqps=None,hqs_c0qps=None,c0qs_hqps=None,c0qs_c0qps=None,do_diag=False):
 	
 		'''
 		Function which completes the mode coupling solution after loading individual terms.\n
@@ -173,35 +173,99 @@ class ModeSum:
 		self.biginds = biginds
 		self.monster = monster		
 
-		#---? WORKING ON QMAGS
-		if 0:
-			qmags = self.mset.lenscale*array([ (i-cm)/((Lx)/1.)*2*pi+1j*(j-cn)/((Ly)/1.)*2*pi 
-				for j in range(0,n2) for i in range(0,m2)])
-		qmagshift = sqrt(sum((self.usshift/(array([Lx,Ly])*self.mset.lenscale/pi))**2,axis=1))
-		qmags = scipy.spatial.distance.squareform(scipy.spatial.distance.pdist(array([qmagshift]).T))
-		self.qmags = qmags
-
-		#---ADD DEMONDEX TO THE CODE AS A DEMO
-		#---FINAL CHECK THAT THE QMAGS ARE CORRECT UNDER THE UNIFIED NAMING SCHEME !!!
-		
 		#---construct the full Helfrich with curvature in matrix form
 		status('status: constructing matrix')
-		self.full_matrix = ((qmags*qmags)*(qmags*qmags)*hqs_hqps-(qmags*qmags)*hqs_c0qps-\
-			(qmags*qmags)*c0qs_hqps+c0qs_c0qps)*real(self.kqqp)
 
-		#---iterate to larger matrix sizes as a speed test and then diagonlize the final result
-		status('status: solution tests')
-		for lim in [100,200,500,1000,2000,None]:
-			st = time.time()
-			self.fullans = linalg.eig(abs(self.full_matrix)[:lim,:lim])
-			if lim != None: del self.fullans
-			status('status: size = '+str(lim)+' duration = '+str(1./60*(time.time()-st))+' minutes')
-'''
-m3,n3=m2-1,n2-1
-inds = array(where(ms.kqqp>1)).T[1]
-[ms.qs[(i)/n3,(i)%n3] for i in inds]
-ms.usshift[inds[0]],ms.usshift[inds[1]]
-[ms.qs[i/n2,i%n2] for i in j for j in [[1386,2970][1539,2883]]]
-sqrt(sum((ms.usshift/(array([Lx,Ly])*ms.mset.lenscale))**2,axis=1))
-'''
+		#-------------------------------------------------------|
+		#---BEGIN NOTES, Q-MAGNITUDES
+		#-------------------------------------------------------|
+		
+		if 0:
+
+			#---? WORKING ON QMAGS
+			if 1:
+				qmags = self.mset.lenscale*array([ (i-cm)/((Lx)/1.)*2*pi+1j*(j-cn)/((Ly)/1.)*2*pi 
+					for j in range(0,n2) for i in range(0,m2)])
+				self.qmags_original_centered = qmags
+				qmags_notcentered = self.mset.lenscale*array([ (i)/((Lx)/1.)*2*pi+1j*(j)/((Ly)/1.)*2*pi 
+					for j in range(0,n2) for i in range(0,m2)])
+				self.qmags_nc = qmags_notcentered
+			if 0: 
+				qmagshift = sqrt(sum((self.usshift/(array([Lx,Ly])*self.mset.lenscale/pi))**2,axis=1))
+			if 0:
+				#---what was I thinking here? this is really stupid. don't need pdist
+				qmags = scipy.spatial.distance.squareform(scipy.spatial.distance.pdist(array([qmagshift]).T))
+				self.qmags = qmags
+			#---ADD DEMONDEX TO THE CODE AS A DEMO
+			#---FINAL CHECK THAT THE QMAGS ARE CORRECT UNDER THE UNIFIED NAMING SCHEME !!!
+			#---wrong qmags
+			if 0: self.full_matrix = ((qmags*qmags)*(qmags*qmags)*hqs_hqps-(qmags*qmags)*hqs_c0qps-\
+				(qmags*qmags)*c0qs_hqps+c0qs_c0qps)*real(self.kqqp)
+			if 0: qdotq = outer(qmagshift,qmagshift)
+			if 0: qmagunshift = sqrt(sum((self.us/(array([Lx,Ly])/self.mset.lenscale*pi))**2,axis=1))
+			#---CURRENT CORRECT WAY
+			if 1:
+				qmagunshift = sqrt(sum((self.us/array([Lx,Ly])*2*pi*self.mset.lenscale)**2,axis=1))
+				qdotq = outer(qmagunshift,qmagunshift)
+				self.qmagunshift = qmagunshift
+				self.qdotq = qdotq
+				self.full_matrix = (
+					qdotq*qdotq*hqs_hqps-\
+					qdotq*hqs_c0qps-\
+					qdotq*c0qs_hqps+\
+					c0qs_c0qps)*abs(self.kqqp)
+			#---trying to make sure q is by complex number / conjugate AND BUT SO this failed
+			if 0:
+				qmagunshift = sqrt(sum((self.us/array([Lx,Ly])*2*pi*self.mset.lenscale)**2,axis=1))
+				qdotq = outer(qmagunshift,qmagunshift)
+				self.qmagunshift = qmagunshift
+				self.qdotq = qdotq
+				self.full_matrix = (
+					qdotq*qdotq*hqs_hqps-\
+					qdotq*hqs_c0qps-\
+					qdotq*c0qs_hqps+\
+					c0qs_c0qps)*abs(self.kqqp)
+				qmags = self.mset.lenscale*array([ (i)/((Lx)/1.)*2*pi+1j*(j)/((Ly)/1.)*2*pi 
+					for j in range(0,n2) for i in range(0,m2)])
+				#---note that qmags and qmagsunshift have the same maximum
+				'''
+				>>> abs(outer(qmags,qmags)).max()
+				77.570370947799873
+				>>> ms.qdotq.max()
+				77.570370947799873
+				numpy.linalg.norm(((ms.qs/array([Lx,Ly])*2*pi*ms.mset.lenscale))**2,axis=2)
+				'''
+		#-------------------------------------------------------|
+		#---END
+		#-------------------------------------------------------|
+
+		#---compute wavevector magnitudes
+		qmagstd = sqrt(sum((self.us/array([Lx,Ly])*2*pi*self.mset.lenscale)**2,axis=1))
+		qdotq = outer(qmagstd,qmagstd)
+		self.qmagstd = qmagstd
+		self.qdotq = qdotq
+		
+		#---compute the full matrix
+		self.full_matrix = (
+			qdotq*qdotq*hqs_hqps-\
+			qdotq*hqs_c0qps-\
+			qdotq*c0qs_hqps+\
+			c0qs_c0qps)*abs(self.kqqp)
+		
+		#---compare to previous, simple method for mode coupling
+		msc = ModeCouple()
+		self.msc = msc
+		self.msc.calculate_mode_coupling(self.mset,
+			[self.hfield for i in range(len(self.mset.surf))],
+			**self.sets['analysis_descriptors'][self.callsign])
+
+		if do_diag:
+			#---iterate to larger matrix sizes as a speed test and then diagonlize the final result
+			status('status: solution tests')
+			for lim in [100,200,500,1000,2000,None]:
+				st = time.time()
+				self.fullans = linalg.eig(abs(self.full_matrix)[:lim,:lim])
+				if lim != None: del self.fullans
+				status('status: size = '+str(lim)+' duration = '+str(1./60*(time.time()-st))+' minutes')
+
 

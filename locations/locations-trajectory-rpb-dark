@@ -190,3 +190,10 @@ name=membrane-v531-ions
 struct=/home/rpb/worker/repo-membrane/membrane-v531/a5-ions/system.ions.gro
 /home/rpb/worker/repo-membrane/membrane-v531/a5-ions/s5-sim-kraken-md.part0016.pbcmol.40000-90000-50.ions.xtc
 
+name=membrane-v532-bridge
+struct=/home/rpb/worker/repo-membrane/membrane-v532/a6-structure/system.bridge.gro
+/home/rpb/worker/repo-membrane/membrane-v532/a6-structure/s5-sim-kraken-md.part0015.40000-90000-50.bridge.xtc
+
+name=membrane-v532-ions
+struct=/home/rpb/worker/repo-membrane/membrane-v532/a7-ions/system.ions.gro
+/home/rpb/worker/repo-membrane/membrane-v532/a7-ions/s5-sim-kraken-md.part0015.pbcmol.40000-90000-50.ions.xtc
