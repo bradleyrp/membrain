@@ -27,7 +27,7 @@ if 'batch_override' not in globals():
 	routine = [
 		          'calculate',
 		          'plot'
-	          ][0:1]
+	          ][1:2]
 
 	# This is not going to change; this is all script-aamd-ion-lipid-bridge can do.
 	pairings_lipid_ion = [
@@ -313,12 +313,58 @@ if 'calculate' in routine:
 
 if 'plot' in routine:
 	if 'compute' not in routine:
-		# Try to load a pickle
-		# data = unpickle()
-		print 'Not implemented.'
+			analysis_pair = pairings_lipid_ion[0]
+			for aname in analysis_names:
+				status('status: Plotting= ' + str(pairings_lipid_ion[0]) + ' system = ' + aname + '\n')
+				# This pairname piece of junk is buggy as fsck.
+				# The following block is not strictly necessary, but is not buggy.
+				for i in analysis_descriptors[aname]: vars()[i] = (analysis_descriptors[aname])[i]
+				lipid_grofile, lipid_trajfile = trajectory_lookup(analysis_descriptors, aname, globals())
+				ion_grofile, ion_trajfile =  trajectory_lookup(analysis_descriptors, aname, globals(),
+					                                      keytrajsel='ions_trajsel', keysysname='ions_sysname')
+				for traj in lipid_trajfile:
+					mset, num_lipids = load(MembraneSet(), lipid_grofile, lipid_trajfile[0], lipids=True)
+					mset_ions, num_ions = load(MembraneSet(), ion_grofile, ion_trajfile[0], lipids=False)
+					binding_cutoff = define_binding()
+					analysis_pair = pairings_lipid_ion[0]
+				pairnames = [(i if i != 'ptdins' else ptdins_resname) for i in analysis_pair]
+				# ---modify names if the frame selection doesn't perfectly match the original gmx timeslice
+				if '-'.join(aname.split('-')[1:]) != '-'.join(specname_pickle(sysname, lipid_trajfile[0]).split('.')[-1:]):
+					specname_mod = '.'.join(specname_pickle(sysname, lipid_trajfile[0]).split('.')[:-1]) + '.' + '-'.join(aname.split('-')[1:])
+				else:
+					specname_mod = specname_pickle(sysname, lipid_trajfile[0])
+				results = unpickle(pickles+'pkl.bridge.' + '-'.join(pairnames) + '.' + specname_mod + '.pkl')
+
+				(oxygens, oxygen_count, oxygen_pairs, pair_sorted, count, pairs_within_cutoff) = \
+					(results.data[0],results.data[1],results.data[2],results.data[3],results.data[4],results.data[5])
+
+				fig = plt.figure(figsize=(8, 6))
+				gs = mpl.gridspec.GridSpec(1, 1)
+				ax = fig.add_subplot(gs[0])
+
+				plt.bar([i for i in range(len(oxygen_count))],
+					        [float(oxygen_count[i]) / len(oxygen_count) for i in range(len(oxygen_count))], align='center')
+				plt.xticks(range(len(D)), [D[i] for i in range(len(D))])
+				plt.title('Oxygens binding to '+str(ion_name)+' ions binding exactly 1 residue (cutoff = '+str(binding_cutoff)+')' )
+				if show: plt.show()
+
+				plt.bar([x for x in range(len(most_common))], [float(most_common[i][1])/sum(count.values()) for i in range(len(most_common))])
+				plt.xticks([x for x in range(len(most_common))], \
+					           [D[most_common[i][0][0]]+str('-')+D[most_common[i][0][1]] for i in range(len(most_common))] )
+				plt.xticks(rotation=45)
+				plt.ylabel('Fraction of all '+str(ion_name)+' bridges')
+				plt.title('Oxygen pairs coordinated by '+str(ion_name)+ ' ions binding exactly 2 residues (cutoff ='+str(binding_cutoff)+')')
+
+
+				plt.savefig(pickles + 'fig-bridge.' + '-'.join(pairnames) + '.' + specname_mod + '.png', \
+	            dpi=300, bbox_inches='tight')
+				if show: plt.show()
+				plt.close(fig)
+				
 	elif 'compute' in routine:
 		checktime()
 		status('Plotting most recent calculation.')
+		show = True
 		fig = plt.figure(figsize=(8, 6))
 		gs = mpl.gridspec.GridSpec(1, 1)
 		ax = fig.add_subplot(gs[0])
@@ -327,7 +373,7 @@ if 'plot' in routine:
 			        [float(oxygen_count[i]) / len(oxygen_count) for i in range(len(oxygen_count))], align='center')
 		plt.xticks(range(len(D)), [D[i] for i in range(len(D))])
 		plt.title('Oxygens binding to '+str(ion_name)+' ions binding exactly 1 residue (cutoff = '+str(binding_cutoff)+')' )
-		plt.show()
+		if show: plt.show()
 
 		plt.bar([x for x in range(len(most_common))], [float(most_common[i][1])/sum(count.values()) for i in range(len(most_common))])
 		plt.xticks([x for x in range(len(most_common))], \
@@ -335,119 +381,10 @@ if 'plot' in routine:
 		plt.xticks(rotation=45)
 		plt.ylabel('Fraction of all '+str(ion_name)+' bridges')
 		plt.title('Oxygen pairs coordinated by '+str(ion_name)+ ' ions binding exactly 2 residues (cutoff ='+str(binding_cutoff)+')')
-		plt.show()
+		if show: plt.show()
 
 		# Plot fraction of all potential bridges occupied over time, histogrammed...
 
 	else:
 		print 'No data to plot.'
 
-	pair = pairings_lipid_ion[0]
-	pairnames = [(i if i != 'ptdins' else ptdins_resname) for i in pair]
-	# ---check if the comparison and pair are valid (even though empty pkl may exist, this is easier)
-	if (not any([mset == None for mset in msets]) and \
-			    any([all([i in mset.resnames for i in pairnames]) for mset in msets])) or \
-					resname_group == 'protonation':
-
-		#---seemingly redundant routine to ensure the right bins
-		all_cutoff_bins = []
-		for aname in analysis_names:
-			print aname
-			for i in analysis_descriptors[aname]: vars()[i] = (analysis_descriptors[aname])[i]
-			mset = msets[analysis_names.index(aname)]
-			mdat = mset.store[0]
-			pairnames = [(i if i != 'ptdins' else ptdins_resname) for i in pair]
-			#---handle cases where lipids may only be on one monolayer
-			allcurves_both_monolayers = []
-			if not all([i in mset.resnames for i in pairnames]): break
-			which_monolayers = [i for i in range(2) if
-			                    (len(mset.monolayer_by_resid[i][mset.resnames.index(pairnames[0])]) > 0 and
-			                     len(mset.monolayer_by_resid[i][mset.resnames.index(pairnames[1])]) > 0)]
-			for i in which_monolayers:
-				allcurves_both_monolayers.append(mdat.get(['monolayer', i]))
-			allcurves = concatenate([i for i in allcurves_both_monolayers])
-			cutoff_bins = min([shape(allcurves[i])[0] for i in range(len(allcurves))])
-			all_cutoff_bins.append(cutoff_bins)
-		consensus_cutoff_bins = min(all_cutoff_bins)
-		maxpeak = 0
-		fig = plt.figure(figsize=(8, 6))
-		gs = mpl.gridspec.GridSpec(1, 1)
-		ax = fig.add_subplot(gs[0])
-		plotted_objects = 0
-		for aname in analysis_names:
-			for i in analysis_descriptors[aname]: vars()[i] = (analysis_descriptors[aname])[i]
-			pairnames = [(i if i != 'ptdins' else ptdins_resname) for i in pair]
-			mset = msets[analysis_names.index(aname)]
-			mdat = mset.store[0]
-			#---handle cases where lipids may only be on one monolayer
-			allcurves_both_monolayers = []
-			if not all([i in mset.resnames for i in pairnames]) and resname_group != 'protonation': break
-			which_monolayers = [i for i in range(2) if
-			                    (len(mset.monolayer_by_resid[i][mset.resnames.index(pairnames[0])]) > 0 and
-			                     len(mset.monolayer_by_resid[i][mset.resnames.index(pairnames[1])]) > 0)]
-			for i in which_monolayers:
-				allcurves_both_monolayers.append(mdat.get(['monolayer', i]))
-			allcurves = concatenate([i for i in allcurves_both_monolayers])
-			binsizeabs = mdat.getnote('binsizeabs')
-			cutoff_bins = min([shape(allcurves[i])[0] for i in range(len(allcurves))])
-			scanrange = arange(0, int(consensus_cutoff_bins))
-			nbins = len(scanrange) - 1
-			avgcurv = np.mean(array([i[0:nbins] for i in allcurves]), axis=0)
-			hist, binedge = numpy.histogram([1 for i in range(1000)],
-			                                range=(0, max(scanrange) * binsizeabs), bins=len(scanrange) - 1)
-			mid = (binedge[1:] + binedge[:-1]) / 2
-			binwidth = binsizeabs
-			areas = [pi * binwidth * mid[i] * 2 for i in range(len(mid))]
-			#---previously used mdat.getnote('points_counts')[0][0]
-			nlipids = max([i[0] for i in mdat.getnote('points_counts')])
-			vecs = np.mean(mset.vecs, axis=0)
-			#---color selection section
-			if resname_group == 'phosphate_position':
-				color = color_dictionary_aamd(ionname=ion_name, lipid_resname=ptdins_resname,
-				                              comparison='ions_phospate_position')
-			elif resname_group == 'protonation':
-				color = color_dictionary_aamd(ionname=ion_name,
-				                              lipid_resname=ptdins_resname, comparison='protonation')
-			else:
-				color = color_dictionary_aamd(ionname=ion_name, comparison='ions')
-			if 'color_overrides' in globals(): color = color_overrides[analysis_names.index(aname)]
-			if 'marker_overrides' in globals():
-				plot_marker = marker_overrides[analysis_names.index(aname)]
-			else:
-				plot_marker = '-'
-			labelname = [proper_residue_names[i] for i in pairnames]
-			if pairnames[0] == pairnames[1]:
-				label = labelname[0] + ' (self), ' + ion_label + \
-				        (early_late[analysis_names.index(aname)] if 'early_late' in globals() else '') + \
-				        (extra_label_list[analysis_names.index(aname)]
-				         if ('ptdins' not in pair and 'extra_label_list' in globals()) else '')
-			else:
-				label = labelname[0] + '-' + labelname[1] + ', ' + ion_label + \
-				        (early_late[analysis_names.index(aname)] if 'early_late' in globals() else '') + \
-				        (extra_label_list[analysis_names.index(aname)]
-				         if ('ptdins' not in pair and 'extra_label_list' in globals()) else '')
-			#---plot
-			if len(avgcurv) > 0: plotted_objects += 1
-			gr_curve = avgcurv / areas / (nlipids / (vecs[0] * vecs[1]))
-			maxpeak = max(gr_curve) if maxpeak < max(gr_curve) else maxpeak
-			ax.plot(mid / 10., gr_curve, plot_marker, lw=2.5, color=color,
-			        label=label)
-		ax.set_ylim((0, (2.0 if maxpeak > 1.5 else 1.5)))
-		ax.legend()
-		ax.grid(True)
-		ax.set_xlabel(r'$\mathbf{r}\:\mathrm{(nm)}$', fontsize=fsaxlabel)
-		ax.set_ylabel(r'$\mathrm{g(\mathbf{r})}$', fontsize=fsaxlabel)
-		plt.setp(ax.get_xticklabels(), fontsize=fsaxticks)
-		plt.setp(ax.get_yticklabels(), fontsize=fsaxticks)
-		ax.set_title(composition_name + ' bilayer', fontsize=fsaxtitle)
-		plt.legend(loc='lower right')
-		print plotted_objects
-		print pairnames
-		#---save
-		if plotted_objects > 0:
-			plt.savefig(pickles + '/PREPARE-FIGURES/' + 'fig-gr2d-' + \
-			            '-'.join(pairnames) + '.' + \
-			            '-'.join(analysis_names) + '.png', \
-			            dpi=300, bbox_inches='tight')
-		if showplots: plt.show()
-		plt.close(fig)

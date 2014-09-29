@@ -51,7 +51,7 @@ master_datatypes = {
     'bridge':{
 		'struct':{'frame':1,'type':0},
 		'struct_opts':{'type':{
-		'oxygens':0,'oxygen_count':1,'oxygen_pairs':2,'pair_sorted':3,'count':4, 'pairs_within_cutoff':5]}},
+		'oxygens':0,'oxygen_count':1,'oxygen_pairs':2,'pair_sorted':3,'count':4, 'pairs_within_cutoff':5}},
 		'description':'Holds the output of ion-lipid bridge calculations. Particle specs are in the pkl name and the notes.',
 		},
 	}
