@@ -239,10 +239,14 @@ if 'args' not in globals():
 	#---parser and logging
 	parser = argparse.ArgumentParser(description='Membrain argument parser.',prog='Membrain')
 	parser.add_argument('-viz',action='store_true',help='Set this to use mayavi 3D visualization.')
-	parser.add_argument('-d','--debugmode',action='store_true',help='Set this to use mayavi 3D visualization.')
-	parser.add_argument('-log',help='The log file. Standard output routes here. Error goes to a separate file.')
-	parser.add_argument('-o','--operation',choices=['test'],help='Calculation to perform.')
+	parser.add_argument('-d','--debugmode',action='store_true',
+		help='Set this to use mayavi 3D visualization.')
+	parser.add_argument('-log',
+		help='The log file. Standard output routes here. Error goes to a separate file.')
+	parser.add_argument('-o','--operation',choices=['test'],
+		help='Calculation to perform.')
 	parser.add_argument('-i','--interactive',action='store_true',help='Run python in interactive mode.')
+	parser.add_argument('-p','--passed',help='A single pass-through argument for a user-facing script.')
 	args = parser.parse_args()
 
 	#---enable 3D visualization
@@ -263,6 +267,8 @@ if 'args' not in globals():
 	#---enable also via setting the debugmode variable to True in the script
 	if ('debugmode' in globals() and debugmode) or args.debugmode:
 		sys.excepthook = postmortem_debug
+		
+	#---pass an argument through
 	
 	#---call any function called when the operation flag is caught by the parser
 	if __name__ == "__main__" and args.operation != None:

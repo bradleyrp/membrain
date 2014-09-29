@@ -70,7 +70,7 @@ class MembraneSet:
 		self.vecs_index = []
 		self.griddims = []
 		self.universe = []
-		self.unierse_structfile = ''
+		self.universe_structfile = ''
 		self.universe_trajfile = ''
 		self.monolayer_residues = []
 		self.monolayer_residues_abs = []
