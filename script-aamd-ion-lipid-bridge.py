@@ -338,29 +338,49 @@ if 'plot' in routine:
 				(oxygens, oxygen_count, oxygen_pairs, pair_sorted, count, pairs_within_cutoff) = \
 					(results.data[0],results.data[1],results.data[2],results.data[3],results.data[4],results.data[5])
 
+				count = Counter()
+				for pair in pair_sorted:
+					count[pair] += 1
+				most_common = count.most_common()[0:10]
+
+				fulfillment = float(sum(count.values()))/float(sum(pairs_within_cutoff))
+				average_bridges = float(sum(count.values()))/float(len(pairs_within_cutoff))
+
+				print 'Average number of two-lipid bridges = ' + str(average_bridges)
+				print 'Fraction of all possible bridges occupied = ' + str(fulfillment)
+
 				fig = plt.figure(figsize=(8, 6))
 				gs = mpl.gridspec.GridSpec(1, 1)
 				ax = fig.add_subplot(gs[0])
+				show = False
 
 				plt.bar([i for i in range(len(oxygen_count))],
 					        [float(oxygen_count[i]) / len(oxygen_count) for i in range(len(oxygen_count))], align='center')
 				plt.xticks(range(len(D)), [D[i] for i in range(len(D))])
 				plt.title('Oxygens binding to '+str(ion_name)+' ions binding exactly 1 residue (cutoff = '+str(binding_cutoff)+')' )
+				plt.savefig(pickles + 'fig-binding.' + '-'.join(pairnames) + '.' + specname_mod + '.png', \
+	            dpi=300, bbox_inches='tight')
 				if show: plt.show()
+				plt.close(fig)
+
+
+				fig = plt.figure(figsize=(8, 6))
+				gs = mpl.gridspec.GridSpec(1, 1)
+				ax = fig.add_subplot(gs[0])
+				show = False
 
 				plt.bar([x for x in range(len(most_common))], [float(most_common[i][1])/sum(count.values()) for i in range(len(most_common))])
 				plt.xticks([x for x in range(len(most_common))], \
 					           [D[most_common[i][0][0]]+str('-')+D[most_common[i][0][1]] for i in range(len(most_common))] )
 				plt.xticks(rotation=45)
 				plt.ylabel('Fraction of all '+str(ion_name)+' bridges')
-				plt.title('Oxygen pairs coordinated by '+str(ion_name)+ ' ions binding exactly 2 residues (cutoff ='+str(binding_cutoff)+')')
-
+				plt.title('Oxygen pairs coordinated by '+str(ion_name)+ ' ions binding exactly 2 residues (cutoff = '+str(binding_cutoff)+')')
 
 				plt.savefig(pickles + 'fig-bridge.' + '-'.join(pairnames) + '.' + specname_mod + '.png', \
 	            dpi=300, bbox_inches='tight')
 				if show: plt.show()
 				plt.close(fig)
-				
+
 	elif 'compute' in routine:
 		checktime()
 		status('Plotting most recent calculation.')
@@ -380,7 +400,7 @@ if 'plot' in routine:
 			           [D[most_common[i][0][0]]+str('-')+D[most_common[i][0][1]] for i in range(len(most_common))] )
 		plt.xticks(rotation=45)
 		plt.ylabel('Fraction of all '+str(ion_name)+' bridges')
-		plt.title('Oxygen pairs coordinated by '+str(ion_name)+ ' ions binding exactly 2 residues (cutoff ='+str(binding_cutoff)+')')
+		plt.title('Oxygen pairs coordinated by '+str(ion_name)+ ' ions binding exactly 2 residues (cutoff = '+str(binding_cutoff)+')')
 		if show: plt.show()
 
 		# Plot fraction of all potential bridges occupied over time, histogrammed...
