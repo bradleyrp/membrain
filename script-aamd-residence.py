@@ -89,12 +89,9 @@ if 'mset' not in globals():
 		mset_ions.selections.append(group_ion)
 		targlist = list(set(mset.universe.selectAtoms('all').names()))
 		#---simple way to select targets based on regex for a letter in the atom name
-		#---? may need replaced with more specific method
 		target_names = ' or '.join(['name '+i for i in targlist if re.search(target_atomsel_via_regex,i)])
 		group_lipid = mset.universe.selectAtoms('resname '+target_lipid_resname+' and ('+target_names+')')
 		mset.selections.append(group_lipid)
-		#---? why does switching the mset to the correct option actually change the result ??!??
-		#---? check correct order
 		atomnames = list(set(mset.selections[0].names()))
 		#---loop over frames
 		st = time.time()
@@ -112,23 +109,6 @@ if 'mset' not in globals():
 			ndists,nnexts = neighborfinder(cd,nlatoms+1)
 			#---save the first nearest distances for later
 			neardists[fr] = array(ndists[0])
-			#---deprecated method that didn't consider farther atoms being parts of distinct lipids
-			#---...for example, an ion could be within the cutoff for two atoms on one lipid and it would 
-			#---...miss the third atom within the cutoff from a distinct lipid which would also be a bridge
-			if 0:
-				#---ion numbers for those within the cutoff for each rank
-				nears = nearby(ndists,splitter)
-				#---nears is hence a cascade of atoms that made it past the cutoff
-				#---...so that when an ion is close to two atoms on one lipid but also another on a distinct
-				#---...lipid residue, then that third atom will be found in the third list of nears
-				#---lipid residue numbers for nearby lipids
-				nres = [nnexts[i][nears[1]]/nlatoms for i in range(nlatoms)]
-				#---ions which bridge two distinct lipids
-				bridged.append(nears[1][where(nres[0]!=nres[1])[0]])
-				#---atoms which these ions contact
-				contact_atoms.append((nnexts[:2,bridged[-1]]%nlatoms).T)
-				#---contacting lipids residues
-				contact_lipids.append((nnexts[:2,bridged[-1]]/nlatoms).T)
 			#---new method
 			ndists,nnexts = ndists.T,nnexts.T
 			#---see if subsequent residues are different than the first nearest residue
