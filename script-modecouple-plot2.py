@@ -86,8 +86,7 @@ def blurry_binner(xs,ys,binwidth=0.05):
 	colx = array([mean(xs[where(inds==i)]) for i in range(len(xsort))])
 	return colx,coly,inds
 
-
-#---MAIN /// TESTING
+#---TESTING
 #-------------------------------------------------------------------------------------------------------------
 
 #---redoing termlist from scratch
@@ -103,9 +102,10 @@ if 'termdat' not in globals():
 		termdat += abs(outer(ms.hqs[fr],ms.hqs[fr]))/float(len(ms.hqs))
 		if 0: termdat += outer(abs(ms.hqs[fr]),abs(ms.hqs[fr]))/float(len(ms.hqs))
 		
-if 0:
+if 1:
 	#---remake of the built-in undulation calculator
 	#---...which perfectly captures the original code and correct scaling
+	#---...without cutting any of the original heights from the edges of the grid
 	trim = 0
 	m,n = m2-trim,n2-trim
 	lxy = ms.mset.vecs
@@ -120,9 +120,10 @@ if 0:
 	undulate_qmag2d = mean(qs,axis=0)
 	ys = reshape(undulate_hqhq2d,-1)[1:]
 	xs = reshape(undulate_qmag2d,-1)[1:]
-	plot_spectrum1d(xs,ys,'',show=True,logplot=True,)	
+	print 'plotting the undulations via the original method...'
+	plot_spectrum1d(xs,ys,'',show=True,logplot=True,ylims=[10**-6,10**2])	
 	
-if 0:
+if 1:
 	#---new version from outer to confirm that outer works to compute the fluctuations
 	Lx,Ly = mean(ms.mset.vecs,axis=0)[0:2]		
 	qmags = ms.mset.lenscale*array([[sqrt(((i)/((Lx)/1.)*2*pi)**2+((j)/((Ly)/1.)*2*pi)**2)
@@ -132,42 +133,60 @@ if 0:
 		((j-n2*(j>n2/2))/((Ly)/1.)*2*pi)**2)
 		for j in range(0,n2)] for i in range(0,m2)])
 	xvals = reshape(qmagsshift,-1)[1:]
+	#---accidentally deleted the definition of tmp a couple weeks ago
+	#---replaced it with an obvious choice here but this probably needs checked
+	tmpa = outer(ms.hqs[0],ms.hqs[0])
+	tmp = [abs(tmpa[i,i]) for i in range(len(qvals))]
+	#---corrected method that uses the whole termdat
+	tmp = array([termdat[i,i] for i in range(len(qvals))])
 	yvals = tmp[1:]
-	if 0: plot_spectrum1d(xvals,yvals,'',show=True,logplot=True,)	
-	if 0:
+	#---plot after collapsing in three different ways	
+	if 1: 
+		#---raw data
+		print 'plotting raw data...'
+		plot_spectrum1d(xvals,yvals,'',show=True,logplot=True,)	
+	if 1:
+		#---perfect binner
+		print 'plotting data after perfect binning...'
 		xvals2,yvals2 = perfect_collapser(xvals,yvals)
 		plot_spectrum1d(xvals2,yvals2,'',show=True,logplot=True,)	
-	if 0:
+	if 1:
+		#---blurry binner
+		print 'plotting data after blurry binning...'
 		xvals3,yvals3,inds = blurry_binner(xvals,yvals)
 		plot_spectrum1d(xvals3,yvals3,'',show=True,logplot=True,)	
 		
+#---COMPUTE
+#-------------------------------------------------------------------------------------------------------------
 
-#---working on the dimensionality reduction and checking that meshgrid works
-if 0:
-	xvals3,yvals3,inds = blurry_binner(xvals,yvals)
-	ttt = array(meshgrid(inds,inds)).T
-	all(ttt[100,:,0]==inds[100])
-	all(ttt[100,:,1]==inds)
-	#---in this case we have constructed a list of all combinations of the bin indices
-	jjj = array(meshgrid(where(inds==65)[0],where(inds==80)[0])).T
-	jj = reshape(jjj,(product(shape(jjj)[:2]),2))
-	termdat[jj[:,0],jj[:,1]]
-	
-reddim = inds.max()
-tiny = zeros((reddim,reddim))
-tinycount = zeros((reddim,reddim))
-st = time.time()
-for i in range(reddim):
-	status('i = '+str(i),start=st,i=i,looplen=reddim)
-	for j in range(reddim):
-		if 0:
+#---DIMENSIONALITY REDUCTION
+if 1:
+	#---working on the dimensionality reduction and checking that meshgrid works
+	if 1:
+		xvals3,yvals3,inds = blurry_binner(xvals,yvals)
+		ttt = array(meshgrid(inds,inds)).T
+		all(ttt[100,:,0]==inds[100])
+		all(ttt[100,:,1]==inds)
+		#---in this case we have constructed a list of all combinations of the bin indices
+		jjj = array(meshgrid(where(inds==65)[0],where(inds==80)[0])).T
+		jj = reshape(jjj,(product(shape(jjj)[:2]),2))
+		termdat[jj[:,0],jj[:,1]]
+	reddim = inds.max()
+	tiny = zeros((reddim,reddim))
+	tinycount = zeros((reddim,reddim))
+	st = time.time()
+	for i in range(reddim):
+		status('i = '+str(i),start=st,i=i,looplen=reddim)
+		for j in range(reddim):
+			if 0:
+				jjj = array(meshgrid(where(inds==i)[0],where(inds==j)[0])).T
+				jj = reshape(jjj,(product(shape(jjj)[:2]),2))
+				sieve = termdat[jj[:,0],jj[:,1]]
+			#---I did one check, but this needs another to make sure indexing is working right
 			jjj = array(meshgrid(where(inds==i)[0],where(inds==j)[0])).T
-			jj = reshape(jjj,(product(shape(jjj)[:2]),2))
-			sieve = termdat[jj[:,0],jj[:,1]]
-		#---I did one check, but this needs another to make sure indexing is working right
-		jjj = array(meshgrid(where(inds==i)[0],where(inds==j)[0])).T
-		sieve = termdat[jjj[...,0],jjj[...,1]]
-		tiny[i,j] = mean(sieve)
-		tinycount[i,j]  = len(sieve)
-plt.imshow(array(tiny/tinycount).T,origin='lower',interpolation='nearest',norm=mpl.colors.LogNorm());plt.show()
+			sieve = termdat[jjj[...,0],jjj[...,1]]
+			tiny[i,j] = mean(sieve)
+			tinycount[i,j]  = len(sieve)
+	plt.imshow(array(tiny/tinycount).T,origin='lower',interpolation='nearest',norm=mpl.colors.LogNorm())
+	plt.show()
 

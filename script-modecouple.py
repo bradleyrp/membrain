@@ -68,6 +68,9 @@ sweep_kappa = {
 	
 #---combine sweeps
 sweep = dict(sweep_curv.items()+sweep_kappa.items())
+
+#---HYPOTHESIS
+#-------------------------------------------------------------------------------------------------------------
 	
 #---construct hypotheses from sweep variables and the default hypothesis
 hypotheses = []
