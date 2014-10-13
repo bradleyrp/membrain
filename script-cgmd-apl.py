@@ -98,7 +98,7 @@ if 'mov' in routine:
 	clrs = [brewer2mpl.get_map('Set1','qualitative',9).mpl_colors[i] for i in range(9)]
 	clrset = [clrs[i] for i in [8,7,1,0]]
 
-	#---relative residsf
+	#---relative resids
 	resids = [[mset.resids_reracker.index(i) for i in j] for j in mset.resids]
 	#---color codes
 	colorcodes = [[[i for i in range(4) if j in resids[i]][0] 
@@ -112,3 +112,4 @@ if 'mov' in routine:
 	rand_color_list = [np.random.rand(3,1) for i in range(2*len(dat_vor[0][0][0].points))]
 	#---celltest was updated slightly, see the plot_snapshot section
 	plotmov(dat_vor,'celltest',plotfunc='cellplot')
+	
