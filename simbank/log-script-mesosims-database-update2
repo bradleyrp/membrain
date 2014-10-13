@@ -1,0 +1,7 @@
+status: calctypes = ['update_kappas']
+status: startframe = 1200
+status: endframe = 2200
+Traceback (most recent call last):
+  File "./script-mesosims-database-update.py", line 383, in <module>
+    status('status: new calculations = '+str(needs))
+NameError: name 'needs' is not defined

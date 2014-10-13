@@ -18,8 +18,13 @@ from mpl_toolkits.axes_grid1.inset_locator import inset_axes
 routine = [
 	'calc',
 	'hypothesize',
+<<<<<<< HEAD
 	'coupling_solution',
 	][1:]
+=======
+	'testing_basic_undulation_spectra',
+	][1:3]
+>>>>>>> 340cac56a8809331b14e1f90c1d3d7e2cc770c05
 
 #---select a simulation system
 callsign = [
@@ -265,7 +270,11 @@ if 'hypothesize' in routine and 'ms' not in globals():
 	#---check on the kappa field	
 	if 0: plt.imshow(real(ms.kqs).T,interpolation='nearest',origin='lower');plt.show()
 	
+<<<<<<< HEAD
 elif 'ms' in globals(): print 'refusing to continue because ms already defined'
+=======
+elif 'ms' in globals(): print 'refuse to continue because ms already defined'
+>>>>>>> 340cac56a8809331b14e1f90c1d3d7e2cc770c05
 		
 #---TESTING
 #-------------------------------------------------------------------------------------------------------------
@@ -337,6 +346,7 @@ if 'testing_basic_undulation_spectra' in routine:
 #---SOLUTION
 #-------------------------------------------------------------------------------------------------------------
 
+<<<<<<< HEAD
 if 'coupling_solution' in routine:
 
 	#---collect the full matrix from the ModeSum object
@@ -357,6 +367,20 @@ if 'coupling_solution' in routine:
 	xvals3,yvals3,inds = blurry_binner(xvals,yvals)
 
 	#---reduce dimensionality and average
+=======
+if 'dimred' in routine:
+
+	#---working on the dimensionality reduction and checking that meshgrid works
+	if 1:
+		xvals3,yvals3,inds = blurry_binner(xvals,yvals)
+		ttt = array(meshgrid(inds,inds)).T
+		all(ttt[100,:,0]==inds[100])
+		all(ttt[100,:,1]==inds)
+		#---in this case we have constructed a list of all combinations of the bin indices
+		jjj = array(meshgrid(where(inds==65)[0],where(inds==80)[0])).T
+		jj = reshape(jjj,(product(shape(jjj)[:2]),2))
+		termdat_test[jj[:,0],jj[:,1]]
+>>>>>>> 340cac56a8809331b14e1f90c1d3d7e2cc770c05
 	reddim = inds.max()
 	tiny = zeros((reddim,reddim))
 	tinycount = zeros((reddim,reddim))
@@ -364,14 +388,25 @@ if 'coupling_solution' in routine:
 	for i in range(reddim):
 		status('i = '+str(i),start=st,i=i,looplen=reddim)
 		for j in range(reddim):
+<<<<<<< HEAD
+=======
+			if 0:
+				jjj = array(meshgrid(where(inds==i)[0],where(inds==j)[0])).T
+				jj = reshape(jjj,(product(shape(jjj)[:2]),2))
+				sieve = termdat_test[jj[:,0],jj[:,1]]
+>>>>>>> 340cac56a8809331b14e1f90c1d3d7e2cc770c05
 			#---I did one check, but this needs another to make sure indexing is working right
 			jjj = array(meshgrid(where(inds==i)[0],where(inds==j)[0])).T
 			sieve = termdat_test[jjj[...,0],jjj[...,1]]
 			tiny[i,j] = mean(sieve)
 			tinycount[i,j]  = len(sieve)
 	plt.imshow(array(tiny/tinycount).T,origin='lower',interpolation='nearest',norm=mpl.colors.LogNorm())
+<<<<<<< HEAD
 	plt.savefig(allsets['pickles']+'COUPLESOLN-'+str(args.passed)+'.png')
 	plt.show()
 	
+=======
+	plt.show()
+>>>>>>> 340cac56a8809331b14e1f90c1d3d7e2cc770c05
 
 
