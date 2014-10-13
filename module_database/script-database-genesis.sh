@@ -1,5 +1,7 @@
 #!/usr/bin/bash
 
+'''Run this script only once to prepare a database for module_database.'''
+
 #---parameters
 centerdir=/home/rpb/worker/project-postgresql-central
 

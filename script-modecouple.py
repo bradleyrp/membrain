@@ -18,8 +18,8 @@ from mpl_toolkits.axes_grid1.inset_locator import inset_axes
 routine = [
 	'calc',
 	'hypothesize',
-	'testing_basic_undulation_spectra',
-	][1:3]
+	'coupling_solution',
+	][1:]
 
 #---select a simulation system
 callsign = [
@@ -265,7 +265,7 @@ if 'hypothesize' in routine and 'ms' not in globals():
 	#---check on the kappa field	
 	if 0: plt.imshow(real(ms.kqs).T,interpolation='nearest',origin='lower');plt.show()
 	
-elif 'ms' in globals(): print 'refuse to continue because ms already defined'
+elif 'ms' in globals(): print 'refusing to continue because ms already defined'
 		
 #---TESTING
 #-------------------------------------------------------------------------------------------------------------
@@ -337,18 +337,26 @@ if 'testing_basic_undulation_spectra' in routine:
 #---SOLUTION
 #-------------------------------------------------------------------------------------------------------------
 
-if 'dimred' in routine:
+if 'coupling_solution' in routine:
 
-	#---working on the dimensionality reduction and checking that meshgrid works
-	if 1:
-		xvals3,yvals3,inds = blurry_binner(xvals,yvals)
-		ttt = array(meshgrid(inds,inds)).T
-		all(ttt[100,:,0]==inds[100])
-		all(ttt[100,:,1]==inds)
-		#---in this case we have constructed a list of all combinations of the bin indices
-		jjj = array(meshgrid(where(inds==65)[0],where(inds==80)[0])).T
-		jj = reshape(jjj,(product(shape(jjj)[:2]),2))
-		termdat_test[jj[:,0],jj[:,1]]
+	#---collect the full matrix from the ModeSum object
+	termdat_test = ms.full_matrix
+
+	#---prepare the diagonalto set the bin sizes
+	m2,n2 = shape(ms.hqs)[1:]-0*array([1,1])
+	Lx,Ly = mean(ms.mset.vecs,axis=0)[0:2]		
+	qmags = ms.mset.lenscale*array([[sqrt(((i)/((Lx)/1.)*2*pi)**2+((j)/((Ly)/1.)*2*pi)**2)
+		for j in range(0,n2)] for i in range(0,m2)])	
+	qvals = reshape(qmags,-1)
+	qmagsshift = ms.mset.lenscale*array([[sqrt(((i-m2*(i>m2/2))/((Lx)/1.)*2*pi)**2+
+		((j-n2*(j>n2/2))/((Ly)/1.)*2*pi)**2)
+		for j in range(0,n2)] for i in range(0,m2)])
+	xvals = reshape(qmagsshift,-1)[1:]
+	diag = array([termdat_test[i,i] for i in range(len(qvals))])
+	yvals = diag[1:]
+	xvals3,yvals3,inds = blurry_binner(xvals,yvals)
+
+	#---reduce dimensionality and average
 	reddim = inds.max()
 	tiny = zeros((reddim,reddim))
 	tinycount = zeros((reddim,reddim))
@@ -356,16 +364,14 @@ if 'dimred' in routine:
 	for i in range(reddim):
 		status('i = '+str(i),start=st,i=i,looplen=reddim)
 		for j in range(reddim):
-			if 0:
-				jjj = array(meshgrid(where(inds==i)[0],where(inds==j)[0])).T
-				jj = reshape(jjj,(product(shape(jjj)[:2]),2))
-				sieve = termdat_test[jj[:,0],jj[:,1]]
 			#---I did one check, but this needs another to make sure indexing is working right
 			jjj = array(meshgrid(where(inds==i)[0],where(inds==j)[0])).T
 			sieve = termdat_test[jjj[...,0],jjj[...,1]]
 			tiny[i,j] = mean(sieve)
 			tinycount[i,j]  = len(sieve)
 	plt.imshow(array(tiny/tinycount).T,origin='lower',interpolation='nearest',norm=mpl.colors.LogNorm())
+	plt.savefig(allsets['pickles']+'COUPLESOLN-'+str(args.passed)+'.png')
 	plt.show()
+	
 
 
