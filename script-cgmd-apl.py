@@ -1,6 +1,10 @@
 #!/usr/bin/python
 
-interact = True
+'''
+A script to compute the areas per lipid from a CGMD simulation.
+authored by rpb
+'''
+
 from membrainrunner import *
 execfile('locations.py')
 
@@ -112,3 +116,4 @@ if 'mov' in routine:
 	rand_color_list = [np.random.rand(3,1) for i in range(2*len(dat_vor[0][0][0].points))]
 	#---celltest was updated slightly, see the plot_snapshot section
 	plotmov(dat_vor,'celltest',plotfunc='cellplot')
+	

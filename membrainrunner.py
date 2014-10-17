@@ -196,11 +196,13 @@ def specname_pickle(sysname,traj,timeslice=None):
 #---MONITORING FUNCTIONS
 #-------------------------------------------------------------------------------------------------------------
 	
-def status(string,start=None,i=None,looplen=None):
+def status(string,start=None,i=None,looplen=None,blocked=False):
 	'''Print status to the screen also allows for re-writing the line. Duplicated in the membrain library.'''
 	#---note: still looking for a way to use the carriage return for dynamic counter without ...
 	#---...having many newlines printed to the file. it seems impossible to use the '\r' + flush()...
 	#---...method with both screen and file output, since I can't stop the buffer from being written
+	#---the blocked flag will remove tabs so that large multiline text doesn't awkwardly wrap in the code
+	if blocked: string = re.sub('\n([\t])+',' ',re.sub('\n([\t])+','',string))
 	#---display a refreshable string
 	if start == None and looplen == None and i != None:		
 		print '\r'+string+'  ...  '+str(i+1).rjust(7)+'/'+str(looplen).ljust(8)+'\n',
